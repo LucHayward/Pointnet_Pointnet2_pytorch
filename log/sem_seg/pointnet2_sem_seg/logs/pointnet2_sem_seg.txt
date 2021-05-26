@@ -1029,3 +1029,9 @@ class clutter        weight: 0.011, IoU: 0.409
 2021-03-23 12:47:10,783 - Model - INFO - Best mIoU: 0.526403
 2021-03-23 12:47:10,783 - Model - INFO - **** Epoch 33 (36/128) ****
 2021-03-23 12:47:10,783 - Model - INFO - Learning rate:0.000343
+2021-05-26 12:17:26,458 - Model - INFO - PARAMETER ...
+2021-05-26 12:17:26,459 - Model - INFO - Namespace(batch_size=16, decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, optimizer='Adam', step_size=10, test_area=5)
+2021-05-26 12:17:54,163 - Model - INFO - PARAMETER ...
+2021-05-26 12:17:54,163 - Model - INFO - Namespace(batch_size=16, decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, optimizer='Adam', step_size=10, test_area=5)
+2021-05-26 12:19:23,406 - Model - INFO - PARAMETER ...
+2021-05-26 12:19:23,407 - Model - INFO - Namespace(batch_size=16, decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, optimizer='Adam', step_size=10, test_area=5)

@@ -136,7 +136,7 @@ class ModelNetDataLoader(Dataset):
             else:
                 point_set = point_set[0:self.npoints, :]
                 # TODO No need, rather use uniform/fps
-                # TODO Sample self.npoints random points without repeat, could use this to reindex/shuffle the array?
+                # Sample self.npoints random points without repeat, could use this to reindex/shuffle the array?
                 # random_idxs = rng.choice(np.arange(0, len(point_set)),self.npoints, replace=False)
                 # point_set = point_set[random_idxs]
 

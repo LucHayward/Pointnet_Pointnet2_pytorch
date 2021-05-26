@@ -1,12 +1,21 @@
 import os
 import sys
+import argparse
 from indoor3d_util import DATA_PATH, collect_point_label
+
+parser = argparse.ArgumentParser('collect')
+parser.add_argument('--meta_path', default='meta/', help='Path to meta folder containing class and anno_paths')
+parser.add_argument('--data_path', default=None, help='If data path needs to change, set it here. Should point to data root')
+args = parser.parse_args()
+
+if args.data_path is not None:
+    DATA_PATH = args.data_path
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(BASE_DIR)
 
-anno_paths = [line.rstrip() for line in open(os.path.join(BASE_DIR, 'meta/anno_paths.txt'))]
+anno_paths = [line.rstrip() for line in open(os.path.join(BASE_DIR, f'{args.meta_path}anno_paths.txt'))]
 anno_paths = [os.path.join(DATA_PATH, p) for p in anno_paths]
 
 output_folder = os.path.join(ROOT_DIR, 'data/stanford_indoor3d')
