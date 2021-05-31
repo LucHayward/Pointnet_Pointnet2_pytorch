@@ -119,7 +119,7 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
         new_xyz: sampled points position data, [Batch, npoint, nsample, 3]
         new_points: sampled points data, [Batch, npoint, nsample, 3+D]
     """
-    Batch, N, C = xyz.shape  # Batch, NumPoint, Coordinate?
+    Batch, N, C = xyz.shape  # Batch, NumPoint, Coordinate
     S = npoint
     fps_idx = farthest_point_sample(xyz, npoint) # [Batch, npoint, C]
     new_xyz = index_points(xyz, fps_idx)
@@ -177,7 +177,7 @@ class PointNetSetAbstraction(nn.Module):
         """
         Input:
             xyz: input points position data, [B, C, N] = [batch, coordinates, numPoint]
-            points: input points data, [B, D, N]
+            points: input points data, [B, D, N] = [batch, dimensions, numPoint]
         Return:
             new_xyz: sampled points position data, [B, C, S]
             new_points_concat: sample points feature data, [B, D', S]
@@ -190,7 +190,7 @@ class PointNetSetAbstraction(nn.Module):
             new_xyz, new_points = sample_and_group_all(xyz, points)
         else:
             new_xyz, new_points = sample_and_group(self.npoint, self.radius, self.nsample, xyz, points)
-        # new_xyz: sampled points position data, [B, npoint, C]
+        # new_xyz: sampled points position data, [B, npoint, Coordinates]
         # new_points: sampled points data, [B, npoint, nsample, C+D]
         new_points = new_points.permute(0, 3, 2, 1) # [B, C+D, nsample,npoint]
         for i, conv in enumerate(self.mlp_convs):

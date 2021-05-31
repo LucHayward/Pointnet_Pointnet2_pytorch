@@ -1,0 +1,595 @@
+2021-05-30 19:02:47,327 - Model - INFO - PARAMETER ...
+2021-05-30 19:02:47,327 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-30 19:03:02,607 - Model - INFO - PARAMETER ...
+2021-05-30 19:03:02,607 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-30 19:05:42,757 - Model - INFO - PARAMETER ...
+2021-05-30 19:05:42,757 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-30 19:07:51,986 - Model - INFO - The number of training data is: 4815
+2021-05-30 19:07:53,493 - Model - INFO - The number of test data is: 535
+2021-05-30 19:08:06,962 - Model - INFO - PARAMETER ...
+2021-05-30 19:08:06,962 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-30 19:08:10,086 - Model - INFO - The number of training data is: 4815
+2021-05-30 19:08:10,086 - Model - INFO - The number of test data is: 535
+2021-05-30 19:08:10,123 - Model - INFO - No existing model, starting training from scratch...
+2021-05-30 19:08:10,124 - Model - INFO - **** Epoch 1 (1/32) ****
+2021-05-30 19:08:10,124 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:13:12,224 - Model - INFO - Training mean loss: 0.222414
+2021-05-30 19:13:12,224 - Model - INFO - Training accuracy: 0.982456
+2021-05-30 19:13:12,225 - Model - INFO - Save model...
+2021-05-30 19:13:12,225 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 19:13:12,262 - Model - INFO - Saving model....
+2021-05-30 19:13:12,290 - Model - INFO - ---- EPOCH 001 EVALUATION ----
+2021-05-30 19:13:44,030 - Model - INFO - eval mean loss: 0.200955
+2021-05-30 19:13:44,031 - Model - INFO - eval point avg class IoU: 0.493575
+2021-05-30 19:13:44,031 - Model - INFO - eval point accuracy: 0.987151
+2021-05-30 19:13:44,031 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:13:44,031 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.013, IoU: 0.987 
+class floor          weight: 0.987, IoU: 0.000 
+
+2021-05-30 19:13:44,031 - Model - INFO - Eval mean loss: 0.200955
+2021-05-30 19:13:44,031 - Model - INFO - Eval accuracy: 0.987151
+2021-05-30 19:13:44,031 - Model - INFO - Save model...
+2021-05-30 19:13:44,031 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/best_model.pth
+2021-05-30 19:13:44,060 - Model - INFO - Saving model....
+2021-05-30 19:13:44,060 - Model - INFO - Best mIoU: 0.493575
+2021-05-30 19:13:44,061 - Model - INFO - **** Epoch 2 (2/32) ****
+2021-05-30 19:13:44,061 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:18:44,041 - Model - INFO - Training mean loss: 0.205693
+2021-05-30 19:18:44,041 - Model - INFO - Training accuracy: 0.986703
+2021-05-30 19:18:44,072 - Model - INFO - ---- EPOCH 002 EVALUATION ----
+2021-05-30 19:19:15,635 - Model - INFO - eval mean loss: 0.172596
+2021-05-30 19:19:15,636 - Model - INFO - eval point avg class IoU: 0.495245
+2021-05-30 19:19:15,636 - Model - INFO - eval point accuracy: 0.990490
+2021-05-30 19:19:15,636 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:19:15,636 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 19:19:15,636 - Model - INFO - Eval mean loss: 0.172596
+2021-05-30 19:19:15,636 - Model - INFO - Eval accuracy: 0.990490
+2021-05-30 19:19:15,636 - Model - INFO - Save model...
+2021-05-30 19:19:15,636 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/best_model.pth
+2021-05-30 19:19:15,682 - Model - INFO - Saving model....
+2021-05-30 19:19:15,682 - Model - INFO - Best mIoU: 0.495245
+2021-05-30 19:19:15,683 - Model - INFO - **** Epoch 3 (3/32) ****
+2021-05-30 19:19:15,683 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:24:16,666 - Model - INFO - Training mean loss: 0.202428
+2021-05-30 19:24:16,666 - Model - INFO - Training accuracy: 0.986834
+2021-05-30 19:24:16,696 - Model - INFO - ---- EPOCH 003 EVALUATION ----
+2021-05-30 19:24:48,367 - Model - INFO - eval mean loss: 0.180817
+2021-05-30 19:24:48,367 - Model - INFO - eval point avg class IoU: 0.494324
+2021-05-30 19:24:48,367 - Model - INFO - eval point accuracy: 0.988647
+2021-05-30 19:24:48,367 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:24:48,367 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 19:24:48,368 - Model - INFO - Eval mean loss: 0.180817
+2021-05-30 19:24:48,368 - Model - INFO - Eval accuracy: 0.988647
+2021-05-30 19:24:48,368 - Model - INFO - Best mIoU: 0.495245
+2021-05-30 19:24:48,368 - Model - INFO - **** Epoch 4 (4/32) ****
+2021-05-30 19:24:48,368 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:29:48,545 - Model - INFO - Training mean loss: 0.203402
+2021-05-30 19:29:48,545 - Model - INFO - Training accuracy: 0.986701
+2021-05-30 19:29:48,575 - Model - INFO - ---- EPOCH 004 EVALUATION ----
+2021-05-30 19:30:20,101 - Model - INFO - eval mean loss: 0.174658
+2021-05-30 19:30:20,101 - Model - INFO - eval point avg class IoU: 0.494615
+2021-05-30 19:30:20,102 - Model - INFO - eval point accuracy: 0.989229
+2021-05-30 19:30:20,102 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:30:20,102 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 19:30:20,102 - Model - INFO - Eval mean loss: 0.174658
+2021-05-30 19:30:20,102 - Model - INFO - Eval accuracy: 0.989229
+2021-05-30 19:30:20,102 - Model - INFO - Best mIoU: 0.495245
+2021-05-30 19:30:20,102 - Model - INFO - **** Epoch 5 (5/32) ****
+2021-05-30 19:30:20,102 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:35:20,621 - Model - INFO - Training mean loss: 0.204166
+2021-05-30 19:35:20,621 - Model - INFO - Training accuracy: 0.986558
+2021-05-30 19:35:20,652 - Model - INFO - ---- EPOCH 005 EVALUATION ----
+2021-05-30 19:35:52,130 - Model - INFO - eval mean loss: 0.156024
+2021-05-30 19:35:52,131 - Model - INFO - eval point avg class IoU: 0.495541
+2021-05-30 19:35:52,131 - Model - INFO - eval point accuracy: 0.991081
+2021-05-30 19:35:52,131 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:35:52,131 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.009, IoU: 0.991 
+class floor          weight: 0.991, IoU: 0.000 
+
+2021-05-30 19:35:52,131 - Model - INFO - Eval mean loss: 0.156024
+2021-05-30 19:35:52,131 - Model - INFO - Eval accuracy: 0.991081
+2021-05-30 19:35:52,131 - Model - INFO - Save model...
+2021-05-30 19:35:52,131 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/best_model.pth
+2021-05-30 19:35:52,185 - Model - INFO - Saving model....
+2021-05-30 19:35:52,185 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 19:35:52,185 - Model - INFO - **** Epoch 6 (6/32) ****
+2021-05-30 19:35:52,185 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:40:51,334 - Model - INFO - Training mean loss: 0.202696
+2021-05-30 19:40:51,334 - Model - INFO - Training accuracy: 0.986665
+2021-05-30 19:40:51,334 - Model - INFO - Save model...
+2021-05-30 19:40:51,334 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 19:40:51,390 - Model - INFO - Saving model....
+2021-05-30 19:40:51,421 - Model - INFO - ---- EPOCH 006 EVALUATION ----
+2021-05-30 19:41:22,871 - Model - INFO - eval mean loss: 0.173511
+2021-05-30 19:41:22,871 - Model - INFO - eval point avg class IoU: 0.494656
+2021-05-30 19:41:22,872 - Model - INFO - eval point accuracy: 0.989312
+2021-05-30 19:41:22,872 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:41:22,872 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 19:41:22,872 - Model - INFO - Eval mean loss: 0.173511
+2021-05-30 19:41:22,872 - Model - INFO - Eval accuracy: 0.989312
+2021-05-30 19:41:22,872 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 19:41:22,872 - Model - INFO - **** Epoch 7 (7/32) ****
+2021-05-30 19:41:22,872 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:46:22,672 - Model - INFO - Training mean loss: 0.202118
+2021-05-30 19:46:22,673 - Model - INFO - Training accuracy: 0.986712
+2021-05-30 19:46:22,703 - Model - INFO - ---- EPOCH 007 EVALUATION ----
+2021-05-30 19:46:54,247 - Model - INFO - eval mean loss: 0.171534
+2021-05-30 19:46:54,247 - Model - INFO - eval point avg class IoU: 0.495166
+2021-05-30 19:46:54,247 - Model - INFO - eval point accuracy: 0.990332
+2021-05-30 19:46:54,247 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:46:54,247 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 19:46:54,247 - Model - INFO - Eval mean loss: 0.171534
+2021-05-30 19:46:54,247 - Model - INFO - Eval accuracy: 0.990332
+2021-05-30 19:46:54,247 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 19:46:54,247 - Model - INFO - **** Epoch 8 (8/32) ****
+2021-05-30 19:46:54,247 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:51:54,120 - Model - INFO - Training mean loss: 0.203007
+2021-05-30 19:51:54,121 - Model - INFO - Training accuracy: 0.986523
+2021-05-30 19:51:54,150 - Model - INFO - ---- EPOCH 008 EVALUATION ----
+2021-05-30 19:52:25,702 - Model - INFO - eval mean loss: 0.194822
+2021-05-30 19:52:25,702 - Model - INFO - eval point avg class IoU: 0.494130
+2021-05-30 19:52:25,702 - Model - INFO - eval point accuracy: 0.988260
+2021-05-30 19:52:25,703 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:52:25,703 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.012, IoU: 0.988 
+class floor          weight: 0.988, IoU: 0.000 
+
+2021-05-30 19:52:25,703 - Model - INFO - Eval mean loss: 0.194822
+2021-05-30 19:52:25,703 - Model - INFO - Eval accuracy: 0.988260
+2021-05-30 19:52:25,703 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 19:52:25,703 - Model - INFO - **** Epoch 9 (9/32) ****
+2021-05-30 19:52:25,703 - Model - INFO - Learning rate:0.001000
+2021-05-30 19:57:25,900 - Model - INFO - Training mean loss: 0.203146
+2021-05-30 19:57:25,901 - Model - INFO - Training accuracy: 0.986577
+2021-05-30 19:57:25,929 - Model - INFO - ---- EPOCH 009 EVALUATION ----
+2021-05-30 19:57:57,866 - Model - INFO - eval mean loss: 0.178684
+2021-05-30 19:57:57,866 - Model - INFO - eval point avg class IoU: 0.494558
+2021-05-30 19:57:57,866 - Model - INFO - eval point accuracy: 0.989116
+2021-05-30 19:57:57,866 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 19:57:57,866 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 19:57:57,866 - Model - INFO - Eval mean loss: 0.178684
+2021-05-30 19:57:57,866 - Model - INFO - Eval accuracy: 0.989116
+2021-05-30 19:57:57,866 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 19:57:57,866 - Model - INFO - **** Epoch 10 (10/32) ****
+2021-05-30 19:57:57,866 - Model - INFO - Learning rate:0.001000
+2021-05-30 20:03:01,820 - Model - INFO - Training mean loss: 0.201452
+2021-05-30 20:03:01,820 - Model - INFO - Training accuracy: 0.986697
+2021-05-30 20:03:01,850 - Model - INFO - ---- EPOCH 010 EVALUATION ----
+2021-05-30 20:03:33,952 - Model - INFO - eval mean loss: 0.188940
+2021-05-30 20:03:33,952 - Model - INFO - eval point avg class IoU: 0.495153
+2021-05-30 20:03:33,952 - Model - INFO - eval point accuracy: 0.990305
+2021-05-30 20:03:33,952 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:03:33,952 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 20:03:33,952 - Model - INFO - Eval mean loss: 0.188940
+2021-05-30 20:03:33,952 - Model - INFO - Eval accuracy: 0.990305
+2021-05-30 20:03:33,952 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:03:33,952 - Model - INFO - **** Epoch 11 (11/32) ****
+2021-05-30 20:03:33,952 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:08:37,477 - Model - INFO - Training mean loss: 0.200953
+2021-05-30 20:08:37,477 - Model - INFO - Training accuracy: 0.986700
+2021-05-30 20:08:37,477 - Model - INFO - Save model...
+2021-05-30 20:08:37,477 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 20:08:37,532 - Model - INFO - Saving model....
+2021-05-30 20:08:37,560 - Model - INFO - ---- EPOCH 011 EVALUATION ----
+2021-05-30 20:09:09,379 - Model - INFO - eval mean loss: 0.169798
+2021-05-30 20:09:09,379 - Model - INFO - eval point avg class IoU: 0.494956
+2021-05-30 20:09:09,379 - Model - INFO - eval point accuracy: 0.989913
+2021-05-30 20:09:09,379 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:09:09,379 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 20:09:09,379 - Model - INFO - Eval mean loss: 0.169798
+2021-05-30 20:09:09,379 - Model - INFO - Eval accuracy: 0.989913
+2021-05-30 20:09:09,379 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:09:09,379 - Model - INFO - **** Epoch 12 (12/32) ****
+2021-05-30 20:09:09,379 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:14:12,416 - Model - INFO - Training mean loss: 0.200904
+2021-05-30 20:14:12,416 - Model - INFO - Training accuracy: 0.986658
+2021-05-30 20:14:12,446 - Model - INFO - ---- EPOCH 012 EVALUATION ----
+2021-05-30 20:14:44,365 - Model - INFO - eval mean loss: 0.186149
+2021-05-30 20:14:44,365 - Model - INFO - eval point avg class IoU: 0.494927
+2021-05-30 20:14:44,365 - Model - INFO - eval point accuracy: 0.989854
+2021-05-30 20:14:44,365 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:14:44,365 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 20:14:44,365 - Model - INFO - Eval mean loss: 0.186149
+2021-05-30 20:14:44,365 - Model - INFO - Eval accuracy: 0.989854
+2021-05-30 20:14:44,365 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:14:44,365 - Model - INFO - **** Epoch 13 (13/32) ****
+2021-05-30 20:14:44,365 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:19:47,484 - Model - INFO - Training mean loss: 0.201089
+2021-05-30 20:19:47,484 - Model - INFO - Training accuracy: 0.986615
+2021-05-30 20:19:47,513 - Model - INFO - ---- EPOCH 013 EVALUATION ----
+2021-05-30 20:20:19,309 - Model - INFO - eval mean loss: 0.204832
+2021-05-30 20:20:19,309 - Model - INFO - eval point avg class IoU: 0.493079
+2021-05-30 20:20:19,309 - Model - INFO - eval point accuracy: 0.986158
+2021-05-30 20:20:19,309 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:20:19,309 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.014, IoU: 0.986 
+class floor          weight: 0.986, IoU: 0.000 
+
+2021-05-30 20:20:19,309 - Model - INFO - Eval mean loss: 0.204832
+2021-05-30 20:20:19,309 - Model - INFO - Eval accuracy: 0.986158
+2021-05-30 20:20:19,309 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:20:19,310 - Model - INFO - **** Epoch 14 (14/32) ****
+2021-05-30 20:20:19,310 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:25:22,551 - Model - INFO - Training mean loss: 0.200553
+2021-05-30 20:25:22,551 - Model - INFO - Training accuracy: 0.986690
+2021-05-30 20:25:22,581 - Model - INFO - ---- EPOCH 014 EVALUATION ----
+2021-05-30 20:25:54,406 - Model - INFO - eval mean loss: 0.214357
+2021-05-30 20:25:54,406 - Model - INFO - eval point avg class IoU: 0.492905
+2021-05-30 20:25:54,406 - Model - INFO - eval point accuracy: 0.985810
+2021-05-30 20:25:54,406 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:25:54,406 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.014, IoU: 0.986 
+class floor          weight: 0.986, IoU: 0.000 
+
+2021-05-30 20:25:54,406 - Model - INFO - Eval mean loss: 0.214357
+2021-05-30 20:25:54,406 - Model - INFO - Eval accuracy: 0.985810
+2021-05-30 20:25:54,406 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:25:54,406 - Model - INFO - **** Epoch 15 (15/32) ****
+2021-05-30 20:25:54,406 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:30:57,526 - Model - INFO - Training mean loss: 0.200841
+2021-05-30 20:30:57,527 - Model - INFO - Training accuracy: 0.986590
+2021-05-30 20:30:57,557 - Model - INFO - ---- EPOCH 015 EVALUATION ----
+2021-05-30 20:31:29,510 - Model - INFO - eval mean loss: 0.206096
+2021-05-30 20:31:29,510 - Model - INFO - eval point avg class IoU: 0.492888
+2021-05-30 20:31:29,510 - Model - INFO - eval point accuracy: 0.985777
+2021-05-30 20:31:29,511 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:31:29,511 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.014, IoU: 0.986 
+class floor          weight: 0.986, IoU: 0.000 
+
+2021-05-30 20:31:29,511 - Model - INFO - Eval mean loss: 0.206096
+2021-05-30 20:31:29,511 - Model - INFO - Eval accuracy: 0.985777
+2021-05-30 20:31:29,511 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:31:29,511 - Model - INFO - **** Epoch 16 (16/32) ****
+2021-05-30 20:31:29,511 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:36:32,719 - Model - INFO - Training mean loss: 0.200976
+2021-05-30 20:36:32,719 - Model - INFO - Training accuracy: 0.986628
+2021-05-30 20:36:32,719 - Model - INFO - Save model...
+2021-05-30 20:36:32,719 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 20:36:32,769 - Model - INFO - Saving model....
+2021-05-30 20:36:32,798 - Model - INFO - ---- EPOCH 016 EVALUATION ----
+2021-05-30 20:37:04,701 - Model - INFO - eval mean loss: 0.178195
+2021-05-30 20:37:04,701 - Model - INFO - eval point avg class IoU: 0.494595
+2021-05-30 20:37:04,701 - Model - INFO - eval point accuracy: 0.989190
+2021-05-30 20:37:04,701 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:37:04,701 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 20:37:04,701 - Model - INFO - Eval mean loss: 0.178195
+2021-05-30 20:37:04,701 - Model - INFO - Eval accuracy: 0.989190
+2021-05-30 20:37:04,701 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:37:04,701 - Model - INFO - **** Epoch 17 (17/32) ****
+2021-05-30 20:37:04,701 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:42:07,590 - Model - INFO - Training mean loss: 0.199792
+2021-05-30 20:42:07,590 - Model - INFO - Training accuracy: 0.986692
+2021-05-30 20:42:07,619 - Model - INFO - ---- EPOCH 017 EVALUATION ----
+2021-05-30 20:42:39,537 - Model - INFO - eval mean loss: 0.203360
+2021-05-30 20:42:39,537 - Model - INFO - eval point avg class IoU: 0.493661
+2021-05-30 20:42:39,537 - Model - INFO - eval point accuracy: 0.987323
+2021-05-30 20:42:39,537 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:42:39,537 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.013, IoU: 0.987 
+class floor          weight: 0.987, IoU: 0.000 
+
+2021-05-30 20:42:39,537 - Model - INFO - Eval mean loss: 0.203360
+2021-05-30 20:42:39,537 - Model - INFO - Eval accuracy: 0.987323
+2021-05-30 20:42:39,537 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:42:39,537 - Model - INFO - **** Epoch 18 (18/32) ****
+2021-05-30 20:42:39,537 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:47:42,116 - Model - INFO - Training mean loss: 0.199710
+2021-05-30 20:47:42,117 - Model - INFO - Training accuracy: 0.986728
+2021-05-30 20:47:42,146 - Model - INFO - ---- EPOCH 018 EVALUATION ----
+2021-05-30 20:48:14,251 - Model - INFO - eval mean loss: 0.181639
+2021-05-30 20:48:14,251 - Model - INFO - eval point avg class IoU: 0.494378
+2021-05-30 20:48:14,251 - Model - INFO - eval point accuracy: 0.988756
+2021-05-30 20:48:14,251 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:48:14,251 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 20:48:14,251 - Model - INFO - Eval mean loss: 0.181639
+2021-05-30 20:48:14,251 - Model - INFO - Eval accuracy: 0.988756
+2021-05-30 20:48:14,251 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:48:14,251 - Model - INFO - **** Epoch 19 (19/32) ****
+2021-05-30 20:48:14,251 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:53:16,937 - Model - INFO - Training mean loss: 0.199997
+2021-05-30 20:53:16,938 - Model - INFO - Training accuracy: 0.986708
+2021-05-30 20:53:16,970 - Model - INFO - ---- EPOCH 019 EVALUATION ----
+2021-05-30 20:53:49,068 - Model - INFO - eval mean loss: 0.163019
+2021-05-30 20:53:49,068 - Model - INFO - eval point avg class IoU: 0.495287
+2021-05-30 20:53:49,068 - Model - INFO - eval point accuracy: 0.990574
+2021-05-30 20:53:49,068 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:53:49,068 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.009, IoU: 0.991 
+class floor          weight: 0.991, IoU: 0.000 
+
+2021-05-30 20:53:49,068 - Model - INFO - Eval mean loss: 0.163019
+2021-05-30 20:53:49,068 - Model - INFO - Eval accuracy: 0.990574
+2021-05-30 20:53:49,069 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:53:49,069 - Model - INFO - **** Epoch 20 (20/32) ****
+2021-05-30 20:53:49,069 - Model - INFO - Learning rate:0.000700
+2021-05-30 20:58:51,781 - Model - INFO - Training mean loss: 0.200428
+2021-05-30 20:58:51,781 - Model - INFO - Training accuracy: 0.986576
+2021-05-30 20:58:51,813 - Model - INFO - ---- EPOCH 020 EVALUATION ----
+2021-05-30 20:59:23,754 - Model - INFO - eval mean loss: 0.219526
+2021-05-30 20:59:23,754 - Model - INFO - eval point avg class IoU: 0.492449
+2021-05-30 20:59:23,754 - Model - INFO - eval point accuracy: 0.984897
+2021-05-30 20:59:23,754 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 20:59:23,755 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.015, IoU: 0.985 
+class floor          weight: 0.985, IoU: 0.000 
+
+2021-05-30 20:59:23,755 - Model - INFO - Eval mean loss: 0.219526
+2021-05-30 20:59:23,755 - Model - INFO - Eval accuracy: 0.984897
+2021-05-30 20:59:23,755 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 20:59:23,755 - Model - INFO - **** Epoch 21 (21/32) ****
+2021-05-30 20:59:23,755 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:04:26,546 - Model - INFO - Training mean loss: 0.200353
+2021-05-30 21:04:26,547 - Model - INFO - Training accuracy: 0.986549
+2021-05-30 21:04:26,547 - Model - INFO - Save model...
+2021-05-30 21:04:26,547 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 21:04:26,606 - Model - INFO - Saving model....
+2021-05-30 21:04:26,634 - Model - INFO - ---- EPOCH 021 EVALUATION ----
+2021-05-30 21:04:58,637 - Model - INFO - eval mean loss: 0.188960
+2021-05-30 21:04:58,637 - Model - INFO - eval point avg class IoU: 0.494099
+2021-05-30 21:04:58,637 - Model - INFO - eval point accuracy: 0.988198
+2021-05-30 21:04:58,637 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:04:58,637 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.012, IoU: 0.988 
+class floor          weight: 0.988, IoU: 0.000 
+
+2021-05-30 21:04:58,637 - Model - INFO - Eval mean loss: 0.188960
+2021-05-30 21:04:58,638 - Model - INFO - Eval accuracy: 0.988198
+2021-05-30 21:04:58,638 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:04:58,638 - Model - INFO - **** Epoch 22 (22/32) ****
+2021-05-30 21:04:58,638 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:10:01,098 - Model - INFO - Training mean loss: 0.198616
+2021-05-30 21:10:01,098 - Model - INFO - Training accuracy: 0.986722
+2021-05-30 21:10:01,127 - Model - INFO - ---- EPOCH 022 EVALUATION ----
+2021-05-30 21:10:33,229 - Model - INFO - eval mean loss: 0.158470
+2021-05-30 21:10:33,229 - Model - INFO - eval point avg class IoU: 0.495393
+2021-05-30 21:10:33,229 - Model - INFO - eval point accuracy: 0.990785
+2021-05-30 21:10:33,230 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:10:33,230 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.009, IoU: 0.991 
+class floor          weight: 0.991, IoU: 0.000 
+
+2021-05-30 21:10:33,230 - Model - INFO - Eval mean loss: 0.158470
+2021-05-30 21:10:33,230 - Model - INFO - Eval accuracy: 0.990785
+2021-05-30 21:10:33,230 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:10:33,230 - Model - INFO - **** Epoch 23 (23/32) ****
+2021-05-30 21:10:33,230 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:15:35,628 - Model - INFO - Training mean loss: 0.197867
+2021-05-30 21:15:35,629 - Model - INFO - Training accuracy: 0.986775
+2021-05-30 21:15:35,658 - Model - INFO - ---- EPOCH 023 EVALUATION ----
+2021-05-30 21:16:07,908 - Model - INFO - eval mean loss: 0.214493
+2021-05-30 21:16:07,908 - Model - INFO - eval point avg class IoU: 0.492664
+2021-05-30 21:16:07,908 - Model - INFO - eval point accuracy: 0.985328
+2021-05-30 21:16:07,908 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:16:07,908 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.015, IoU: 0.985 
+class floor          weight: 0.985, IoU: 0.000 
+
+2021-05-30 21:16:07,908 - Model - INFO - Eval mean loss: 0.214493
+2021-05-30 21:16:07,909 - Model - INFO - Eval accuracy: 0.985328
+2021-05-30 21:16:07,909 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:16:07,909 - Model - INFO - **** Epoch 24 (24/32) ****
+2021-05-30 21:16:07,909 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:21:10,009 - Model - INFO - Training mean loss: 0.199741
+2021-05-30 21:21:10,009 - Model - INFO - Training accuracy: 0.986555
+2021-05-30 21:21:10,040 - Model - INFO - ---- EPOCH 024 EVALUATION ----
+2021-05-30 21:21:42,066 - Model - INFO - eval mean loss: 0.176220
+2021-05-30 21:21:42,066 - Model - INFO - eval point avg class IoU: 0.494769
+2021-05-30 21:21:42,066 - Model - INFO - eval point accuracy: 0.989538
+2021-05-30 21:21:42,066 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:21:42,066 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 21:21:42,066 - Model - INFO - Eval mean loss: 0.176220
+2021-05-30 21:21:42,067 - Model - INFO - Eval accuracy: 0.989538
+2021-05-30 21:21:42,067 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:21:42,067 - Model - INFO - **** Epoch 25 (25/32) ****
+2021-05-30 21:21:42,067 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:26:44,773 - Model - INFO - Training mean loss: 0.197826
+2021-05-30 21:26:44,773 - Model - INFO - Training accuracy: 0.986800
+2021-05-30 21:26:44,804 - Model - INFO - ---- EPOCH 025 EVALUATION ----
+2021-05-30 21:27:16,801 - Model - INFO - eval mean loss: 0.160561
+2021-05-30 21:27:16,801 - Model - INFO - eval point avg class IoU: 0.495449
+2021-05-30 21:27:16,801 - Model - INFO - eval point accuracy: 0.990898
+2021-05-30 21:27:16,801 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:27:16,801 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.009, IoU: 0.991 
+class floor          weight: 0.991, IoU: 0.000 
+
+2021-05-30 21:27:16,801 - Model - INFO - Eval mean loss: 0.160561
+2021-05-30 21:27:16,801 - Model - INFO - Eval accuracy: 0.990898
+2021-05-30 21:27:16,801 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:27:16,801 - Model - INFO - **** Epoch 26 (26/32) ****
+2021-05-30 21:27:16,801 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:32:18,766 - Model - INFO - Training mean loss: 0.198568
+2021-05-30 21:32:18,766 - Model - INFO - Training accuracy: 0.986680
+2021-05-30 21:32:18,766 - Model - INFO - Save model...
+2021-05-30 21:32:18,766 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 21:32:18,822 - Model - INFO - Saving model....
+2021-05-30 21:32:18,851 - Model - INFO - ---- EPOCH 026 EVALUATION ----
+2021-05-30 21:32:50,729 - Model - INFO - eval mean loss: 0.186463
+2021-05-30 21:32:50,729 - Model - INFO - eval point avg class IoU: 0.494179
+2021-05-30 21:32:50,729 - Model - INFO - eval point accuracy: 0.988357
+2021-05-30 21:32:50,729 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:32:50,729 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.012, IoU: 0.988 
+class floor          weight: 0.988, IoU: 0.000 
+
+2021-05-30 21:32:50,729 - Model - INFO - Eval mean loss: 0.186463
+2021-05-30 21:32:50,730 - Model - INFO - Eval accuracy: 0.988357
+2021-05-30 21:32:50,730 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:32:50,730 - Model - INFO - **** Epoch 27 (27/32) ****
+2021-05-30 21:32:50,730 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:37:53,574 - Model - INFO - Training mean loss: 0.198619
+2021-05-30 21:37:53,574 - Model - INFO - Training accuracy: 0.986681
+2021-05-30 21:37:53,604 - Model - INFO - ---- EPOCH 027 EVALUATION ----
+2021-05-30 21:38:25,575 - Model - INFO - eval mean loss: 0.168771
+2021-05-30 21:38:25,576 - Model - INFO - eval point avg class IoU: 0.495269
+2021-05-30 21:38:25,576 - Model - INFO - eval point accuracy: 0.990537
+2021-05-30 21:38:25,576 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:38:25,576 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.009, IoU: 0.991 
+class floor          weight: 0.991, IoU: 0.000 
+
+2021-05-30 21:38:25,576 - Model - INFO - Eval mean loss: 0.168771
+2021-05-30 21:38:25,576 - Model - INFO - Eval accuracy: 0.990537
+2021-05-30 21:38:25,576 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:38:25,576 - Model - INFO - **** Epoch 28 (28/32) ****
+2021-05-30 21:38:25,576 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:43:28,612 - Model - INFO - Training mean loss: 0.198751
+2021-05-30 21:43:28,612 - Model - INFO - Training accuracy: 0.986616
+2021-05-30 21:43:28,643 - Model - INFO - ---- EPOCH 028 EVALUATION ----
+2021-05-30 21:44:00,593 - Model - INFO - eval mean loss: 0.185483
+2021-05-30 21:44:00,593 - Model - INFO - eval point avg class IoU: 0.494220
+2021-05-30 21:44:00,593 - Model - INFO - eval point accuracy: 0.988441
+2021-05-30 21:44:00,593 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:44:00,594 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.012, IoU: 0.988 
+class floor          weight: 0.988, IoU: 0.000 
+
+2021-05-30 21:44:00,594 - Model - INFO - Eval mean loss: 0.185483
+2021-05-30 21:44:00,594 - Model - INFO - Eval accuracy: 0.988441
+2021-05-30 21:44:00,594 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:44:00,594 - Model - INFO - **** Epoch 29 (29/32) ****
+2021-05-30 21:44:00,594 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:49:03,077 - Model - INFO - Training mean loss: 0.198630
+2021-05-30 21:49:03,077 - Model - INFO - Training accuracy: 0.986664
+2021-05-30 21:49:03,107 - Model - INFO - ---- EPOCH 029 EVALUATION ----
+2021-05-30 21:49:34,987 - Model - INFO - eval mean loss: 0.171946
+2021-05-30 21:49:34,987 - Model - INFO - eval point avg class IoU: 0.495009
+2021-05-30 21:49:34,987 - Model - INFO - eval point accuracy: 0.990017
+2021-05-30 21:49:34,987 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:49:34,987 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 21:49:34,987 - Model - INFO - Eval mean loss: 0.171946
+2021-05-30 21:49:34,987 - Model - INFO - Eval accuracy: 0.990017
+2021-05-30 21:49:34,987 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:49:34,987 - Model - INFO - **** Epoch 30 (30/32) ****
+2021-05-30 21:49:34,987 - Model - INFO - Learning rate:0.000490
+2021-05-30 21:54:38,353 - Model - INFO - Training mean loss: 0.197357
+2021-05-30 21:54:38,353 - Model - INFO - Training accuracy: 0.986753
+2021-05-30 21:54:38,384 - Model - INFO - ---- EPOCH 030 EVALUATION ----
+2021-05-30 21:55:10,448 - Model - INFO - eval mean loss: 0.167950
+2021-05-30 21:55:10,448 - Model - INFO - eval point avg class IoU: 0.494953
+2021-05-30 21:55:10,448 - Model - INFO - eval point accuracy: 0.989905
+2021-05-30 21:55:10,448 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 21:55:10,448 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.010, IoU: 0.990 
+class floor          weight: 0.990, IoU: 0.000 
+
+2021-05-30 21:55:10,448 - Model - INFO - Eval mean loss: 0.167950
+2021-05-30 21:55:10,448 - Model - INFO - Eval accuracy: 0.989905
+2021-05-30 21:55:10,448 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 21:55:10,448 - Model - INFO - **** Epoch 31 (31/32) ****
+2021-05-30 21:55:10,448 - Model - INFO - Learning rate:0.000343
+2021-05-30 22:00:12,747 - Model - INFO - Training mean loss: 0.197472
+2021-05-30 22:00:12,748 - Model - INFO - Training accuracy: 0.986745
+2021-05-30 22:00:12,748 - Model - INFO - Save model...
+2021-05-30 22:00:12,748 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/model.pth
+2021-05-30 22:00:12,793 - Model - INFO - Saving model....
+2021-05-30 22:00:12,823 - Model - INFO - ---- EPOCH 031 EVALUATION ----
+2021-05-30 22:00:45,011 - Model - INFO - eval mean loss: 0.180670
+2021-05-30 22:00:45,012 - Model - INFO - eval point avg class IoU: 0.494392
+2021-05-30 22:00:45,012 - Model - INFO - eval point accuracy: 0.988784
+2021-05-30 22:00:45,012 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 22:00:45,012 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.011, IoU: 0.989 
+class floor          weight: 0.989, IoU: 0.000 
+
+2021-05-30 22:00:45,012 - Model - INFO - Eval mean loss: 0.180670
+2021-05-30 22:00:45,012 - Model - INFO - Eval accuracy: 0.988784
+2021-05-30 22:00:45,012 - Model - INFO - Best mIoU: 0.495541
+2021-05-30 22:00:45,012 - Model - INFO - **** Epoch 32 (32/32) ****
+2021-05-30 22:00:45,012 - Model - INFO - Learning rate:0.000343
+2021-05-30 22:05:47,759 - Model - INFO - Training mean loss: 0.197575
+2021-05-30 22:05:47,759 - Model - INFO - Training accuracy: 0.986727
+2021-05-30 22:05:47,790 - Model - INFO - ---- EPOCH 032 EVALUATION ----
+2021-05-30 22:06:19,817 - Model - INFO - eval mean loss: 0.203901
+2021-05-30 22:06:19,817 - Model - INFO - eval point avg class IoU: 0.493296
+2021-05-30 22:06:19,817 - Model - INFO - eval point accuracy: 0.986592
+2021-05-30 22:06:19,817 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-30 22:06:19,817 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.013, IoU: 0.987 
+class floor          weight: 0.987, IoU: 0.000 
+
+2021-05-30 22:06:19,817 - Model - INFO - Eval mean loss: 0.203901
+2021-05-30 22:06:19,817 - Model - INFO - Eval accuracy: 0.986592
+2021-05-30 22:06:19,817 - Model - INFO - Best mIoU: 0.495541
+2021-05-31 12:05:10,618 - Model - INFO - PARAMETER ...
+2021-05-31 12:05:10,622 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=5)
+2021-05-31 12:06:28,175 - Model - INFO - The number of training data is: 5350
+2021-05-31 12:07:07,973 - Model - INFO - PARAMETER ...
+2021-05-31 12:07:07,973 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=5)
+2021-05-31 12:08:28,572 - Model - INFO - PARAMETER ...
+2021-05-31 12:08:28,572 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-31 12:23:27,395 - Model - INFO - The number of training data is: 4815
+2021-05-31 12:23:27,396 - Model - INFO - The number of test data is: 535
+2021-05-31 12:23:27,556 - Model - INFO - Use pretrain model
+2021-05-31 12:23:27,557 - Model - INFO - **** Epoch 1 (5/32) ****
+2021-05-31 12:23:27,557 - Model - INFO - Learning rate:0.001000
+2021-05-31 12:24:38,752 - Model - INFO - PARAMETER ...
+2021-05-31 12:24:38,752 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)
+2021-05-31 12:24:48,579 - Model - INFO - The number of training data is: 4815
+2021-05-31 12:24:48,579 - Model - INFO - The number of test data is: 535
+2021-05-31 12:24:48,653 - Model - INFO - Use pretrain model
+2021-05-31 12:24:48,655 - Model - INFO - **** Epoch 1 (5/32) ****
+2021-05-31 12:24:48,655 - Model - INFO - Learning rate:0.001000
+2021-05-31 13:56:08,116 - Model - INFO - Training mean loss: 0.204375
+2021-05-31 13:56:14,517 - Model - INFO - Training accuracy: 0.986644
+2021-05-31 14:02:20,729 - Model - INFO - ---- EPOCH 001 EVALUATION ----
+2021-05-31 14:11:33,935 - Model - INFO - eval mean loss: 0.188296
+2021-05-31 14:14:32,918 - Model - INFO - eval point avg class IoU: 0.493921
+2021-05-31 14:14:39,494 - Model - INFO - eval point accuracy: 0.987842
+2021-05-31 14:15:58,027 - Model - INFO - eval point avg class acc: 0.500000
+2021-05-31 14:16:22,928 - Model - INFO - ------- IoU --------
+class ceiling        weight: 0.012, IoU: 0.988 
+class floor          weight: 0.988, IoU: 0.000 
+
+2021-05-31 14:46:28,416 - Model - INFO - Eval mean loss: 0.188296
+2021-05-31 14:46:28,417 - Model - INFO - Eval accuracy: 0.987842
+2021-05-31 14:46:28,417 - Model - INFO - Save model...
+2021-05-31 14:46:28,417 - Model - INFO - Saving at log/sem_seg/pointnet2_sem_seg_church/checkpoints/best_model.pth
+2021-05-31 14:46:28,499 - Model - INFO - Saving model....
+2021-05-31 14:46:28,499 - Model - INFO - Best mIoU: 0.493921
+2021-05-31 14:46:28,500 - Model - INFO - **** Epoch 2 (6/32) ****
+2021-05-31 14:46:28,500 - Model - INFO - Learning rate:0.001000
+2021-05-31 15:16:33,784 - Model - INFO - PARAMETER ...
+2021-05-31 15:16:33,784 - Model - INFO - Namespace(batch_size=16, data_path='church/', decay_rate=0.0001, epoch=32, gpu='0', learning_rate=0.001, log_dir='pointnet2_sem_seg_church', lr_decay=0.7, model='pointnet2_sem_seg', npoint=4096, num_classes=2, optimizer='Adam', step_size=10, test_area=2)

@@ -1,0 +1,477 @@
+2021-05-25 18:54:49,016 - Model - INFO - PARAMETER ...
+2021-05-25 18:54:49,016 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:54:49,016 - Model - INFO - Load dataset ...
+2021-05-25 18:54:50,372 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:54:50,373 - Model - INFO - Start training...
+2021-05-25 18:54:50,373 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:55:12,443 - Model - INFO - PARAMETER ...
+2021-05-25 18:55:12,443 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:55:12,444 - Model - INFO - Load dataset ...
+2021-05-25 18:55:31,552 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:55:31,553 - Model - INFO - Start training...
+2021-05-25 18:55:31,553 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:56:13,874 - Model - INFO - PARAMETER ...
+2021-05-25 18:56:13,874 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:56:13,875 - Model - INFO - Load dataset ...
+2021-05-25 18:56:15,194 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:56:15,195 - Model - INFO - Start training...
+2021-05-25 18:56:20,598 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:57:56,006 - Model - INFO - PARAMETER ...
+2021-05-25 18:57:56,006 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:57:56,006 - Model - INFO - Load dataset ...
+2021-05-25 18:57:57,353 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:57:57,353 - Model - INFO - Start training...
+2021-05-25 18:57:57,353 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:59:12,298 - Model - INFO - PARAMETER ...
+2021-05-25 18:59:12,299 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:59:12,299 - Model - INFO - Load dataset ...
+2021-05-25 18:59:13,667 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:59:13,667 - Model - INFO - Start training...
+2021-05-25 18:59:21,758 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:59:35,560 - Model - INFO - PARAMETER ...
+2021-05-25 18:59:35,560 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:59:35,560 - Model - INFO - Load dataset ...
+2021-05-25 18:59:36,871 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:59:36,872 - Model - INFO - Start training...
+2021-05-25 18:59:39,499 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 18:59:54,821 - Model - INFO - PARAMETER ...
+2021-05-25 18:59:54,821 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 18:59:54,821 - Model - INFO - Load dataset ...
+2021-05-25 18:59:56,128 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 18:59:56,129 - Model - INFO - Start training...
+2021-05-25 18:59:56,129 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 19:00:16,139 - Model - INFO - PARAMETER ...
+2021-05-25 19:00:16,139 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 19:00:16,139 - Model - INFO - Load dataset ...
+2021-05-25 19:00:17,479 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 19:00:17,480 - Model - INFO - Start training...
+2021-05-25 19:00:17,480 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 19:00:23,014 - Model - INFO - PARAMETER ...
+2021-05-25 19:00:23,014 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 19:00:23,014 - Model - INFO - Load dataset ...
+2021-05-25 19:00:24,360 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 19:00:24,362 - Model - INFO - Start training...
+2021-05-25 19:00:29,430 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 19:01:45,083 - Model - INFO - PARAMETER ...
+2021-05-25 19:01:45,083 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 19:01:45,084 - Model - INFO - Load dataset ...
+2021-05-25 19:01:46,408 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 19:01:46,409 - Model - INFO - Start training...
+2021-05-25 19:01:46,409 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 19:01:57,731 - Model - INFO - PARAMETER ...
+2021-05-25 19:01:57,731 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 19:01:57,731 - Model - INFO - Load dataset ...
+2021-05-25 19:01:59,052 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 19:01:59,053 - Model - INFO - Start training...
+2021-05-25 19:01:59,053 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 19:06:35,088 - Model - INFO - PARAMETER ...
+2021-05-25 19:06:35,088 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 19:06:35,088 - Model - INFO - Load dataset ...
+2021-05-25 19:06:36,418 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 19:06:36,419 - Model - INFO - Start training...
+2021-05-25 19:06:36,419 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:18:53,962 - Model - INFO - PARAMETER ...
+2021-05-25 20:18:53,962 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 20:18:53,962 - Model - INFO - Load dataset ...
+2021-05-25 20:18:56,935 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:18:56,936 - Model - INFO - Start training...
+2021-05-25 20:18:56,936 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:27:32,648 - Model - INFO - PARAMETER ...
+2021-05-25 20:27:32,648 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 20:27:32,648 - Model - INFO - Load dataset ...
+2021-05-25 20:27:34,076 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:27:34,077 - Model - INFO - Start training...
+2021-05-25 20:27:34,077 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:29:40,633 - Model - INFO - PARAMETER ...
+2021-05-25 20:29:40,633 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 20:29:40,633 - Model - INFO - Load dataset ...
+2021-05-25 20:29:41,983 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:29:41,984 - Model - INFO - Start training...
+2021-05-25 20:29:41,984 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:29:56,772 - Model - INFO - PARAMETER ...
+2021-05-25 20:29:56,772 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=False)
+2021-05-25 20:29:56,772 - Model - INFO - Load dataset ...
+2021-05-25 20:29:58,108 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:29:58,109 - Model - INFO - Start training...
+2021-05-25 20:29:58,109 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:53:18,440 - Model - INFO - PARAMETER ...
+2021-05-25 20:53:18,440 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 20:53:18,440 - Model - INFO - Load dataset ...
+2021-05-25 20:53:19,749 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:53:19,750 - Model - INFO - Start training...
+2021-05-25 20:53:19,750 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:53:37,885 - Model - INFO - PARAMETER ...
+2021-05-25 20:53:37,887 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 20:53:37,887 - Model - INFO - Load dataset ...
+2021-05-25 20:53:39,305 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:53:39,306 - Model - INFO - Start training...
+2021-05-25 20:53:39,306 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 20:54:10,197 - Model - INFO - PARAMETER ...
+2021-05-25 20:54:10,199 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 20:54:10,199 - Model - INFO - Load dataset ...
+2021-05-25 20:54:12,614 - Model - INFO - PARAMETER ...
+2021-05-25 20:54:12,615 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 20:54:12,615 - Model - INFO - Load dataset ...
+2021-05-25 20:54:14,009 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 20:54:14,010 - Model - INFO - Start training...
+2021-05-25 20:54:14,010 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:00:07,613 - Model - INFO - PARAMETER ...
+2021-05-25 21:00:07,613 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:00:07,613 - Model - INFO - Load dataset ...
+2021-05-25 21:00:08,956 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:00:08,957 - Model - INFO - Start training...
+2021-05-25 21:00:08,957 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:04:00,438 - Model - INFO - PARAMETER ...
+2021-05-25 21:04:00,438 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:04:00,438 - Model - INFO - Load dataset ...
+2021-05-25 21:04:01,766 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:04:01,766 - Model - INFO - Start training...
+2021-05-25 21:04:01,770 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:04:26,134 - Model - INFO - PARAMETER ...
+2021-05-25 21:04:26,134 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:04:26,134 - Model - INFO - Load dataset ...
+2021-05-25 21:04:27,500 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:04:27,501 - Model - INFO - Start training...
+2021-05-25 21:04:27,501 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:08:15,432 - Model - INFO - Train Instance Accuracy: 0.333333
+2021-05-25 21:09:46,475 - Model - INFO - PARAMETER ...
+2021-05-25 21:09:46,475 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:09:46,475 - Model - INFO - Load dataset ...
+2021-05-25 21:09:47,793 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:09:47,794 - Model - INFO - Start training...
+2021-05-25 21:09:47,794 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:18:02,107 - Model - INFO - PARAMETER ...
+2021-05-25 21:18:02,107 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:18:02,107 - Model - INFO - Load dataset ...
+2021-05-25 21:18:07,189 - Model - INFO - PARAMETER ...
+2021-05-25 21:18:07,190 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:18:07,194 - Model - INFO - Load dataset ...
+2021-05-25 21:18:08,540 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:18:08,541 - Model - INFO - Start training...
+2021-05-25 21:18:08,541 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:19:02,596 - Model - INFO - PARAMETER ...
+2021-05-25 21:19:02,596 - Model - INFO - Namespace(batch_size=24, data_path='../../PatrickData/Church/ModelNetFormat', decay_rate=0.0001, epoch=200, gpu='0', learning_rate=0.001, log_dir='pointnet2_cls_ssg_church', model='pointnet2_cls_ssg', num_category=2, num_point=1024, optimizer='Adam', process_data=False, use_cpu=False, use_normals=False, use_uniform_sample=True)
+2021-05-25 21:19:02,596 - Model - INFO - Load dataset ...
+2021-05-25 21:19:03,903 - Model - INFO - No existing model, starting training from scratch...
+2021-05-25 21:19:03,904 - Model - INFO - Start training...
+2021-05-25 21:19:03,904 - Model - INFO - Epoch 1 (1/200):
+2021-05-25 21:28:13,183 - Model - INFO - Train Instance Accuracy: 0.583333
+2021-05-25 21:30:48,944 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:30:48,944 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:30:48,944 - Model - INFO - Save model...
+2021-05-25 21:30:48,944 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 21:30:48,981 - Model - INFO - Epoch 2 (2/200):
+2021-05-25 21:39:53,288 - Model - INFO - Train Instance Accuracy: 0.666667
+2021-05-25 21:42:28,540 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:42:28,540 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:42:28,541 - Model - INFO - Save model...
+2021-05-25 21:42:28,541 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 21:42:28,627 - Model - INFO - Epoch 3 (3/200):
+2021-05-25 21:51:34,504 - Model - INFO - Train Instance Accuracy: 0.680556
+2021-05-25 21:54:09,817 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:54:09,817 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 21:54:09,817 - Model - INFO - Save model...
+2021-05-25 21:54:09,817 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 21:54:09,912 - Model - INFO - Epoch 4 (4/200):
+2021-05-25 22:03:29,425 - Model - INFO - Train Instance Accuracy: 0.736111
+2021-05-25 22:06:04,935 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:06:04,935 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:06:04,935 - Model - INFO - Save model...
+2021-05-25 22:06:04,935 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 22:06:05,023 - Model - INFO - Epoch 5 (5/200):
+2021-05-25 22:15:17,854 - Model - INFO - Train Instance Accuracy: 0.819444
+2021-05-25 22:17:56,029 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:17:56,029 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:17:56,033 - Model - INFO - Save model...
+2021-05-25 22:17:56,033 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 22:17:56,108 - Model - INFO - Epoch 6 (6/200):
+2021-05-25 22:27:42,241 - Model - INFO - Train Instance Accuracy: 0.736111
+2021-05-25 22:30:19,720 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:30:19,721 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:30:19,721 - Model - INFO - Save model...
+2021-05-25 22:30:19,721 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 22:30:19,811 - Model - INFO - Epoch 7 (7/200):
+2021-05-25 22:39:31,523 - Model - INFO - Train Instance Accuracy: 0.777778
+2021-05-25 22:42:08,731 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:42:08,731 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:42:08,731 - Model - INFO - Save model...
+2021-05-25 22:42:08,731 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 22:42:08,822 - Model - INFO - Epoch 8 (8/200):
+2021-05-25 22:51:36,096 - Model - INFO - Train Instance Accuracy: 0.750000
+2021-05-25 22:54:13,307 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:54:13,307 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 22:54:13,307 - Model - INFO - Save model...
+2021-05-25 22:54:13,307 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 22:54:13,395 - Model - INFO - Epoch 9 (9/200):
+2021-05-25 23:03:12,602 - Model - INFO - Train Instance Accuracy: 0.750000
+2021-05-25 23:05:51,445 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:05:51,445 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:05:51,445 - Model - INFO - Save model...
+2021-05-25 23:05:51,445 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 23:05:51,537 - Model - INFO - Epoch 10 (10/200):
+2021-05-25 23:15:24,447 - Model - INFO - Train Instance Accuracy: 0.847222
+2021-05-25 23:18:02,336 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:18:02,337 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:18:02,337 - Model - INFO - Save model...
+2021-05-25 23:18:02,337 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 23:18:02,425 - Model - INFO - Epoch 11 (11/200):
+2021-05-25 23:27:46,200 - Model - INFO - Train Instance Accuracy: 0.861111
+2021-05-25 23:30:23,421 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:30:23,421 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:30:23,421 - Model - INFO - Save model...
+2021-05-25 23:30:23,421 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 23:30:23,513 - Model - INFO - Epoch 12 (12/200):
+2021-05-25 23:39:50,517 - Model - INFO - Train Instance Accuracy: 0.875000
+2021-05-25 23:42:27,848 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:42:27,848 - Model - INFO - Best Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-25 23:42:27,848 - Model - INFO - Save model...
+2021-05-25 23:42:27,848 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 23:42:27,939 - Model - INFO - Epoch 13 (13/200):
+2021-05-25 23:51:40,554 - Model - INFO - Train Instance Accuracy: 0.805556
+2021-05-25 23:54:17,607 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-25 23:54:17,607 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-25 23:54:17,607 - Model - INFO - Save model...
+2021-05-25 23:54:17,607 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-25 23:54:17,682 - Model - INFO - Epoch 14 (14/200):
+2021-05-26 00:03:59,399 - Model - INFO - Train Instance Accuracy: 0.777778
+2021-05-26 00:06:36,323 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 00:06:36,323 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 00:06:36,323 - Model - INFO - Epoch 15 (15/200):
+2021-05-26 00:16:32,797 - Model - INFO - Train Instance Accuracy: 0.888889
+2021-05-26 00:19:10,716 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 00:19:10,716 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 00:19:10,716 - Model - INFO - Epoch 16 (16/200):
+2021-05-26 00:29:08,753 - Model - INFO - Train Instance Accuracy: 0.861111
+2021-05-26 00:31:45,958 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 00:31:45,958 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 00:31:45,958 - Model - INFO - Epoch 17 (17/200):
+2021-05-26 00:41:27,112 - Model - INFO - Train Instance Accuracy: 0.861111
+2021-05-26 00:44:04,306 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 00:44:04,306 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 00:44:04,306 - Model - INFO - Epoch 18 (18/200):
+2021-05-26 00:53:46,494 - Model - INFO - Train Instance Accuracy: 0.875000
+2021-05-26 00:56:23,465 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 00:56:23,465 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 00:56:23,466 - Model - INFO - Epoch 19 (19/200):
+2021-05-26 01:06:05,608 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 01:08:42,626 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 01:08:42,626 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 01:08:42,626 - Model - INFO - Epoch 20 (20/200):
+2021-05-26 01:18:10,366 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 01:20:47,626 - Model - INFO - Test Instance Accuracy: 0.500000, Class Accuracy: 0.500000
+2021-05-26 01:20:47,626 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 01:20:47,626 - Model - INFO - Epoch 21 (21/200):
+2021-05-26 01:30:14,950 - Model - INFO - Train Instance Accuracy: 0.861111
+2021-05-26 01:32:52,154 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 01:32:52,154 - Model - INFO - Best Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 01:32:52,154 - Model - INFO - Save model...
+2021-05-26 01:32:52,154 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 01:32:52,245 - Model - INFO - Epoch 22 (22/200):
+2021-05-26 01:42:19,634 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 01:44:57,435 - Model - INFO - Test Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 01:44:57,435 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 01:44:57,435 - Model - INFO - Save model...
+2021-05-26 01:44:57,435 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 01:44:57,525 - Model - INFO - Epoch 23 (23/200):
+2021-05-26 01:54:40,006 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 01:57:17,059 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 01:57:17,059 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 01:57:17,059 - Model - INFO - Epoch 24 (24/200):
+2021-05-26 02:06:58,779 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 02:09:35,828 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 02:09:35,828 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:09:35,828 - Model - INFO - Epoch 25 (25/200):
+2021-05-26 02:18:32,458 - Model - INFO - Train Instance Accuracy: 0.875000
+2021-05-26 02:21:09,742 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 02:21:09,742 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:21:09,742 - Model - INFO - Epoch 26 (26/200):
+2021-05-26 02:30:52,245 - Model - INFO - Train Instance Accuracy: 0.888889
+2021-05-26 02:33:29,254 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 02:33:29,255 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:33:29,255 - Model - INFO - Epoch 27 (27/200):
+2021-05-26 02:43:13,115 - Model - INFO - Train Instance Accuracy: 0.875000
+2021-05-26 02:45:50,270 - Model - INFO - Test Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:45:50,270 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:45:50,270 - Model - INFO - Save model...
+2021-05-26 02:45:50,270 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 02:45:50,358 - Model - INFO - Epoch 28 (28/200):
+2021-05-26 02:55:20,041 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 02:57:57,270 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 02:57:57,270 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 02:57:57,270 - Model - INFO - Epoch 29 (29/200):
+2021-05-26 03:07:08,731 - Model - INFO - Train Instance Accuracy: 0.888889
+2021-05-26 03:09:45,826 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 03:09:45,826 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 03:09:45,826 - Model - INFO - Epoch 30 (30/200):
+2021-05-26 03:19:42,606 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 03:22:19,767 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 03:22:19,767 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 03:22:19,767 - Model - INFO - Epoch 31 (31/200):
+2021-05-26 03:31:46,277 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 03:34:23,577 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 03:34:23,577 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 03:34:23,577 - Model - INFO - Epoch 32 (32/200):
+2021-05-26 03:43:48,538 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 03:46:24,066 - Model - INFO - Test Instance Accuracy: 0.600000, Class Accuracy: 0.600000
+2021-05-26 03:46:24,066 - Model - INFO - Best Instance Accuracy: 0.650000, Class Accuracy: 0.650000
+2021-05-26 03:46:24,066 - Model - INFO - Epoch 33 (33/200):
+2021-05-26 03:55:44,942 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 03:58:20,025 - Model - INFO - Test Instance Accuracy: 0.750000, Class Accuracy: 0.750000
+2021-05-26 03:58:20,025 - Model - INFO - Best Instance Accuracy: 0.750000, Class Accuracy: 0.750000
+2021-05-26 03:58:20,025 - Model - INFO - Save model...
+2021-05-26 03:58:20,025 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 03:58:20,114 - Model - INFO - Epoch 34 (34/200):
+2021-05-26 04:08:11,341 - Model - INFO - Train Instance Accuracy: 0.875000
+2021-05-26 04:10:46,803 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:10:46,803 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:10:46,803 - Model - INFO - Save model...
+2021-05-26 04:10:46,803 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 04:10:46,880 - Model - INFO - Epoch 35 (35/200):
+2021-05-26 04:19:51,752 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 04:22:26,857 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 04:22:26,857 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:22:26,857 - Model - INFO - Epoch 36 (36/200):
+2021-05-26 04:31:16,172 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 04:33:51,574 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 04:33:51,574 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:33:51,574 - Model - INFO - Epoch 37 (37/200):
+2021-05-26 04:43:46,040 - Model - INFO - Train Instance Accuracy: 0.930556
+2021-05-26 04:46:22,411 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 04:46:22,411 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:46:22,411 - Model - INFO - Epoch 38 (38/200):
+2021-05-26 04:56:14,297 - Model - INFO - Train Instance Accuracy: 0.888889
+2021-05-26 04:58:49,553 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 04:58:49,553 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 04:58:49,553 - Model - INFO - Epoch 39 (39/200):
+2021-05-26 05:08:24,803 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 05:11:00,272 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 05:11:00,272 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 05:11:00,273 - Model - INFO - Epoch 40 (40/200):
+2021-05-26 05:20:04,470 - Model - INFO - Train Instance Accuracy: 0.930556
+2021-05-26 05:22:40,674 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 05:22:40,675 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 05:22:40,675 - Model - INFO - Epoch 41 (41/200):
+2021-05-26 05:32:44,042 - Model - INFO - Train Instance Accuracy: 0.861111
+2021-05-26 05:35:19,037 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 05:35:19,037 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 05:35:19,037 - Model - INFO - Epoch 42 (42/200):
+2021-05-26 05:45:08,494 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 05:47:44,551 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 05:47:44,551 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 05:47:44,551 - Model - INFO - Epoch 43 (43/200):
+2021-05-26 05:57:03,195 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 05:59:38,037 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 05:59:38,037 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 05:59:38,037 - Model - INFO - Epoch 44 (44/200):
+2021-05-26 06:09:28,067 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 06:12:03,311 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 06:12:03,311 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 06:12:03,312 - Model - INFO - Epoch 45 (45/200):
+2021-05-26 06:21:23,773 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 06:23:59,023 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 06:23:59,023 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 06:23:59,023 - Model - INFO - Epoch 46 (46/200):
+2021-05-26 06:33:21,016 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 06:35:56,182 - Model - INFO - Test Instance Accuracy: 0.750000, Class Accuracy: 0.750000
+2021-05-26 06:35:56,182 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 06:35:56,182 - Model - INFO - Epoch 47 (47/200):
+2021-05-26 06:45:00,706 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 06:47:35,980 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 06:47:35,980 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 06:47:35,984 - Model - INFO - Epoch 48 (48/200):
+2021-05-26 06:57:26,712 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 07:00:01,990 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 07:00:01,990 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:00:01,990 - Model - INFO - Epoch 49 (49/200):
+2021-05-26 07:09:22,215 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 07:11:57,292 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 07:11:57,292 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:11:57,293 - Model - INFO - Epoch 50 (50/200):
+2021-05-26 07:20:47,137 - Model - INFO - Train Instance Accuracy: 0.972222
+2021-05-26 07:23:22,418 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 07:23:22,418 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:23:22,418 - Model - INFO - Epoch 51 (51/200):
+2021-05-26 07:32:27,624 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 07:35:03,012 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 07:35:03,012 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:35:03,012 - Model - INFO - Epoch 52 (52/200):
+2021-05-26 07:44:37,860 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 07:47:13,061 - Model - INFO - Test Instance Accuracy: 0.850000, Class Accuracy: 0.850000
+2021-05-26 07:47:13,061 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:47:13,061 - Model - INFO - Epoch 53 (53/200):
+2021-05-26 07:56:36,886 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 07:59:13,245 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:59:13,245 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 07:59:13,245 - Model - INFO - Save model...
+2021-05-26 07:59:13,245 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 07:59:13,338 - Model - INFO - Epoch 54 (54/200):
+2021-05-26 08:08:21,763 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 08:10:58,160 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:10:58,160 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:10:58,160 - Model - INFO - Save model...
+2021-05-26 08:10:58,160 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 08:10:58,234 - Model - INFO - Epoch 55 (55/200):
+2021-05-26 08:20:37,158 - Model - INFO - Train Instance Accuracy: 0.902778
+2021-05-26 08:23:12,388 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:23:12,389 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:23:12,389 - Model - INFO - Save model...
+2021-05-26 08:23:12,389 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 08:23:12,459 - Model - INFO - Epoch 56 (56/200):
+2021-05-26 08:32:19,593 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 08:34:55,896 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:34:55,896 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:34:55,896 - Model - INFO - Save model...
+2021-05-26 08:34:55,896 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 08:34:55,962 - Model - INFO - Epoch 57 (57/200):
+2021-05-26 08:44:16,469 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 08:46:51,756 - Model - INFO - Test Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:46:51,756 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:46:51,756 - Model - INFO - Save model...
+2021-05-26 08:46:51,756 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 08:46:51,848 - Model - INFO - Epoch 58 (58/200):
+2021-05-26 08:56:27,394 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 08:59:02,675 - Model - INFO - Test Instance Accuracy: 0.800000, Class Accuracy: 0.800000
+2021-05-26 08:59:02,675 - Model - INFO - Best Instance Accuracy: 0.900000, Class Accuracy: 0.900000
+2021-05-26 08:59:02,675 - Model - INFO - Epoch 59 (59/200):
+2021-05-26 09:07:53,325 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 09:10:28,646 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:10:28,646 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:10:28,646 - Model - INFO - Save model...
+2021-05-26 09:10:28,646 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 09:10:28,724 - Model - INFO - Epoch 60 (60/200):
+2021-05-26 09:20:36,301 - Model - INFO - Train Instance Accuracy: 0.958333
+2021-05-26 09:23:12,021 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:23:12,021 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:23:12,021 - Model - INFO - Save model...
+2021-05-26 09:23:12,021 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 09:23:12,113 - Model - INFO - Epoch 61 (61/200):
+2021-05-26 09:32:47,982 - Model - INFO - Train Instance Accuracy: 0.930556
+2021-05-26 09:35:23,591 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:35:23,591 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:35:23,591 - Model - INFO - Save model...
+2021-05-26 09:35:23,591 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 09:35:23,665 - Model - INFO - Epoch 62 (62/200):
+2021-05-26 09:45:13,983 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 09:47:48,846 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:47:48,846 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:47:48,846 - Model - INFO - Save model...
+2021-05-26 09:47:48,846 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 09:47:48,933 - Model - INFO - Epoch 63 (63/200):
+2021-05-26 09:57:23,161 - Model - INFO - Train Instance Accuracy: 0.972222
+2021-05-26 09:59:57,967 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:59:57,968 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 09:59:57,968 - Model - INFO - Save model...
+2021-05-26 09:59:57,968 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 09:59:58,061 - Model - INFO - Epoch 64 (64/200):
+2021-05-26 10:09:33,805 - Model - INFO - Train Instance Accuracy: 0.944444
+2021-05-26 10:12:09,473 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 10:12:09,473 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 10:12:09,473 - Model - INFO - Save model...
+2021-05-26 10:12:09,474 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 10:12:09,568 - Model - INFO - Epoch 65 (65/200):
+2021-05-26 10:21:28,254 - Model - INFO - Train Instance Accuracy: 0.916667
+2021-05-26 10:24:03,234 - Model - INFO - Test Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 10:24:03,234 - Model - INFO - Best Instance Accuracy: 0.950000, Class Accuracy: 0.950000
+2021-05-26 10:24:03,234 - Model - INFO - Save model...
+2021-05-26 10:24:03,234 - Model - INFO - Saving at log/classification/pointnet2_cls_ssg_church/checkpoints/best_model.pth
+2021-05-26 10:24:03,321 - Model - INFO - Epoch 66 (66/200):
