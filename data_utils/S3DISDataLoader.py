@@ -57,16 +57,30 @@ class S3DISDataset(Dataset):
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
     def __getitem__(self, idx):
+        """
+        Given a room ID returns self.num_point points, labels
+        Args:
+            idx ():
+
+        Returns: points (Translated XY, Z, IGB/255, XYZ/max(room_XYZ)), labels
+
+        """
         room_idx = self.room_idxs[idx]
         points = self.room_points[room_idx]   # N * 6
         labels = self.room_labels[room_idx]   # N
         N_points = points.shape[0]
-
+        print(f"DEBUG: labelHist = {np.histogram(labels,[0,1,2])}")
+        print(f"DEBUG: AvailablePoints/numPoints = {labels.size}/{self.num_point}={labels.size/self.num_point}")
+        # TODO more even class sampling, maybe
+        # DEBUG: v = pptk.viewer(points[:,:3],labels)
         while (True):  # Repeat until there are at least 1024 point_idxs selected
             center = points[np.random.choice(N_points)][:3]  # Pick random point as center
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]  # Get a square column (z=0) of size block_size
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
             point_idxs = np.where((points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
+            print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0,1,2])}')
+            # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
+
             if point_idxs.size > 1024:
                 break
 
@@ -74,6 +88,8 @@ class S3DISDataset(Dataset):
             selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
         else:
             selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=True)
+
+        print(f"DEBUG: Selected_labelHist = {np.histogram(labels[selected_point_idxs], [0, 1, 2])}")
 
         # normalize
         selected_points = points[selected_point_idxs, :]  # num_point * 6
@@ -83,7 +99,7 @@ class S3DISDataset(Dataset):
         current_points[:, 8] = selected_points[:, 2] / self.room_coord_max[room_idx][2]
         selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
         selected_points[:, 1] = selected_points[:, 1] - center[1]
-        selected_points[:, 3:6] /= 255.0
+        # selected_points[:, 3:6] /= 255.0 #TODO Fix this
         current_points[:, 0:6] = selected_points  # Translated XY, Z, IGB/255, XYZ/max(room_XYZ)
         current_labels = labels[selected_point_idxs]
         if self.transform is not None:

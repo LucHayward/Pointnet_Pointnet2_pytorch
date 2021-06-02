@@ -17,6 +17,8 @@ import provider
 import numpy as np
 import time
 
+import wandb
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -29,10 +31,12 @@ seg_label_to_cat = {}
 for i, cat in enumerate(seg_classes.keys()):
     seg_label_to_cat[i] = cat
 
+
 def inplace_relu(m):
     classname = m.__class__.__name__
     if classname.find('ReLU') != -1:
-        m.inplace=True
+        m.inplace = True
+
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
@@ -99,11 +103,15 @@ def main(args):
     NUM_CLASSES = args.num_classes
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
-    if NUM_CLASSES ==2: classes = ['keep', 'discard'];
+    if NUM_CLASSES == 2:
+        global classes
+        classes = ['keep', 'discard']
     print("start loading training data ...")
-    TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
+    TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
+                                 block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
     print("start loading test data ...")
-    TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area, block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
+    TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
+                                block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
 
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                                                   pin_memory=True, drop_last=True,
@@ -114,6 +122,8 @@ def main(args):
 
     log_string("The number of training data is: %d" % len(TRAIN_DATASET))
     log_string("The number of test data is: %d" % len(TEST_DATASET))
+    wandb.log({'num_training_data': len(TRAIN_DATASET),
+               'num_test-data': len(TEST_DATASET)})
 
     '''MODEL LOADING'''
     MODEL = importlib.import_module(args.model)
@@ -123,6 +133,8 @@ def main(args):
     classifier = MODEL.get_model(NUM_CLASSES).cuda()
     criterion = MODEL.get_loss().cuda()
     classifier.apply(inplace_relu)
+
+    wandb.watch(classifier, criterion, log="all", log_freq=10)
 
     def weights_init(m):
         classname = m.__class__.__name__
@@ -166,17 +178,22 @@ def main(args):
     global_epoch = 0
     best_iou = 0
 
+    training_examples_seen = 0
     for epoch in range(start_epoch, args.epoch):
         '''Train on chopped scenes'''
         log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
+        # wandb.log({'lr': lr}, step=epoch)
+
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
+        # wandb.log({'bn_momentum': momentum}, step=epoch)
+
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
         num_batches = len(trainDataLoader)
         total_correct = 0
@@ -188,7 +205,8 @@ def main(args):
             optimizer.zero_grad()
             # Points: Translated XY, Z, IGB/255, XYZ/max(room_XYZ)
             points = points.data.numpy()
-            points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])  # CHECK Should we be augmenting? I think it helps the model be more robust
+            points[:, :, :3] = provider.rotate_point_cloud_z(
+                points[:, :, :3])  # CHECK Should we be augmenting? I think it helps the model be more robust
             points = torch.Tensor(points)
             points, target = points.float().cuda(), target.long().cuda()
             points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points
@@ -209,6 +227,8 @@ def main(args):
             loss_sum += loss
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
+        # wandb.log({'mean_loss': (loss_sum / num_batches),
+        #            'accuracy': (total_correct / float(total_seen))}, step=epoch)
 
         if epoch % 5 == 0:
             logger.info('Save model...')
@@ -221,6 +241,7 @@ def main(args):
             }
             torch.save(state, savepath)
             log_string('Saving model....')
+            # torch.onnx.export(classifier)
 
         '''Evaluate on chopped scenes'''
         with torch.no_grad():
@@ -262,12 +283,18 @@ def main(args):
                     total_iou_denominator_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
 
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
-            mIoU = np.mean(np.array(total_correct_class) / (np.array(total_iou_denominator_class, dtype=np.float) + 1e-6))
+            mIoU = np.mean(
+                np.array(total_correct_class) / (np.array(total_iou_denominator_class, dtype=np.float) + 1e-6))
             log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
             log_string('eval point avg class IoU: %f' % (mIoU))
             log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
             log_string('eval point avg class acc: %f' % (
                 np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
+            wandb.log({'mIoU': mIoU}, sync=False)
+            # wandb.log({'eval_mean_loss': (loss_sum / float(num_batches)),
+            #            'eval_point_mIoU': mIoU,
+            #            'eval_point_accuracy': (total_correct / float(total_seen)),
+            #            'eval_point_avg_class_accuracy': np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))}, step=epoch)
 
             iou_per_class_str = '------- IoU --------\n'
             for l in range(NUM_CLASSES):
@@ -278,6 +305,8 @@ def main(args):
             log_string(iou_per_class_str)
             log_string('Eval mean loss: %f' % (loss_sum / num_batches))
             log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
+            # wandb.log({'eval_mean_loss': (loss_sum / num_batches),
+            #            'eval_accuracy': total_correct / float(total_seen)}, step=epoch)
 
             if mIoU >= best_iou:
                 best_iou = mIoU
@@ -294,8 +323,16 @@ def main(args):
                 log_string('Saving model....')
             log_string('Best mIoU: %f' % best_iou)
         global_epoch += 1
+        wandb.log({'lr': lr,
+                   'bn_momentum': momentum,
+                   'mean_loss': (loss_sum / num_batches),
+                   'accuracy': (total_correct / float(total_seen)),
+                   'eval_mean_loss': (loss_sum / num_batches),
+                   'eval_accuracy': total_correct / float(total_seen)
+                   })
 
 
 if __name__ == '__main__':
     args = parse_args()
+    wandb.init(project="PointNet2-Pytorch", config=args)
     main(args)
