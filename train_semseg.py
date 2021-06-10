@@ -53,8 +53,7 @@ def parse_args():
     parser.add_argument('--lr_decay', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
     parser.add_argument('--test_area', type=int, default=5, help='Which area to use for test, option: 1-6 [default: 5]')
     parser.add_argument('--num_classes', type=int, default=13, help='number of class_labels [default: 13]')
-    # parser.add_argument('--meta_path', default='meta/',
-    #                     help='Path to meta folder containing class and anno_paths')  # TODO could move this to PatrickData
+    parser.add_argument('--block_size', default=1.0, type=float, help='column size for sampling (tbc)')
     parser.add_argument('--data_path', default=None,
                         help='If data path needs to change, set it here. Should point to data root')
 
@@ -65,6 +64,16 @@ def main(args):
     def log_string(str):
         logger.info(str)
         print(str)
+
+
+    if args.num_classes == 2:
+        global classes, class2label, seg_classes, seg_label_to_cat
+        classes = ['keep, discard']
+        class2label = {cls: i for i, cls in enumerate(classes)}
+        seg_classes = class2label
+        seg_label_to_cat = {}
+        for i, cat in enumerate(seg_classes.keys()):
+            seg_label_to_cat[i] = cat
 
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -103,12 +112,10 @@ def main(args):
     NUM_CLASSES = args.num_classes
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
-    if NUM_CLASSES == 2:
-        global classes
-        classes = ['keep', 'discard']
+    
     print("start loading training data ...")
     TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
-                                 block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
+                                 block_size=args.block_size, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
     print("start loading test data ...")
     TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
                                 block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
