@@ -191,7 +191,7 @@ def main(args):
         log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
-        # wandb.log({'lr': lr}, step=epoch)
+        wandb.log({'lr': lr}, sync=False)
 
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
@@ -199,7 +199,7 @@ def main(args):
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
-        # wandb.log({'bn_momentum': momentum}, step=epoch)
+        wandb.log({'bn_momentum': momentum}, sync=False)
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
         num_batches = len(trainDataLoader)
@@ -226,7 +226,7 @@ def main(args):
             loss = criterion(seg_pred, target, trans_feat, weights)
             loss.backward()
             optimizer.step()
-
+# TODO: check this
             pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
             correct = np.sum(pred_choice == batch_label)
             total_correct += correct
@@ -234,8 +234,8 @@ def main(args):
             loss_sum += loss
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
-        # wandb.log({'mean_loss': (loss_sum / num_batches),
-        #            'accuracy': (total_correct / float(total_seen))}, step=epoch)
+        wandb.log({'mean_loss': (loss_sum / num_batches),
+                   'accuracy': (total_correct / float(total_seen))}, sync=False)
 
         if epoch % 5 == 0:
             logger.info('Save model...')
@@ -285,35 +285,35 @@ def main(args):
                 labelweights += tmp
 
                 for l in range(NUM_CLASSES):
-                    total_seen_class[l] += np.sum((batch_label == l))
-                    total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))
-                    total_iou_denominator_class[l] += np.sum(((pred_val == l) | (batch_label == l)))
-
+                    total_seen_class[l] += np.sum((batch_label == l))  # How many times the label was in the batch
+                    total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))  # How often the predicted label was correct in the batch
+                    total_iou_denominator_class[l] += np.sum(((pred_val == l) | (batch_label == l)))  # Union prediction of class (right or wrong) and actual class occurrences.
+# TODO: check this
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
             mIoU = np.mean(
                 np.array(total_correct_class) / (np.array(total_iou_denominator_class, dtype=np.float) + 1e-6))
-            log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
+            eval_mean_loss = (loss_sum / float(num_batches))
+            eval_point_accuracy = (total_correct / float(total_seen))
+            eval_point_avg_class_accuracy = np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))
+            log_string('eval mean loss: %f' % eval_mean_loss)
             log_string('eval point avg class IoU: %f' % (mIoU))
-            log_string('eval point accuracy: %f' % (total_correct / float(total_seen)))
-            log_string('eval point avg class acc: %f' % (
-                np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))))
-            wandb.log({'mIoU': mIoU}, sync=False)
-            # wandb.log({'eval_mean_loss': (loss_sum / float(num_batches)),
-            #            'eval_point_mIoU': mIoU,
-            #            'eval_point_accuracy': (total_correct / float(total_seen)),
-            #            'eval_point_avg_class_accuracy': np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))}, step=epoch)
+            log_string('eval point accuracy: %f' % eval_point_accuracy)
+            log_string('eval point avg class acc: %f' % eval_point_avg_class_accuracy)
+            
+            wandb.log({'eval_mean_loss': eval_mean_loss,
+                       'eval_point_mIoU': mIoU,
+                       'eval_point_accuracy': eval_point_accuracy,
+                       'eval_point_avg_class_accuracy': eval_point_avg_class_accuracy}, sync=False)
 
             iou_per_class_str = '------- IoU --------\n'
             for l in range(NUM_CLASSES):
                 iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
                     seg_label_to_cat[l] + ' ' * (14 - len(seg_label_to_cat[l])), labelweights[l - 1],
-                    total_correct_class[l] / float(total_iou_denominator_class[l]))
+                    total_correct_class[l] / float(total_iou_denominator_class[l]))            
 
             log_string(iou_per_class_str)
-            log_string('Eval mean loss: %f' % (loss_sum / num_batches))
-            log_string('Eval accuracy: %f' % (total_correct / float(total_seen)))
-            # wandb.log({'eval_mean_loss': (loss_sum / num_batches),
-            #            'eval_accuracy': total_correct / float(total_seen)}, step=epoch)
+            log_string('Eval mean loss: %f' % eval_mean_loss)
+            log_string('Eval accuracy: %f' % eval_point_accuracy)
 
             if mIoU >= best_iou:
                 best_iou = mIoU
@@ -330,13 +330,7 @@ def main(args):
                 log_string('Saving model....')
             log_string('Best mIoU: %f' % best_iou)
         global_epoch += 1
-        wandb.log({'lr': lr,
-                   'bn_momentum': momentum,
-                   'mean_loss': (loss_sum / num_batches),
-                   'accuracy': (total_correct / float(total_seen)),
-                   'eval_mean_loss': (loss_sum / num_batches),
-                   'eval_accuracy': total_correct / float(total_seen)
-                   })
+        wandb.log()
 
 
 if __name__ == '__main__':
