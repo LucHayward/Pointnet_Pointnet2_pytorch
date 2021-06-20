@@ -38,6 +38,10 @@ def parse_args():
     parser.add_argument('--visual', action='store_true', default=False, help='visualize result [default: False]')
     parser.add_argument('--test_area', type=int, default=5, help='area for testing, option: 1-6 [default: 5]')
     parser.add_argument('--num_votes', type=int, default=3, help='aggregate segmentation scores with voting [default: 5]')
+    parser.add_argument('--num_classes', type=int, default=13, help='number of class_labels [default: 13]')
+    parser.add_argument('--data_path', default=None,
+                        help='If data path needs to change, set it here. Should point to data root')
+
     return parser.parse_args()
 
 
@@ -75,13 +79,15 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    NUM_CLASSES = 13
+    NUM_CLASSES = args.num_classes
     BATCH_SIZE = args.batch_size
     NUM_POINT = args.num_point
 
     root = 'data/s3dis/stanford_indoor3d/'
+    if args.data_path is not None:
+        root = f'data/s3dis/{args.data_path}'
 
-    TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT)
+    TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT, num_classes=NUM_CLASSES)
     log_string("The number of test data is: %d" % len(TEST_DATASET_WHOLE_SCENE))
 
     '''MODEL LOADING'''

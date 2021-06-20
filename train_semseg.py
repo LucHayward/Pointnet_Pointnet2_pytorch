@@ -119,6 +119,14 @@ def main(args):
     print("start loading test data ...")
     TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
                                 block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
+    # DEBUG
+    # import pptk
+    # all_points = [p for sublist in TRAIN_DATASET.room_points for p in sublist]
+    # all_labels = [p for sublist in TRAIN_DATASET.room_labels for p in sublist]
+    # all_labels = np.array(all_labels)
+    # all_points = np.array(all_points)
+    # current_points, current_labels = TRAIN_DATASET.room_points[0], TRAIN_DATASET.room_labels[0]
+    # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                                                   pin_memory=True, drop_last=True,
@@ -299,7 +307,7 @@ def main(args):
             log_string('eval point avg class IoU: %f' % (mIoU))
             log_string('eval point accuracy: %f' % eval_point_accuracy)
             log_string('eval point avg class acc: %f' % eval_point_avg_class_accuracy)
-            
+
             wandb.log({'eval_mean_loss': eval_mean_loss,
                        'eval_point_mIoU': mIoU,
                        'eval_point_accuracy': eval_point_accuracy,
@@ -309,7 +317,7 @@ def main(args):
             for l in range(NUM_CLASSES):
                 iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
                     seg_label_to_cat[l] + ' ' * (14 - len(seg_label_to_cat[l])), labelweights[l - 1],
-                    total_correct_class[l] / float(total_iou_denominator_class[l]))            
+                    total_correct_class[l] / float(total_iou_denominator_class[l]))
 
             log_string(iou_per_class_str)
             log_string('Eval mean loss: %f' % eval_mean_loss)
@@ -335,5 +343,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    wandb.init(project="PointNet2-Pytorch", config=args)
+    wandb.init(project="PointNet2-Pytorch", config=args, name="Stanford_NoArea")
     main(args)

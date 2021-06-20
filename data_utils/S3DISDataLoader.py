@@ -23,6 +23,7 @@ class S3DISDataset(Dataset):
         self.num_point = num_point
         self.block_size = block_size
         self.transform = transform
+        self.num_classes = num_classes
         rooms = sorted(os.listdir(data_root))
         rooms = [room for room in rooms if 'Area_' in room]
         if split == 'train':
@@ -70,25 +71,24 @@ class S3DISDataset(Dataset):
         points = self.room_points[room_idx]  # N * 6
         labels = self.room_labels[room_idx]  # N
         N_points = points.shape[0]
-        print(f"DEBUG: labelHist = {np.histogram(labels, [0, 1, 2])}")
-        print(f"DEBUG: AvailablePoints/numPoints = {labels.size}/{self.num_point}={labels.size / self.num_point}")
+        # print(f"DEBUG: labelHist = {np.histogram(labels, [0, 1, 2])}")
+        # print(f"DEBUG: AvailablePoints/numPoints = {labels.size}/{self.num_point}={labels.size / self.num_point}")
         # TODO more even class sampling, maybe
         # DEBUG: v = pptk.viewer(points[:,:3],labels)
         while (True):  # Repeat until there are at least 1024 point_idxs selected
-            if sum(labels) > 0:
+            if self.num_classes == 2 and sum(labels) > 0:
                 while True:  # TODO fix this too
                     center_idx = np.random.choice(N_points, p=labels/sum(labels))
                     if labels[center_idx] == 1: break
             else:
                 center_idx = np.random.choice(N_points)
             center = points[center_idx][:3]  # Pick random point as center
-            block_min = center - [self.block_size / 2.0, self.block_size / 2.0,
-                                  0]  # Get a square column (z=0) of size block_size
+            block_min = center - [self.block_size / 2.0, self.block_size / 2.0,0]  # Get a square column (z=0) of size block_size
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
             point_idxs = np.where(
                 (points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (
                         points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
-            print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
+            # print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
             # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
 
             if point_idxs.size > 1024:
@@ -96,19 +96,21 @@ class S3DISDataset(Dataset):
 
         if point_idxs.size >= self.num_point:  # Select points from the point_idxs up until self.num_point, with replacement if necessary\
             # TODO Fix this shit
-            discard_point_idxs = [p for p in point_idxs if labels[p] == 1]
-            keep_point_idxs = [p for p in point_idxs if labels[p] == 0]
-            if len(discard_point_idxs) >= self.num_point//2 and len(keep_point_idxs) >= self.num_point//2:
-                selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point//2, replace=False),np.random.choice(keep_point_idxs, self.num_point//2, replace=False)))
-            elif len(keep_point_idxs) <= self.num_point//2:
-                selected_point_idxs = np.concatenate((np.array(keep_point_idxs), np.random.choice(discard_point_idxs, self.num_point-len(keep_point_idxs), replace=False)))
+            if self.num_classes == 2:
+                discard_point_idxs = [p for p in point_idxs if labels[p] == 1]
+                keep_point_idxs = [p for p in point_idxs if labels[p] == 0]
+                if len(discard_point_idxs) >= self.num_point//2 and len(keep_point_idxs) >= self.num_point//2:
+                    selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point//2, replace=False),np.random.choice(keep_point_idxs, self.num_point//2, replace=False)))
+                elif len(keep_point_idxs) <= self.num_point//2:
+                    selected_point_idxs = np.concatenate((np.array(keep_point_idxs), np.random.choice(discard_point_idxs, self.num_point-len(keep_point_idxs), replace=False)))
+                else:
+                    selected_point_idxs = np.concatenate((np.array(discard_point_idxs), np.random.choice(keep_point_idxs, self.num_point-len(discard_point_idxs), replace=False)))
             else:
-                selected_point_idxs = np.concatenate((np.array(discard_point_idxs), np.random.choice(keep_point_idxs, self.num_point-len(discard_point_idxs), replace=False)))
-            # selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
+                selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
         else:
             selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=True)
 
-        print(f"DEBUG: Selected_labelHist = {np.histogram(labels[selected_point_idxs], [0, 1, 2])}")
+        # print(f"DEBUG: Selected_labelHist = {np.histogram(labels[selected_point_idxs], [0, 1, 2])}")
 
         # normalize
         selected_points = points[selected_point_idxs, :]  # num_point * 6
@@ -132,7 +134,7 @@ class S3DISDataset(Dataset):
 
 class ScannetDatasetWholeScene():
     # prepare to give prediction on each points
-    def __init__(self, root, block_points=4096, split='test', test_area=5, stride=0.5, block_size=1.0, padding=0.001):
+    def __init__(self, root, block_points=4096, split='test', test_area=5, stride=0.5, block_size=1.0, padding=0.001, num_classes=13):
         self.block_points = block_points
         self.block_size = block_size
         self.padding = padding
@@ -157,13 +159,15 @@ class ScannetDatasetWholeScene():
             self.room_coord_min.append(coord_min), self.room_coord_max.append(coord_max)
         assert len(self.scene_points_list) == len(self.semantic_labels_list)
 
-        labelweights = np.zeros(13)
+        labelweights = np.zeros(num_classes)
         for seg in self.semantic_labels_list:
-            tmp, _ = np.histogram(seg, range(14))
+            tmp, _ = np.histogram(seg, range(num_classes+1))
+            # print(f"DEBUG: Loading data seg with hist = {tmp}")
             self.scene_points_num.append(seg.shape[0])
             labelweights += tmp
         labelweights = labelweights.astype(np.float32)
         labelweights = labelweights / np.sum(labelweights)
+        # print(f"DEBUG: labelweights = {labelweights}")
         self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0)
 
     def __getitem__(self, index):
