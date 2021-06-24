@@ -65,10 +65,9 @@ def main(args):
         logger.info(str)
         print(str)
 
-
     if args.num_classes == 2:
         global classes, class2label, seg_classes, seg_label_to_cat
-        classes = ['keep, discard']
+        classes = ['keep', 'discard']
         class2label = {cls: i for i, cls in enumerate(classes)}
         seg_classes = class2label
         seg_label_to_cat = {}
@@ -112,7 +111,7 @@ def main(args):
     NUM_CLASSES = args.num_classes
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
-    
+
     print("start loading training data ...")
     TRAIN_DATASET = S3DISDataset(split='train', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
                                  block_size=args.block_size, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
@@ -217,6 +216,7 @@ def main(args):
         classifier = classifier.train()
 
         for i, (points, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
+            # print(i)
             optimizer.zero_grad()
             # Points: Translated XY, Z, IGB/255, XYZ/max(room_XYZ)
             points = points.data.numpy()
@@ -234,7 +234,7 @@ def main(args):
             loss = criterion(seg_pred, target, trans_feat, weights)
             loss.backward()
             optimizer.step()
-# TODO: check this
+            # TODO: check this
             pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
             correct = np.sum(pred_choice == batch_label)
             total_correct += correct
@@ -294,15 +294,18 @@ def main(args):
 
                 for l in range(NUM_CLASSES):
                     total_seen_class[l] += np.sum((batch_label == l))  # How many times the label was in the batch
-                    total_correct_class[l] += np.sum((pred_val == l) & (batch_label == l))  # How often the predicted label was correct in the batch
-                    total_iou_denominator_class[l] += np.sum(((pred_val == l) | (batch_label == l)))  # Union prediction of class (right or wrong) and actual class occurrences.
-# TODO: check this
+                    total_correct_class[l] += np.sum(
+                        (pred_val == l) & (batch_label == l))  # How often the predicted label was correct in the batch
+                    total_iou_denominator_class[l] += np.sum(((pred_val == l) | (
+                            batch_label == l)))  # Union prediction of class (right or wrong) and actual class occurrences.
+            # TODO: check this
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
             mIoU = np.mean(
                 np.array(total_correct_class) / (np.array(total_iou_denominator_class, dtype=np.float) + 1e-6))
             eval_mean_loss = (loss_sum / float(num_batches))
             eval_point_accuracy = (total_correct / float(total_seen))
-            eval_point_avg_class_accuracy = np.mean(np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))
+            eval_point_avg_class_accuracy = np.mean(
+                np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))
             log_string('eval mean loss: %f' % eval_mean_loss)
             log_string('eval point avg class IoU: %f' % (mIoU))
             log_string('eval point accuracy: %f' % eval_point_accuracy)
@@ -343,5 +346,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    wandb.init(project="PointNet2-Pytorch", config=args, name="Stanford_NoArea")
+    wandb.init(project="PointNet2-Pytorch",
+               config={'grid_shape_original': (10, 10,), 'data_split': {'training': 253, 'validation': 64}}.update(
+                   args.__dict__), name="Church-Grid")
     main(args)

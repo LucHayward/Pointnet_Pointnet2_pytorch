@@ -88,3 +88,15 @@ class clutter       , IoU: 0.416
 2021-03-23 22:45:35,271 - Model - INFO - eval point avg class IoU: 0.535313
 2021-03-23 22:45:35,271 - Model - INFO - eval whole scene point avg class acc: 0.620289
 2021-03-23 22:45:35,271 - Model - INFO - eval whole scene point accuracy: 0.829893
+2021-06-21 15:23:34,520 - Model - INFO - PARAMETER ...
+2021-06-21 15:23:34,520 - Model - INFO - Namespace(batch_size=32, data_path=None, gpu='0', log_dir='pointnet2_sem_seg', num_classes=13, num_point=4096, num_votes=3, test_area=5, visual=False)
+2021-06-21 15:31:51,214 - Model - INFO - The number of test data is: 67
+2021-06-21 15:32:40,248 - Model - INFO - ---- EVALUATION WHOLE SCENE----
+2021-06-21 15:44:48,513 - Model - INFO - PARAMETER ...
+2021-06-21 15:44:48,513 - Model - INFO - Namespace(batch_size=32, data_path=None, gpu='0', log_dir='pointnet2_sem_seg', num_classes=13, num_point=4096, num_votes=3, test_area=5, visual=False)
+2021-06-21 15:45:03,967 - Model - INFO - The number of test data is: 67
+2021-06-21 15:45:05,467 - Model - INFO - ---- EVALUATION WHOLE SCENE----
+2021-06-21 15:48:24,167 - Model - INFO - PARAMETER ...
+2021-06-21 15:48:24,167 - Model - INFO - Namespace(batch_size=32, data_path=None, gpu='0', log_dir='pointnet2_sem_seg', num_classes=13, num_point=4096, num_votes=3, test_area=5, visual=False)
+2021-06-21 15:48:40,678 - Model - INFO - The number of test data is: 67
+2021-06-21 15:48:42,264 - Model - INFO - ---- EVALUATION WHOLE SCENE----
