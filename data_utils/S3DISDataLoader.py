@@ -167,7 +167,9 @@ class S3DISDataset(Dataset):
         while (True):  # Repeat until there are at least 1024 point_idxs selected
             if self.num_classes == 2 and 1 in labels:
                 while True:  # TODO fix this too
-                    center_idx = rng.choice(np.arange(len(labels))[labels == 1])
+                    tmp = np.arange(len(labels))[labels == 1]
+                    center_idx = tmp[np.random.randint(0, len(tmp))]
+
                     if labels[center_idx] == 1: break
             else:
                 center_idx = np.random.choice(N_points)

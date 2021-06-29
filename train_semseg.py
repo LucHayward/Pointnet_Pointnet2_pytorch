@@ -297,7 +297,7 @@ def main(args):
                     total_correct_class[l] += np.sum(
                         (pred_val == l) & (batch_label == l))  # How often the predicted label was correct in the batch
                     total_iou_denominator_class[l] += np.sum(((pred_val == l) | (
-                            batch_label == l)))  # Union prediction of class (right or wrong) and actual class occurrences.
+                            batch_label == l)))  # Class occurrences + false predictions (Union prediction of class (right or wrong) and actual class occurrences.)
             # TODO: check this
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
             mIoU = np.mean(
@@ -341,12 +341,12 @@ def main(args):
                 log_string('Saving model....')
             log_string('Best mIoU: %f' % best_iou)
         global_epoch += 1
-        wandb.log()
+        wandb.log({})
 
 
 if __name__ == '__main__':
     args = parse_args()
     wandb.init(project="PointNet2-Pytorch",
-               config={'grid_shape_original': (10, 10,), 'data_split': {'training': 253, 'validation': 64}}.update(
+               config={'grid_shape_original': (100, 100,), 'data_split': {'training': 254, 'validation': 63}}.update(
                    args.__dict__), name="Church-Grid")
     main(args)
