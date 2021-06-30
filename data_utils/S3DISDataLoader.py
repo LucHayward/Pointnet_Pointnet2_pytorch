@@ -1,4 +1,6 @@
 import os
+from line_profiler_pycharm import profile
+
 import numpy as np
 
 from tqdm import tqdm
@@ -146,6 +148,7 @@ class S3DISDataset(Dataset):
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
+    @profile
     def __getitem__(self, idx):
         """
         Given a room ID returns self.num_point points, labels
@@ -177,9 +180,7 @@ class S3DISDataset(Dataset):
             block_min = center - [self.block_size / 2.0, self.block_size / 2.0,
                                   0]  # Get a square column (z=0) of size block_size
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-            point_idxs = np.where(
-                (points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (
-                        points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
+            point_idxs = np.where((points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
             # print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
             # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
 
@@ -189,23 +190,14 @@ class S3DISDataset(Dataset):
         if point_idxs.size >= self.num_point:  # Select points from the point_idxs up until self.num_point, with replacement if necessary\
             # TODO Fix this shit
             if self.num_classes == 2:
-                discard_point_idxs = point_idxs[labels[point_idxs] == 1]
+                discard_point_idxs = point_idxs[np.bool_(labels[point_idxs])]
                 keep_point_idxs = point_idxs[labels[point_idxs] == 0]
                 if len(discard_point_idxs) >= self.num_point // 2 and len(keep_point_idxs) >= self.num_point // 2:
-                    selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,
-                                                                           replace=False),
-                                                          np.random.choice(keep_point_idxs, self.num_point // 2,
-                                                                           replace=False)))  # TODO Look into changing the sampling here
+                    selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,replace=False),np.random.choice(keep_point_idxs, self.num_point // 2,replace=False)))  # TODO Look into changing the sampling here
                 elif len(keep_point_idxs) <= self.num_point // 2:
-                    selected_point_idxs = np.concatenate((np.array(keep_point_idxs),
-                                                          np.random.choice(discard_point_idxs,
-                                                                           self.num_point - len(keep_point_idxs),
-                                                                           replace=False)))
+                    selected_point_idxs = np.concatenate((np.array(keep_point_idxs),np.random.choice(discard_point_idxs,self.num_point - len(keep_point_idxs),replace=False)))
                 else:
-                    selected_point_idxs = np.concatenate((np.array(discard_point_idxs),
-                                                          np.random.choice(keep_point_idxs,
-                                                                           self.num_point - len(discard_point_idxs),
-                                                                           replace=False)))
+                    selected_point_idxs = np.concatenate((np.array(discard_point_idxs),np.random.choice(keep_point_idxs,self.num_point - len(discard_point_idxs),replace=False)))
             else:
                 selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
         else:

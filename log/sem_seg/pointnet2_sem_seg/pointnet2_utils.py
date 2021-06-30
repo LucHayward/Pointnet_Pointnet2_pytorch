@@ -113,23 +113,23 @@ def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
         npoint:
         radius:
         nsample:
-        xyz: input points position data, [B, N, 3]
-        points: input points data, [B, N, D]
+        xyz: input points position data, [Batch, N, 3]
+        points: input points data, [Batch, N, D]
     Return:
-        new_xyz: sampled points position data, [B, npoint, nsample, 3]
-        new_points: sampled points data, [B, npoint, nsample, 3+D]
+        new_xyz: sampled points position data, [Batch, npoint, nsample, 3]
+        new_points: sampled points data, [Batch, npoint, nsample, 3+D]
     """
-    B, N, C = xyz.shape
+    Batch, N, C = xyz.shape  # Batch, NumPoint, Coordinate
     S = npoint
-    fps_idx = farthest_point_sample(xyz, npoint) # [B, npoint, C]
+    fps_idx = farthest_point_sample(xyz, npoint) # [Batch, npoint, C]
     new_xyz = index_points(xyz, fps_idx)
     idx = query_ball_point(radius, nsample, xyz, new_xyz)
-    grouped_xyz = index_points(xyz, idx) # [B, npoint, nsample, C]
-    grouped_xyz_norm = grouped_xyz - new_xyz.view(B, S, 1, C)
+    grouped_xyz = index_points(xyz, idx) # [Batch, npoint, nsample, C]
+    grouped_xyz_norm = grouped_xyz - new_xyz.view(Batch, S, 1, C)
 
     if points is not None:
         grouped_points = index_points(points, idx)
-        new_points = torch.cat([grouped_xyz_norm, grouped_points], dim=-1) # [B, npoint, nsample, C+D]
+        new_points = torch.cat([grouped_xyz_norm, grouped_points], dim=-1) # [Batch, npoint, nsample, C+D]
     else:
         new_points = grouped_xyz_norm
     if returnfps:
@@ -176,26 +176,26 @@ class PointNetSetAbstraction(nn.Module):
     def forward(self, xyz, points):
         """
         Input:
-            xyz: input points position data, [B, C, N]
-            points: input points data, [B, D, N]
+            xyz: input points position data, [B, C, N] = [batch, coordinates, numPoint]
+            points: input points data, [B, D, N] = [batch, dimensions, numPoint]
         Return:
             new_xyz: sampled points position data, [B, C, S]
             new_points_concat: sample points feature data, [B, D', S]
         """
         xyz = xyz.permute(0, 2, 1)
         if points is not None:
-            points = points.permute(0, 2, 1)
+            points = points.permute(0, 2, 1)  # Rearrange the tensor according to the dimensions
 
         if self.group_all:
             new_xyz, new_points = sample_and_group_all(xyz, points)
         else:
             new_xyz, new_points = sample_and_group(self.npoint, self.radius, self.nsample, xyz, points)
-        # new_xyz: sampled points position data, [B, npoint, C]
+        # new_xyz: sampled points position data, [B, npoint, Coordinates]
         # new_points: sampled points data, [B, npoint, nsample, C+D]
         new_points = new_points.permute(0, 3, 2, 1) # [B, C+D, nsample,npoint]
         for i, conv in enumerate(self.mlp_convs):
             bn = self.mlp_bns[i]
-            new_points =  F.relu(bn(conv(new_points)), inplace=True)
+            new_points =  F.relu(bn(conv(new_points)))
 
         new_points = torch.max(new_points, 2)[0]
         new_xyz = new_xyz.permute(0, 2, 1)
@@ -253,7 +253,7 @@ class PointNetSetAbstractionMsg(nn.Module):
             for j in range(len(self.conv_blocks[i])):
                 conv = self.conv_blocks[i][j]
                 bn = self.bn_blocks[i][j]
-                grouped_points =  F.relu(bn(conv(grouped_points)), inplace=True)
+                grouped_points =  F.relu(bn(conv(grouped_points)))
             new_points = torch.max(grouped_points, 2)[0]  # [B, D', S]
             new_points_list.append(new_points)
 
@@ -311,6 +311,6 @@ class PointNetFeaturePropagation(nn.Module):
         new_points = new_points.permute(0, 2, 1)
         for i, conv in enumerate(self.mlp_convs):
             bn = self.mlp_bns[i]
-            new_points = F.relu(bn(conv(new_points)), inplace=True)
+            new_points = F.relu(bn(conv(new_points)))
         return new_points
 
