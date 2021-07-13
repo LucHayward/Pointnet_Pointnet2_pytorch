@@ -287,7 +287,7 @@ def main(args):
         log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
-        wandb.log({'lr': lr, 'epoch': epoch}, sync=False)
+        wandb.log({'lr': lr, 'epoch': epoch}, commit=False)
 
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
@@ -295,7 +295,7 @@ def main(args):
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
-        wandb.log({'bn_momentum': momentum, 'epoch': epoch}, sync=False)
+        wandb.log({'bn_momentum': momentum, 'epoch': epoch}, commit=False)
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
         num_batches = len(trainDataLoader)
@@ -314,14 +314,17 @@ def main(args):
                 # for idx in range(len(points)):
                 #   sample_v = pptk.viewer(points[idx, :3], target[idx])
                 #   sample_v.set(color_map=turbo_colormap_data, lookat=(0,0,0), phi=0,theta=np.pi/4,r=5)
+                #   sample_name = f"epoch_{epoch}_batch_{i}_sample_{idx}"
                 #   sample_v.capture(Path(f'screenshots/{timestr}/epoch_{epoch}_batch_{i}_sample_{idx}.png'))
                 # 
                 #   pred_v = pptk.viewer(points[idx, :3], seg_pred[idx])
                 #   pred_v.set(color_map=turbo_colormap_data, lookat=(0,0,0), phi=0,theta=np.pi/4,r=5)
                 #   pred_v.capture(Path(f'screenshots/{timestr}/epoch_{epoch}_batch_{i}_pred_{idx}.png'))
+                # Could also do a comparison/difference of where it was right/wrong (basically where pred == target)
 
                 # For now just save out the points as numbers
                 # Otherwise can plot in wandb: https://docs.wandb.ai/guides/track/log#3d-visualizations
+                # wandb.log({'point_cloud': {"sample_name": sample_name, "points": wandb.Object3D(np.hstack((points[idx, :3], target[idx])))}})
                 
                 pass
             # print(i)
@@ -353,7 +356,7 @@ def main(args):
         log_string('Training mean loss: %f' % mean_loss)
         log_string('Training accuracy: %f' % accuracy)
         wandb.log({'mean_loss': mean_loss,
-                   'accuracy': accuracy, 'epoch': epoch}, sync=False)
+                   'accuracy': accuracy, 'epoch': epoch}, commit=False)
 
         if epoch % 5 == 0:
             logger.info('Save model...')
@@ -425,7 +428,7 @@ def main(args):
                        'eval_point_mIoU': mIoU,
                        'eval_point_accuracy': eval_point_accuracy,
                        'eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
-                       'labelweights': labelweights, 'epoch': epoch}, sync=False)
+                       'labelweights': labelweights, 'epoch': epoch}, commit=False)
             # TODO: Want to log:
             """
             ------- IoU --------
