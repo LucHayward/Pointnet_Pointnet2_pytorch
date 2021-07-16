@@ -1,10 +1,13 @@
 import os
 # from line_profiler_pycharm import profile
 
+
 import numpy as np
 
 from tqdm import tqdm
 from torch.utils.data import Dataset
+
+import pptk
 
 turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149], [0.19956, 0.09498, 0.29024],
                        [0.20415, 0.10652, 0.31844], [0.20860, 0.11802, 0.34607], [0.21291, 0.12947, 0.37314],
@@ -148,9 +151,9 @@ class S3DISDataset(Dataset):
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
         # TODO check what the room_coord_min values are
-        print(f"DEGUG: room_coord_min:\n{self.room_coord_min}")
-        print(f"DEGUG: room_coord_min.min(): {np.min(self.room_coord_min)}")
-        print(f"DEGUG: room_coord_min.max(): {np.max(self.room_coord_min)}")
+        # print(f"DEGUG: room_coord_min:\n{self.room_coord_min}")
+        # print(f"DEGUG: room_coord_min.min(): {np.min(self.room_coord_min)}")
+        # print(f"DEGUG: room_coord_min.max(): {np.max(self.room_coord_min)}")
 
     # @profile
     def __getitem__(self, idx):
@@ -176,8 +179,10 @@ class S3DISDataset(Dataset):
                 while True:  # TODO fix this too
                     tmp = np.arange(len(labels))[labels == 1]
                     center_idx = tmp[np.random.randint(0, len(tmp))]
-
+                    # v.color_map(np.hstack((np.array(turbo_colormap_data), np.ones(len(turbo_colormap_data))[...,None]*0.5)))
                     if labels[center_idx] == 1: break
+                    else:
+                        print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
             else:
                 center_idx = np.random.choice(N_points)
             center = points[center_idx][:3]  # Pick random point as center
@@ -191,12 +196,16 @@ class S3DISDataset(Dataset):
             # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
             if point_idxs.size > 1024:
                 break
+            else:
+                self.block_size *= 2
+                print(f'DEBUG: increasing block size to {self.block_size}')
 
         if point_idxs.size >= self.num_point:  # Select points from the point_idxs up until self.num_point, with replacement if necessary\
             # TODO Fix this shit
             if self.num_classes == 2:
-                discard_point_idxs = point_idxs[np.bool_(labels[point_idxs])]
-                keep_point_idxs = point_idxs[labels[point_idxs] == 0]
+                discard_point_mask = np.bool_(labels[point_idxs])
+                discard_point_idxs = point_idxs[discard_point_mask]
+                keep_point_idxs = point_idxs[~discard_point_mask]
                 if len(discard_point_idxs) >= self.num_point // 2 and len(keep_point_idxs) >= self.num_point // 2:
                     selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,
                                                                            replace=False),
