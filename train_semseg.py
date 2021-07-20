@@ -22,7 +22,6 @@ import pptk
 from tabulate import tabulate
 from line_profiler_pycharm import profile
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -145,9 +144,15 @@ def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, e
         # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
         confusion_mask = np.zeros(len(points_batch), dtype=int)  # pptk/wandb
         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 1)] = 3  # tp (red)
-        confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 1)] = 1  # fp (green)
         confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 0)] = 2  # fn (yellow)
+        confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 1)] = 1  # fp (green)
         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 0)] = 0  # tn (purple)
+
+        #         confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 1)] = 3  # fp (red)
+        #         confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 0)] = 2  # fn (yellow)
+        #         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 1)] = 1  # tp (green)
+        #         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 0)] = 0  # tn (purple)
+
         confusion_mask_rgb255 = np.array([convert_class_to_rgb255(i, 3) for i in confusion_mask])
         pred_rgb255 = np.array([convert_class_to_rgb255(i, 1) for i in pred[idx]])
         target_labels_rgb255 = np.array([convert_class_to_rgb255(i, 1) for i in target_labels[idx]])
@@ -174,11 +179,11 @@ def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, e
         #                headers=['', 'Actual 1', 'Actual 0']))
         # print(f'Accuracy: {accuracy}')
 
-        wandb.log({f"{data_split}/pointcloud-ground-truth-and-prediction": {
+        wandb.log({f"Visualise-Batch/{data_split}/pointcloud-ground-truth-and-prediction": {
             "epoch": epoch,
             "batch": batch_num,
-            "sample": idx+1,
-            "epoch*batch*sample": max(epoch,1) * max(batch_num,1) * (idx+1),
+            "sample": idx + 1,
+            "epoch*batch*sample": max(epoch, 1) * max(batch_num, 1) * (idx + 1),
             "confusion-matrix": {
                 "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
                 "true-positive": confusion_matrix_data[0][3],
@@ -376,7 +381,8 @@ def main(args):
 
         # TODO: Compare labeleweights (hist(batch_labels)) and maybe log this?
         # TODO: maybe even start logging the training vs prediction images?
-        for i, (points, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9, desc="Training"):
+        for i, (points, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9,
+                                        desc="Training"):
             if args.log_clouds:
                 # TODO: log the pointclouds that get generated
                 # For each item in the batch, generate an image and save that image.
@@ -422,7 +428,7 @@ def main(args):
             total_seen += (BATCH_SIZE * NUM_POINT)
             loss_sum += loss
 
-            if args.log_clouds and i==0:
+            if args.log_clouds and i == 0:  # Visualise the first batch in every sample
                 visualise_batch(np.array(points.transpose(1, 2).cpu()),
                                 pred_choice.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
                                 'Train', experiment_dir)
@@ -431,12 +437,12 @@ def main(args):
         accuracy = total_correct / float(total_seen)
         log_string('Training mean loss: %f' % mean_loss)
         log_string('Training accuracy: %f' % accuracy)
-        wandb.log({'mean_loss': mean_loss,
-                   'accuracy': accuracy, 'epoch': epoch}, commit=False)
+        wandb.log({'Train/mean_loss': mean_loss,
+                   'Train/accuracy': accuracy, 'epoch': epoch}, commit=False)
 
         if epoch % 5 == 0:
             logger.info('Save model...')
-            savepath = str(checkpoints_dir) + '/model.pth'
+            savepath = str(checkpoints_dir) + '/model.pth'  # Should use .pt
             log_string('Saving at %s' % savepath)
             state = {
                 'epoch': epoch,
@@ -445,7 +451,7 @@ def main(args):
             }
             torch.save(state, savepath)
             log_string('Saving model....')
-            # torch.onnx.export(classifier)
+            wandb.save(savepath, overwrite=True)
 
         '''Evaluate on chopped scenes'''
         with torch.no_grad():
@@ -507,11 +513,11 @@ def main(args):
             log_string('eval point accuracy: %f' % eval_point_accuracy)
             log_string('eval point avg class acc: %f' % eval_point_avg_class_accuracy)
 
-            wandb.log({'eval_mean_loss': eval_mean_loss,
-                       'eval_point_mIoU': mIoU,
-                       'eval_point_accuracy': eval_point_accuracy,
-                       'eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
-                       'labelweights': labelweights, 'epoch': epoch}, commit=False)
+            wandb.log({'Validation/eval_mean_loss': eval_mean_loss,
+                       'Validation/eval_point_mIoU': mIoU,
+                       'Validation/eval_point_accuracy': eval_point_accuracy,
+                       'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
+                       'Validation/labelweights': labelweights, 'epoch': epoch}, commit=False)
             # TODO: Want to log:
 
             iou_per_class_str = '------- IoU --------\n'
@@ -525,7 +531,7 @@ def main(args):
             class keep           weight: 0.253, IoU: 0.493
             class discard        weight: 0.747, IoU: 0.146
             """
-            wandb.log({"IoU": {
+            wandb.log({"Validation/IoU": {
                 "class": seg_label_to_cat[l],
                 "weight": labelweights[l - 1],
                 "IoU": total_correct_class[l] / float(total_iou_denominator_class[l]),
@@ -566,7 +572,7 @@ if __name__ == '__main__':
     wandb.finish()
     ################
 
-    args.update({'npoint':4096*2})
+    args.__dict__.update({'npoint': 4096 * 2})
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
     config.update(args.__dict__)
     # os.environ["WANDB_MODE"] = "dryrun"
