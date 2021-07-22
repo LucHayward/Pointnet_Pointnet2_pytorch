@@ -180,7 +180,8 @@ class S3DISDataset(Dataset):
                     tmp = np.arange(len(labels))[labels == 1]
                     center_idx = tmp[np.random.randint(0, len(tmp))]
                     # v.color_map(np.hstack((np.array(turbo_colormap_data), np.ones(len(turbo_colormap_data))[...,None]*0.5)))
-                    if labels[center_idx] == 1: break
+                    if labels[center_idx] == 1:
+                        break
                     else:
                         print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
             else:
@@ -191,7 +192,7 @@ class S3DISDataset(Dataset):
             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
             point_idxs = np.where(
                 (points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (
-                            points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
+                        points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
             # print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
             # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
             if point_idxs.size > 1024:
@@ -242,8 +243,8 @@ class S3DISDataset(Dataset):
         current_labels = labels[selected_point_idxs]
         if self.transform is not None:
             current_points, current_labels = self.transform(current_points, current_labels)
-        # print("got_item")
-        return current_points, current_labels
+        # pptk.viewer(np.concatenate((current_points[:,:3], current_points[:,6:],generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[0],generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[0], generate_bounding_cube([0,0,0],1)[0])), np.concatenate((current_labels+2,current_labels,generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[1][:,0], generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[1][:,0], generate_bounding_cube([0,0,0],1)[1][:,0])))
+        return current_points, current_labels, room_idx
 
     def __len__(self):
         return len(self.room_idxs)
