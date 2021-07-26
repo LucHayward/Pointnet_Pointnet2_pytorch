@@ -575,7 +575,7 @@ def main(args):
                     preds = np.concatenate(all_eval_pred, axis=0)
                     preds = preds[start_index:stop_index]
                     preds = preds.reshape(-1)
-                    visualise_prediction(pnts[:, 6:] * TEST_DATASET.room_coord_max[0], preds, targets, epoch,
+                    visualise_prediction(pnts[:, 6:], preds, targets, epoch,
                                          "Validation", wandb_section="Visualise-Merged")
 
                     # TODO: second validation set isn't displaying correctly...

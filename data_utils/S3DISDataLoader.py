@@ -236,10 +236,10 @@ class S3DISDataset(Dataset):
         current_points[:, 6] = selected_points[:, 0] / self.room_coord_max[room_idx][0]
         current_points[:, 7] = selected_points[:, 1] / self.room_coord_max[room_idx][1]
         current_points[:, 8] = selected_points[:, 2] / self.room_coord_max[room_idx][2]
-        selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
-        selected_points[:, 1] = selected_points[:, 1] - center[1]
+        # selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
+        # selected_points[:, 1] = selected_points[:, 1] - center[1]
         # selected_points[:, 3:6] /= 255.0 #TODO Fix this
-        current_points[:, 0:6] = selected_points  # Translated XY, Z, IGB/255, XYZ/max(room_XYZ)
+        current_points[:, 0:6] = selected_points  # Global XYZ, IGB/255, XYZ/max(room_XYZ)
         current_labels = labels[selected_point_idxs]
         if self.transform is not None:
             current_points, current_labels = self.transform(current_points, current_labels)
