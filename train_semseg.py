@@ -255,6 +255,21 @@ def parse_args():
     parser.add_argument('--log_merged_validation', default=False, help='Log the merged validation pointclouds')
     parser.add_argument('--validate_only', default=False, help='Skip training and only run the validation step')
 
+    # Exposing new HParams
+    # Pointnet Set Abstraction: Group All options
+    parser.add_argument('--psa1_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 1')
+    parser.add_argument('--psa2_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 2')
+    parser.add_argument('--psa3_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 3')
+    parser.add_argument('--psa4_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 4')
+
+    # Pointnet Set Abstraction: Sphere Radius
+    parser.add_argument('--psa1_radius', default=0.1, help='Sphere lookup radius in Pointnet Set Abstraction Layer 1')
+    parser.add_argument('--psa2_radius', default=0.2, help='Sphere lookup radius in Pointnet Set Abstraction Layer 2')
+    parser.add_argument('--psa3_radius', default=0.4, help='Sphere lookup radius in Pointnet Set Abstraction Layer 3')
+    parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
+
+
+
     return parser.parse_args()
 
 
