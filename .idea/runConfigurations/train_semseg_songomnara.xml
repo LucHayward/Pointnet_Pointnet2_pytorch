@@ -1,0 +1,25 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="train_semseg_songomnara" type="PythonConfigurationType" factoryName="Python">
+    <module name="Pointnet_Pointnet2_pytorch" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="LD_LIBRARY_PATH" value="usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:" />
+    </envs>
+    <option name="SDK_HOME" value="" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="IS_MODULE_SDK" value="true" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_semseg.py" />
+    <option name="PARAMETERS" value="--model pointnet2_sem_seg --batch_size 20 --test_area 2 --log_dir pointnet2_sem_seg_songomnara --num_classes 2 --data_path songomnara/ --epoch 200 --learning_rate 0.1 --block_size 1.0 --log_clouds True" />
+    <option name="SHOW_COMMAND_LINE" value="true" />
+    <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
+    <option name="REDIRECT_INPUT" value="false" />
+    <option name="INPUT_FILE" value="" />
+    <method v="2" />
+  </configuration>
+</component>
