@@ -140,11 +140,16 @@ def convert_class_to_rgb255(class_num, max_class):
 # 1790+324+27+1955
 # @profile
 def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, experiment_dir=Path(''),
-                    confidences=False, ):
-    for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
-        # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
-        visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
+                    confidences=False, merged=False):
+    if merged:
+        visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
+                             batch_num,
                              wandb_section='Visualise-Batch')
+    else:
+        for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
+            # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
+            visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
+                                 wandb_section='Visualise-Batch')
 
 
 def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
@@ -176,7 +181,7 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     # TODO: Visualise confidence
     v = pptk.viewer(points)
     v.color_map(turbo_colormap_data)
-    v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=7, phi=.9, theta=0.4)
+    v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
     # save_path = experiment_dir / f'media/pointclouds'
     # if not save_path.exists():
     #     save_path.mkdir(parents=True)
@@ -199,21 +204,23 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     print(f'Accuracy: {accuracy}\n'
           f'Recall: {recall}\n'
           f'Precision: {precision}\n'
-          f'f1: {f1}')
+          f'f1: {f1}\n'
+          f'Distribution (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][1]) / len(target_labels):.2f}:'
+          f'{(confusion_matrix_data[0][2] + confusion_matrix_data[0][3]) / len(target_labels):.2f}')
 
     if batch_num is not None:
         wandb.log({
-            f"{wandb_section + '/' if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
                 'batch': batch_num}},
             commit=False)
     if confidences is not None:
         wandb.log({
-            f"{wandb_section + '/' if wandb_section is not None else ''}{data_split}/{data_split}/pointcloud-ground-truth-and-prediction": {
+            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
                 "pointcloud": {
                     "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
                 }}}, commit=False)
     wandb.log({
-        f"{wandb_section + '/' if wandb_section is not None else ''}{data_split}/{data_split}/pointcloud-ground-truth-and-prediction": {
+        f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
             "epoch": epoch,
             # "batch": batch_num,
             # "epoch*batch*sample": max(epoch, 1) * max(batch_num, 1) * (idx + 1),
@@ -251,24 +258,31 @@ def parse_args():
     parser.add_argument('--block_size', default=1.0, type=float, help='column size for sampling (tbc)')
     parser.add_argument('--data_path', default=None,
                         help='If data path needs to change, set it here. Should point to data root')
-    parser.add_argument('--log_clouds', default=False, help='Log the pointclouds that get sampled')
-    parser.add_argument('--log_merged_validation', default=False, help='Log the merged validation pointclouds')
-    parser.add_argument('--validate_only', default=False, help='Skip training and only run the validation step')
+
+    # New arguments
+    parser.add_argument('--log_clouds', action='store_true', help='Log the pointclouds that get sampled')
+    parser.add_argument('--log_merged_validation', action='store_true', help='Log the merged validation pointclouds')
+    parser.add_argument('--validate_only', action='store_true', help='Skip training and only run the validation step')
+    parser.add_argument('--no_augment_points', action='store_false', help='Augment pointcloud (currently by rotation)')
+    parser.add_argument('--log_merged_training_batches', default=True,
+                        help='When logging training batch visualisations, merge batches in global coordinate space before visualising.')
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
-    parser.add_argument('--psa1_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 1')
-    parser.add_argument('--psa2_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 2')
-    parser.add_argument('--psa3_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 3')
-    parser.add_argument('--psa4_group_all', default=False, help='Use Group_all in Pointnet Set Abstraction Layer 4')
+    parser.add_argument('--psa1_group_all', action='store_true',
+                        help='Use Group_all in Pointnet Set Abstraction Layer 1')
+    parser.add_argument('--psa2_group_all', action='store_true',
+                        help='Use Group_all in Pointnet Set Abstraction Layer 2')
+    parser.add_argument('--psa3_group_all', action='store_true',
+                        help='Use Group_all in Pointnet Set Abstraction Layer 3')
+    parser.add_argument('--psa4_group_all', action='store_true',
+                        help='Use Group_all in Pointnet Set Abstraction Layer 4')
 
     # Pointnet Set Abstraction: Sphere Radius
     parser.add_argument('--psa1_radius', default=0.1, help='Sphere lookup radius in Pointnet Set Abstraction Layer 1')
     parser.add_argument('--psa2_radius', default=0.2, help='Sphere lookup radius in Pointnet Set Abstraction Layer 2')
     parser.add_argument('--psa3_radius', default=0.4, help='Sphere lookup radius in Pointnet Set Abstraction Layer 3')
     parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
-
-
 
     return parser.parse_args()
 
@@ -426,7 +440,7 @@ def main(args):
         total_correct = 0
         total_seen = 0
         loss_sum = 0
-        classifier = classifier.train()
+        classifier = classifier.train()  # Set model to training mode
 
         if not args.validate_only:
             # TODO: Compare labeleweights (hist(batch_labels)) and maybe log this?
@@ -456,10 +470,16 @@ def main(args):
                     pass
                 # print(i)
                 optimizer.zero_grad()
-                # Points: Translated XY, Z, IGB/255, XYZ/max(room_XYZ)
+                # Points: Global XYZ, IGB/255, XYZ/max(room_XYZ)
                 points = points.data.numpy()
-                points[:, :, :3] = provider.rotate_point_cloud_z(
-                    points[:, :, :3])  # CHECK Should we be augmenting? I think it helps the model be more robust
+                # if args.log_clouds:
+                    # Log points and their places
+                    # v = pptk.viewer(np.vstack(points)[:, :3], np.hstack(target), np.repeat(room_idx, 4096),
+                    #                 np.arange(20).repeat(4096))
+                    # v.color_map(turbo_colormap_data)
+                    # print(np.asarray(np.unique(room_idx, return_counts=True)).T)
+                # CHECK Should we be augmenting? I think it helps the model be more robust
+                if not args.no_augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points
@@ -482,7 +502,8 @@ def main(args):
                 if args.log_clouds and i == 0:  # Visualise the first batch in every sample
                     visualise_batch(np.array(points.transpose(1, 2).cpu()),
                                     pred_choice.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
-                                    'Train', experiment_dir, seg_pred.exp().cpu().numpy())
+                                    'Train', experiment_dir, seg_pred.exp().cpu().data.numpy(),
+                                    args.log_merged_training_batches)
 
             mean_loss = loss_sum / num_batches
             accuracy = total_correct / float(total_seen)
@@ -502,7 +523,7 @@ def main(args):
                 }
                 torch.save(state, savepath)
                 log_string('Saving model....')
-                wandb.save(savepath, overwrite=True)
+                wandb.save(savepath)
 
         '''Evaluate on chopped scenes'''
         with torch.no_grad():
@@ -671,9 +692,9 @@ if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
     config.update(args.__dict__)
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name="Church-Grid")
+               config=config, name="Church-Grid-GlobalXYZ")
     main(args)
     wandb.finish()
     ################
