@@ -182,7 +182,7 @@ class PointNetSetAbstraction(nn.Module):
             new_xyz: sampled points position data, [B, C, S]
             new_points_concat: sample points feature data, [B, D', S]
         """
-        xyz = xyz.permute(0, 2, 1)
+        xyz = xyz.permute(0, 2, 1)  #Back to B, C, N
         if points is not None:
             points = points.permute(0, 2, 1)  # Rearrange the tensor according to the dimensions
 
