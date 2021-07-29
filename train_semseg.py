@@ -193,12 +193,18 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
 
     if confidences is not None:
         # Could do this by applying it as a label or as a alpha mask
-        v.attributes(pred, target_labels, confusion_mask, confidences)
+        # Confidence of prediction intervals histogram
+        print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1,6))))
+        v.attributes(pred, target_labels, confusion_mask, np.hstack((pred_rgb255 / 255, confidences[:, :1].round(1))))
+        v.attributes(pred, target_labels, confusion_mask, np.hstack((confusion_mask_rgb255 / 255, confidences[:, :1].round(1))))
     else:
         v.attributes(pred, target_labels, confusion_mask)
 
     print(tabulate([['Pred 1', confusion_matrix_data[0][3], confusion_matrix_data[0][1]],
                     ['Pred 0', confusion_matrix_data[0][2], confusion_matrix_data[0][0]]],
+                   headers=['', 'Actual 1', 'Actual 0']))
+    print(tabulate([['Pred 1', (confusion_matrix_data[0][3]/len(target_labels)).__round__(3), (confusion_matrix_data[0][1]/len(target_labels)).__round__(3)],
+                    ['Pred 0', (confusion_matrix_data[0][2]/len(target_labels)).__round__(3), (confusion_matrix_data[0][0]/len(target_labels)).__round__(3)]],
                    headers=['', 'Actual 1', 'Actual 0']))
     print(f'Accuracy: {accuracy}\n'
           f'Recall: {recall}\n'
@@ -559,7 +565,7 @@ def main(args):
                 if args.log_clouds and i == 0:
                     visualise_batch(np.array(points.transpose(1, 2).cpu()),
                                     pred_val.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
-                                    "Validation", experiment_dir, seg_pred.exp().cpu().numpy())
+                                    "Validation", experiment_dir, seg_pred.exp().cpu().numpy(), merged=True)
 
             if args.log_merged_validation:
                 stop_index = all_eval_room_idx.index(1) - 1
