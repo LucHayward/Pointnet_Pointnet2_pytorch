@@ -143,8 +143,7 @@ def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, e
                     confidences=False, merged=False):
     if merged:
         visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
-                             batch_num,
-                             wandb_section='Visualise-Batch')
+                             batch_num, confidences=confidences, wandb_section='Visualise-Batch')
     else:
         for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
             # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
@@ -214,11 +213,13 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
                 'batch': batch_num}},
             commit=False)
     if confidences is not None:
-        wandb.log({
-            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
-                "pointcloud": {
-                    "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
-                }}}, commit=False)
+        pass
+        # wandb.log({
+        #     f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+        #         "pointcloud": {
+        #             "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
+        #
+        #         }}}, commit=False)
     wandb.log({
         f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
             "epoch": epoch,
@@ -448,27 +449,6 @@ def main(args):
             for i, (points, target, room_idx) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader),
                                                       smoothing=0.9,
                                                       desc="Training"):
-                if args.log_clouds:
-                    # TODO: log the pointclouds that get generated
-                    # For each item in the batch, generate an image and save that image.
-                    # - can use pptk
-                    # for idx in range(len(points)):
-                    #   sample_v = pptk.viewer(points[idx, :3], target[idx])
-                    #   sample_v.set(color_map=turbo_colormap_data, lookat=(0,0,0), phi=0,theta=np.pi/4,r=5)
-                    #   sample_name = f"epoch_{epoch}_batch_{i}_sample_{idx}"
-                    #   sample_v.capture(Path(f'screenshots/{timestr}/epoch_{epoch}_batch_{i}_sample_{idx}.png'))
-                    #
-                    #   pred_v = pptk.viewer(points[idx, :3], seg_pred[idx])
-                    #   pred_v.set(color_map=turbo_colormap_data, lookat=(0,0,0), phi=0,theta=np.pi/4,r=5)
-                    #   pred_v.capture(Path(f'screenshots/{timestr}/epoch_{epoch}_batch_{i}_pred_{idx}.png'))
-                    # Could also do a comparison/difference of where it was right/wrong (basically where pred == target)
-
-                    # For now just save out the points as numbers
-                    # Otherwise can plot in wandb: https://docs.wandb.ai/guides/track/log#3d-visualizations
-                    # wandb.log({'point_cloud': {"sample_name": sample_name, "points": wandb.Object3D(np.hstack((points[idx, :3], target[idx])))}})
-
-                    pass
-                # print(i)
                 optimizer.zero_grad()
                 # Points: Global XYZ, IGB/255, XYZ/max(room_XYZ)
                 points = points.data.numpy()
@@ -482,7 +462,7 @@ def main(args):
                 if not args.no_augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
-                points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points
+                points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points, No idea why though
 
                 seg_pred, trans_feat = classifier(points)
                 seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
@@ -664,6 +644,26 @@ def main(args):
         global_epoch += 1
         wandb.log({})
 
+def generate_points_on_sphere(r, n, offset=[0, 0, 0]):
+    points = []
+    alpha = 4.0 * np.pi * r * r / n
+    d = np.sqrt(alpha)
+    m_nu = int(np.round(np.pi / d))
+    d_nu = np.pi / m_nu
+    d_phi = alpha / d_nu
+    count = 0
+    for m in range(0, m_nu):
+        nu = np.pi * (m + 0.5) / m_nu
+        m_phi = int(np.round(2 * np.pi * np.sin(nu) / d_phi))
+        for n in range(0, m_phi):
+            phi = 2 * np.pi * n / m_phi
+            xp = r * np.sin(nu) * np.cos(phi)
+            yp = r * np.sin(nu) * np.sin(phi)
+            zp = r * np.cos(nu)
+            count = count + 1
+            points.append([xp, yp, zp])
+
+    return np.array(points) + offset
 
 def generate_bounding_wireframe_points(min, max, number):
     points = [np.linspace(min, [max[0], min[1], min[2]], number), np.linspace(min, [min[0], max[1], min[2]], number),
@@ -692,7 +692,7 @@ if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
     config.update(args.__dict__)
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
                config=config, name="Church-Grid-GlobalXYZ")
     main(args)
