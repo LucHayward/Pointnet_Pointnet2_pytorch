@@ -195,8 +195,8 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
         # Could do this by applying it as a label or as a alpha mask
         # Confidence of prediction intervals histogram
         print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1,6))))
-        v.attributes(pred, target_labels, confusion_mask, np.hstack((pred_rgb255 / 255, confidences[:, :1].round(1))))
-        v.attributes(pred, target_labels, confusion_mask, np.hstack((confusion_mask_rgb255 / 255, confidences[:, :1].round(1))))
+        v.attributes(pred, target_labels, confusion_mask, np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:,None])))
+        v.attributes(pred, target_labels, confusion_mask, np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:,None])))
     else:
         v.attributes(pred, target_labels, confusion_mask)
 
@@ -268,11 +268,12 @@ def parse_args():
 
     # New arguments
     parser.add_argument('--log_clouds', action='store_true', help='Log the pointclouds that get sampled')
-    parser.add_argument('--log_merged_validation', action='store_true', help='Log the merged validation pointclouds')
     parser.add_argument('--validate_only', action='store_true', help='Skip training and only run the validation step')
     parser.add_argument('--no_augment_points', action='store_false', help='Augment pointcloud (currently by rotation)')
-    parser.add_argument('--log_merged_training_batches', default=True,
+    parser.add_argument('--log_merged_validation', action='store_true', help='Log the merged validation pointclouds')
+    parser.add_argument('--log_merged_training_batches', action='store_true',
                         help='When logging training batch visualisations, merge batches in global coordinate space before visualising.')
+    parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
@@ -292,6 +293,13 @@ def parse_args():
     parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
 
     return parser.parse_args()
+
+def set_bn_training(model, v):
+    """Sets the models BatchNorm lauers to True"""
+    if 'BatchNorm' in model._get_name():
+        model.training = v
+    for module in model.children():
+        set_bn_training(module, v)
 
 
 def main(args):
@@ -361,10 +369,10 @@ def main(args):
     # current_points, current_labels = TRAIN_DATASET.room_points[0], TRAIN_DATASET.room_labels[0]
     # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=0,
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4,
                                                  pin_memory=True, drop_last=True)
     weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
 
@@ -523,6 +531,9 @@ def main(args):
             total_iou_denominator_class = [0 for _ in range(NUM_CLASSES)]
             classifier = classifier.eval()
 
+            if args.force_bn:
+                set_bn_training(classifier, True)
+
             all_eval_points = []
             all_eval_target = []
             all_eval_pred = []
@@ -565,7 +576,7 @@ def main(args):
                 if args.log_clouds and i == 0:
                     visualise_batch(np.array(points.transpose(1, 2).cpu()),
                                     pred_val.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
-                                    "Validation", experiment_dir, seg_pred.exp().cpu().numpy(), merged=True)
+                                    "Validation", experiment_dir, seg_pred.exp().cpu().numpy(), merged=args.log_merged_validation)
 
             if args.log_merged_validation:
                 stop_index = all_eval_room_idx.index(1) - 1
@@ -698,9 +709,9 @@ if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
     config.update(args.__dict__)
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name="Church-Grid-GlobalXYZ")
+               config=config)
     main(args)
     wandb.finish()
     ################

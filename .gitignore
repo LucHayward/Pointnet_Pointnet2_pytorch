@@ -116,3 +116,9 @@ dmypy.json
 .pyre/
 /wandb/
 /data/
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/Pointnet_Pointnet2_pytorch.iml
+/.idea/inspectionProfiles/profiles_settings.xml
+/train_semseg.py.pclprof
+/.idea/vcs.xml
