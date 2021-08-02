@@ -136,120 +136,6 @@ def convert_class_to_rgb255(class_num, max_class):
     else:
         return np.multiply(turbo_colormap_data[len(turbo_colormap_data) // max_class * class_num], 255)
 
-
-def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, confidences=False, merged=False):
-    if merged:
-        visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
-                             batch_num, confidences=confidences, wandb_section='Visualise-Batch')
-    else:
-        for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
-            # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
-            visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
-                                 wandb_section='Visualise-Batch')
-
-
-def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
-                         wandb_section=None):
-    confusion_mask = np.zeros(len(points), dtype=int)  # pptk/wandb
-    confusion_mask[(pred == target_labels) & (pred == 1)] = 3  # tp (red)
-    confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
-    confusion_mask[(pred != target_labels) & (pred == 1)] = 1  # fp (green)
-    confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
-
-    #         confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 1)] = 3  # fp (red)
-    #         confusion_mask[(pred[idx] != target_labels[idx]) & (pred[idx] == 0)] = 2  # fn (yellow)
-    #         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 1)] = 1  # tp (green)
-    #         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 0)] = 0  # tn (purple)
-
-    confusion_mask_rgb255 = np.array([convert_class_to_rgb255(i, 3) for i in confusion_mask])
-    pred_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in pred])
-    target_labels_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in target_labels])
-    if confidences is not None:
-        confidences_rgb255 = np.array([])
-
-    confusion_matrix_data = np.histogram(confusion_mask, [0, 1, 2, 3, 4])
-    accuracy = np.sum(pred == target_labels) / len(pred)
-    # Precision = of all the positive predications how many are correct (high Precision = low FP)
-    precision = confusion_matrix_data[0][3] / (confusion_matrix_data[0][3] + confusion_matrix_data[0][1])
-    recall = confusion_matrix_data[0][3] / (confusion_matrix_data[0][3] + confusion_matrix_data[0][2])  # sensitivity
-    f1 = 2 * (recall * precision) / (recall + precision)
-
-    if os.environ.get("WANDB_MODE") is not None:
-        v = pptk.viewer(points)
-        v.color_map(turbo_colormap_data)
-        v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
-        # save_path = experiment_dir / f'media/pointclouds'
-        # if not save_path.exists():
-        #     save_path.mkdir(parents=True)
-        # v.attributes(pred[idx])
-        # v.capture(save_path / f'E{epoch}B{batch_num}Predicted.png')
-        # v.attributes(target_labels[idx])
-        # v.capture(save_path / f'E{epoch}B{batch_num}Target.png')
-        # v.attributes(confusion_mask)
-        # v.capture(save_path / f'E{epoch}B{batch_num}Comparison.png')
-
-        if confidences is not None:
-            # Could do this by applying it as a label or as a alpha mask
-            # Confidence of prediction intervals histogram
-            print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6))))
-            v.attributes(pred, target_labels, confusion_mask,
-                         np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:, None])))
-            v.attributes(pred, target_labels, confusion_mask,
-                         np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
-        else:
-            v.attributes(pred, target_labels, confusion_mask)
-
-    print(tabulate([['Pred 1', confusion_matrix_data[0][3], confusion_matrix_data[0][1]],
-                    ['Pred 0', confusion_matrix_data[0][2], confusion_matrix_data[0][0]]],
-                   headers=['', 'Actual 1', 'Actual 0']))
-    print(tabulate([['Pred 1', (confusion_matrix_data[0][3] / len(target_labels)).__round__(3),
-                     (confusion_matrix_data[0][1] / len(target_labels)).__round__(3)],
-                    ['Pred 0', (confusion_matrix_data[0][2] / len(target_labels)).__round__(3),
-                     (confusion_matrix_data[0][0] / len(target_labels)).__round__(3)]],
-                   headers=['', 'Actual 1', 'Actual 0']))
-    print(f'Accuracy: {accuracy}\n'
-          f'Recall: {recall}\n'
-          f'Precision: {precision}\n'
-          f'f1: {f1}\n'
-          f'Distribution predicted (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][1]) / len(target_labels):.2f}:'
-          f'{(confusion_matrix_data[0][2] + confusion_matrix_data[0][3]) / len(target_labels):.2f}'
-          f'Distribution target (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][3]) / len(target_labels):.2f}:'
-          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][2]) / len(target_labels):.2f}')
-
-    if batch_num is not None:
-        wandb.log({
-            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
-                'batch': batch_num}},
-            commit=False)
-    if confidences is not None:
-        pass
-        # wandb.log({
-        #     f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
-        #         "pointcloud": {
-        #             "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
-        #
-        #         }}}, commit=False)
-    wandb.log({
-        f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
-            "epoch": epoch,
-            # "batch": batch_num,
-            # "epoch*batch*sample": max(epoch, 1) * max(batch_num, 1) * (idx + 1),
-            "confusion-matrix": {
-                "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
-                "true-positive": confusion_matrix_data[0][3],
-                "false-positive": confusion_matrix_data[0][1],
-                "true-negative": confusion_matrix_data[0][0],
-                "false-negative": confusion_matrix_data[0][2]
-            },
-            'accuracy': accuracy,
-            "pointcloud": {
-                "confusion-cloud": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
-                "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
-                "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
-            }
-        }})
-
-
 def parse_args():
     parser = argparse.ArgumentParser('Model')
     parser.add_argument('--model', type=str, default='pointnet_sem_seg', help='model name [default: pointnet_sem_seg]')
@@ -272,7 +158,7 @@ def parse_args():
     # New arguments
     parser.add_argument('--log_clouds', action='store_true', help='Log the pointclouds that get sampled')
     parser.add_argument('--validate_only', action='store_true', help='Skip training and only run the validation step')
-    parser.add_argument('--no_augment_points', action='store_false', help='Augment pointcloud (currently by rotation)')
+    parser.add_argument('--augment_points', action='store_true', help='Augment pointcloud (currently by rotation)')
     parser.add_argument('--log_merged_validation', action='store_true', help='Log the merged validation pointclouds')
     parser.add_argument('--log_merged_training_batches', action='store_true',
                         help='When logging training batch visualisations, merge batches in global coordinate space before visualising.')
@@ -296,6 +182,109 @@ def parse_args():
     parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
 
     return parser.parse_args()
+
+
+def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, confidences=False, merged=False):
+    if merged:
+        visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
+                             batch_num, confidences=confidences, wandb_section='Visualise-Batch')
+    else:
+        for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
+            # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
+            visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
+                                 wandb_section='Visualise-Batch')
+
+
+def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
+                         wandb_section=None):
+    confusion_mask = np.zeros(len(points), dtype=int)  # pptk/wandb
+    # confusion_mask[(pred == target_labels) & (pred == 1)] = 3  # tp (red)
+    # confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
+    # confusion_mask[(pred != target_labels) & (pred == 1)] = 1  # fp (green)
+    # confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
+    confusion_mask[(pred != target_labels) & (pred == 1)] = 3  # fp (red)
+    confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
+    confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
+    confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
+
+    confusion_mask_rgb255 = np.array([convert_class_to_rgb255(i, 3) for i in confusion_mask])
+    pred_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in pred])
+    target_labels_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in target_labels])
+    if confidences is not None:
+        confidences_rgb255 = np.array([])
+
+    confusion_matrix_data = np.histogram(confusion_mask, [0, 1, 2, 3, 4])
+    accuracy = np.sum(pred == target_labels) / len(pred)
+    # Precision = of all the positive predications how many are correct (high Precision = low FP)
+    precision = confusion_matrix_data[0][1] / (confusion_matrix_data[0][1] + confusion_matrix_data[0][3])
+    recall = confusion_matrix_data[0][1] / (confusion_matrix_data[0][1] + confusion_matrix_data[0][2])  # sensitivity
+    f1 = 2 * (recall * precision) / (recall + precision)
+
+    if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
+        v = pptk.viewer(points)
+        v.color_map(turbo_colormap_data)
+        v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
+
+        if confidences is not None:
+            # Could do this by applying it as a label or as a alpha mask
+            # Confidence of prediction intervals histogram
+            print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6))))
+            v.attributes(pred, target_labels, confusion_mask,
+                         np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:, None])))
+            v.attributes(pred, target_labels, confusion_mask,
+                         np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
+        else:
+            v.attributes(pred, target_labels, confusion_mask)
+
+    print(tabulate([['Pred 1', confusion_matrix_data[0][1], confusion_matrix_data[0][3]],
+                    ['Pred 0', confusion_matrix_data[0][2], confusion_matrix_data[0][0]]],
+                   headers=['', 'Actual 1', 'Actual 0']))
+    print(tabulate([['Pred 1', (confusion_matrix_data[0][3] / len(target_labels)).__round__(3),
+                     (confusion_matrix_data[0][1] / len(target_labels)).__round__(3)],
+                    ['Pred 0', (confusion_matrix_data[0][2] / len(target_labels)).__round__(3),
+                     (confusion_matrix_data[0][0] / len(target_labels)).__round__(3)]],
+                   headers=['', 'Actual 1', 'Actual 0']))
+    print(f'Accuracy: {accuracy}\n'
+          f'Recall: {recall}\n'
+          f'Precision: {precision}\n'
+          f'f1: {f1}\n'
+          f'Distribution predicted (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][2]) / len(target_labels):.2f}:'
+          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][3]) / len(target_labels):.2f}'
+          f'Distribution target (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][3]) / len(target_labels):.2f}:'
+          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][2]) / len(target_labels):.2f}')
+
+    if batch_num is not None:
+        wandb.log({
+            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+                'batch': batch_num}},
+            commit=False)
+    if confidences is not None:
+        pass
+        # wandb.log({
+        #     f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+        #         "pointcloud": {
+        #             "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
+        #
+        #         }}}, commit=False)
+    wandb.log({
+        f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+            "epoch": epoch,
+            "confusion-matrix": {
+                "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
+                "true-positive": confusion_matrix_data[0][1],
+                "false-positive": confusion_matrix_data[0][3],
+                "true-negative": confusion_matrix_data[0][0],
+                "false-negative": confusion_matrix_data[0][2]
+            },
+            'accuracy': accuracy,
+            "pointcloud": {
+                "comparison": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
+                "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
+                "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
+            }
+        }})
+
+
 
 
 def set_bn_training(model, v):
@@ -477,7 +466,7 @@ def main(args):
                 # v.color_map(turbo_colormap_data)
                 # print(np.asarray(np.unique(room_idx, return_counts=True)).T)
                 # CHECK Should we be augmenting? I think it helps the model be more robust
-                if not args.no_augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
+                if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points, No idea why though
