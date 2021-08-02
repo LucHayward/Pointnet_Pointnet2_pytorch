@@ -137,10 +137,7 @@ def convert_class_to_rgb255(class_num, max_class):
         return np.multiply(turbo_colormap_data[len(turbo_colormap_data) // max_class * class_num], 255)
 
 
-# 1790+324+27+1955
-# @profile
-def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, experiment_dir=Path(''),
-                    confidences=False, merged=False):
+def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, confidences=False, merged=False):
     if merged:
         visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
                              batch_num, confidences=confidences, wandb_section='Visualise-Batch')
@@ -165,8 +162,8 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     #         confusion_mask[(pred[idx] == target_labels[idx]) & (pred[idx] == 0)] = 0  # tn (purple)
 
     confusion_mask_rgb255 = np.array([convert_class_to_rgb255(i, 3) for i in confusion_mask])
-    pred_rgb255 = np.array([convert_class_to_rgb255(i, 1) for i in pred])
-    target_labels_rgb255 = np.array([convert_class_to_rgb255(i, 1) for i in target_labels])
+    pred_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in pred])
+    target_labels_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in target_labels])
     if confidences is not None:
         confidences_rgb255 = np.array([])
 
@@ -177,41 +174,47 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     recall = confusion_matrix_data[0][3] / (confusion_matrix_data[0][3] + confusion_matrix_data[0][2])  # sensitivity
     f1 = 2 * (recall * precision) / (recall + precision)
 
-    # TODO: Visualise confidence
-    v = pptk.viewer(points)
-    v.color_map(turbo_colormap_data)
-    v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
-    # save_path = experiment_dir / f'media/pointclouds'
-    # if not save_path.exists():
-    #     save_path.mkdir(parents=True)
-    # v.attributes(pred[idx])
-    # v.capture(save_path / f'E{epoch}B{batch_num}Predicted.png')
-    # v.attributes(target_labels[idx])
-    # v.capture(save_path / f'E{epoch}B{batch_num}Target.png')
-    # v.attributes(confusion_mask)
-    # v.capture(save_path / f'E{epoch}B{batch_num}Comparison.png')
+    if os.environ.get("WANDB_MODE") is not None:
+        v = pptk.viewer(points)
+        v.color_map(turbo_colormap_data)
+        v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
+        # save_path = experiment_dir / f'media/pointclouds'
+        # if not save_path.exists():
+        #     save_path.mkdir(parents=True)
+        # v.attributes(pred[idx])
+        # v.capture(save_path / f'E{epoch}B{batch_num}Predicted.png')
+        # v.attributes(target_labels[idx])
+        # v.capture(save_path / f'E{epoch}B{batch_num}Target.png')
+        # v.attributes(confusion_mask)
+        # v.capture(save_path / f'E{epoch}B{batch_num}Comparison.png')
 
-    if confidences is not None:
-        # Could do this by applying it as a label or as a alpha mask
-        # Confidence of prediction intervals histogram
-        print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1,6))))
-        v.attributes(pred, target_labels, confusion_mask, np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:,None])))
-        v.attributes(pred, target_labels, confusion_mask, np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:,None])))
-    else:
-        v.attributes(pred, target_labels, confusion_mask)
+        if confidences is not None:
+            # Could do this by applying it as a label or as a alpha mask
+            # Confidence of prediction intervals histogram
+            print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6))))
+            v.attributes(pred, target_labels, confusion_mask,
+                         np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:, None])))
+            v.attributes(pred, target_labels, confusion_mask,
+                         np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
+        else:
+            v.attributes(pred, target_labels, confusion_mask)
 
     print(tabulate([['Pred 1', confusion_matrix_data[0][3], confusion_matrix_data[0][1]],
                     ['Pred 0', confusion_matrix_data[0][2], confusion_matrix_data[0][0]]],
                    headers=['', 'Actual 1', 'Actual 0']))
-    print(tabulate([['Pred 1', (confusion_matrix_data[0][3]/len(target_labels)).__round__(3), (confusion_matrix_data[0][1]/len(target_labels)).__round__(3)],
-                    ['Pred 0', (confusion_matrix_data[0][2]/len(target_labels)).__round__(3), (confusion_matrix_data[0][0]/len(target_labels)).__round__(3)]],
+    print(tabulate([['Pred 1', (confusion_matrix_data[0][3] / len(target_labels)).__round__(3),
+                     (confusion_matrix_data[0][1] / len(target_labels)).__round__(3)],
+                    ['Pred 0', (confusion_matrix_data[0][2] / len(target_labels)).__round__(3),
+                     (confusion_matrix_data[0][0] / len(target_labels)).__round__(3)]],
                    headers=['', 'Actual 1', 'Actual 0']))
     print(f'Accuracy: {accuracy}\n'
           f'Recall: {recall}\n'
           f'Precision: {precision}\n'
           f'f1: {f1}\n'
-          f'Distribution (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][1]) / len(target_labels):.2f}:'
-          f'{(confusion_matrix_data[0][2] + confusion_matrix_data[0][3]) / len(target_labels):.2f}')
+          f'Distribution predicted (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][1]) / len(target_labels):.2f}:'
+          f'{(confusion_matrix_data[0][2] + confusion_matrix_data[0][3]) / len(target_labels):.2f}'
+          f'Distribution target (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][3]) / len(target_labels):.2f}:'
+          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][2]) / len(target_labels):.2f}')
 
     if batch_num is not None:
         wandb.log({
@@ -293,6 +296,7 @@ def parse_args():
     parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
 
     return parser.parse_args()
+
 
 def set_bn_training(model, v):
     """Sets the models BatchNorm lauers to True"""
@@ -467,11 +471,11 @@ def main(args):
                 # Points: Global XYZ, IGB/255, XYZ/max(room_XYZ)
                 points = points.data.numpy()
                 # if args.log_clouds:
-                    # Log points and their places
-                    # v = pptk.viewer(np.vstack(points)[:, :3], np.hstack(target), np.repeat(room_idx, 4096),
-                    #                 np.arange(20).repeat(4096))
-                    # v.color_map(turbo_colormap_data)
-                    # print(np.asarray(np.unique(room_idx, return_counts=True)).T)
+                # Log points and their places
+                # v = pptk.viewer(np.vstack(points)[:, :3], np.hstack(target), np.repeat(room_idx, 4096),
+                #                 np.arange(20).repeat(4096))
+                # v.color_map(turbo_colormap_data)
+                # print(np.asarray(np.unique(room_idx, return_counts=True)).T)
                 # CHECK Should we be augmenting? I think it helps the model be more robust
                 if not args.no_augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
@@ -486,7 +490,7 @@ def main(args):
                 loss = criterion(seg_pred, target, trans_feat, weights)
                 loss.backward()
                 optimizer.step()
-                # TODO: check this
+
                 pred_choice = seg_pred.cpu().data.max(1)[1].numpy()
                 correct = np.sum(pred_choice == batch_label)
                 total_correct += correct
@@ -494,10 +498,9 @@ def main(args):
                 loss_sum += loss
 
                 if args.log_clouds and i == 0:  # Visualise the first batch in every sample
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()),
-                                    pred_choice.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
-                                    'Train', experiment_dir, seg_pred.exp().cpu().data.numpy(),
-                                    args.log_merged_training_batches)
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
+                                    np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
+                                    seg_pred.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
             mean_loss = loss_sum / num_batches
             accuracy = total_correct / float(total_seen)
@@ -568,17 +571,17 @@ def main(args):
                     total_iou_denominator_class[l] += np.sum(((pred_val == l) | (
                             batch_label == l)))  # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
 
-                if args.log_merged_validation:
+                if args.log_merged_validation and args.num_classes == 2:
                     all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
-                    all_eval_pred.append(pred_val.reshape(20, -1))
-                    all_eval_target.append(np.array(target.cpu()).reshape(20, -1))
+                    all_eval_pred.append(pred_val.reshape(args.batch_size, -1))
+                    all_eval_target.append(np.array(target.cpu()).reshape(args.batch_size, -1))
                     all_eval_room_idx += room_idx
                 if args.log_clouds and i == 0:
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()),
-                                    pred_val.reshape(20, -1), np.array(target.cpu()).reshape(20, -1), i, epoch,
-                                    "Validation", experiment_dir, seg_pred.exp().cpu().numpy(), merged=args.log_merged_validation)
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_val.reshape(args.batch_size, -1),
+                                    np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, "Validation",
+                                    seg_pred.exp().cpu().numpy(), merged=args.log_merged_validation)
 
-            if args.log_merged_validation:
+            if args.log_merged_validation and args.num_classes == 2:
                 stop_index = all_eval_room_idx.index(1) - 1
                 start_index = 0
                 for area in range(len(TEST_DATASET.room_points)):
@@ -639,6 +642,7 @@ def main(args):
                 "text": iou_per_class_str
             }
             }, commit=False)
+            # TODO Custom graph here
 
             log_string(iou_per_class_str)
             log_string('Eval mean loss: %f' % eval_mean_loss)
@@ -661,6 +665,7 @@ def main(args):
         global_epoch += 1
         wandb.log({})
 
+
 def generate_points_on_sphere(r, n, offset=[0, 0, 0]):
     points = []
     alpha = 4.0 * np.pi * r * r / n
@@ -681,6 +686,7 @@ def generate_points_on_sphere(r, n, offset=[0, 0, 0]):
             points.append([xp, yp, zp])
 
     return np.array(points) + offset
+
 
 def generate_bounding_wireframe_points(min, max, number):
     points = [np.linspace(min, [max[0], min[1], min[2]], number), np.linspace(min, [min[0], max[1], min[2]], number),
@@ -711,7 +717,7 @@ if __name__ == '__main__':
     config.update(args.__dict__)
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config)
+               config=config, name='Church-Grid-GlobalXYZ')
     main(args)
     wandb.finish()
     ################

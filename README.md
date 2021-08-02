@@ -117,7 +117,7 @@ Visualization results will save in `log/sem_seg/pointnet2_sem_seg/visual/` and y
 |Model  | Overall Acc |Class avg IoU | Checkpoint 
 |--|--|--|--|
 | PointNet (Pytorch) | 78.9 | 43.7| [40.7MB](log/sem_seg/pointnet_sem_seg) |
-| PointNet2_ssg (Pytorch) | **83.0** | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg) |
+| PointNet2_ssg (Pytorch) | **83.0** | **53.5**| [11.2MB](log/sem_seg/pointnet2_sem_seg_old) |
 
 ## Visualization
 ### Using show3d_balls.py
