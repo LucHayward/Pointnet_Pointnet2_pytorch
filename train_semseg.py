@@ -128,13 +128,14 @@ def inplace_relu(m):
         m.inplace = True
 
 
-def convert_class_to_rgb255(class_num, max_class):
+def convert_class_to_turborgb255(class_num, max_class):
     if class_num == 0:
         return np.multiply(turbo_colormap_data[0], 255)
     elif class_num == max_class:
         return np.multiply(turbo_colormap_data[-1], 255)
     else:
         return np.multiply(turbo_colormap_data[len(turbo_colormap_data) // max_class * class_num], 255)
+
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
@@ -156,13 +157,17 @@ def parse_args():
                         help='If data path needs to change, set it here. Should point to data root')
 
     # New arguments
-    parser.add_argument('--log_clouds', action='store_true', help='Log the pointclouds that get sampled')
+    parser.add_argument('--log_first_batch_cloud', action='store_true', help='Log the pointclouds that get sampled')
     parser.add_argument('--validate_only', action='store_true', help='Skip training and only run the validation step')
     parser.add_argument('--augment_points', action='store_true', help='Augment pointcloud (currently by rotation)')
     parser.add_argument('--log_merged_validation', action='store_true', help='Log the merged validation pointclouds')
     parser.add_argument('--log_merged_training_batches', action='store_true',
                         help='When logging training batch visualisations, merge batches in global coordinate space before visualising.')
+    parser.add_argument('--log_merged_training_set', action='store_true',
+                        help='merge all teh points used during training into one visualisation')
     parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
+    parser.add_argument('--test_sample_rate', default=1.0, type=float, help='How much to oversample the test set by')
+
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
@@ -207,17 +212,19 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
     confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
 
-    confusion_mask_rgb255 = np.array([convert_class_to_rgb255(i, 3) for i in confusion_mask])
-    pred_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in pred])
-    target_labels_rgb255 = np.array([convert_class_to_rgb255(i, args.num_classes) for i in target_labels])
+    confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask])
+    pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
+    target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
     if confidences is not None:
         confidences_rgb255 = np.array([])
 
     confusion_matrix_data = np.histogram(confusion_mask, [0, 1, 2, 3, 4])
+    true_neg, true_pos, false_neg, false_pos = confusion_matrix_data[0]
     accuracy = np.sum(pred == target_labels) / len(pred)
     # Precision = of all the positive predications how many are correct (high Precision = low FP)
-    precision = confusion_matrix_data[0][1] / (confusion_matrix_data[0][1] + confusion_matrix_data[0][3])
-    recall = confusion_matrix_data[0][1] / (confusion_matrix_data[0][1] + confusion_matrix_data[0][2])  # sensitivity
+    precision = true_pos / (true_pos + false_pos)
+    # Of all the possible positives, how many do we predict (high recall = low fN)
+    recall = true_pos / (true_pos + false_neg)
     f1 = 2 * (recall * precision) / (recall + precision)
 
     if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
@@ -228,7 +235,8 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
         if confidences is not None:
             # Could do this by applying it as a label or as a alpha mask
             # Confidence of prediction intervals histogram
-            print(print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6))))
+            print()
+            print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6)))
             v.attributes(pred, target_labels, confusion_mask,
                          np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:, None])))
             v.attributes(pred, target_labels, confusion_mask,
@@ -236,22 +244,36 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
         else:
             v.attributes(pred, target_labels, confusion_mask)
 
-    print(tabulate([['Pred 1', confusion_matrix_data[0][1], confusion_matrix_data[0][3]],
-                    ['Pred 0', confusion_matrix_data[0][2], confusion_matrix_data[0][0]]],
+        # import open3d as o3d
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(points)
+        # pcd.colors = o3d.utility.Vector3dVector(confusion_mask_rgb255 / 255)
+        # o3d.visualization.draw_geometries([pcd])
+
+    print('\nConfusion Matrix (numPoints)')
+    print(tabulate([['Pred 1', true_pos, false_pos],
+                    ['Pred 0', false_neg, true_neg]],
                    headers=['', 'Actual 1', 'Actual 0']))
-    print(tabulate([['Pred 1', (confusion_matrix_data[0][3] / len(target_labels)).__round__(3),
-                     (confusion_matrix_data[0][1] / len(target_labels)).__round__(3)],
-                    ['Pred 0', (confusion_matrix_data[0][2] / len(target_labels)).__round__(3),
-                     (confusion_matrix_data[0][0] / len(target_labels)).__round__(3)]],
-                   headers=['', 'Actual 1', 'Actual 0']))
-    print(f'Accuracy: {accuracy}\n'
-          f'Recall: {recall}\n'
-          f'Precision: {precision}\n'
-          f'f1: {f1}\n'
-          f'Distribution predicted (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][2]) / len(target_labels):.2f}:'
-          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][3]) / len(target_labels):.2f}'
-          f'Distribution target (0:1): {(confusion_matrix_data[0][0] + confusion_matrix_data[0][3]) / len(target_labels):.2f}:'
-          f'{(confusion_matrix_data[0][1] + confusion_matrix_data[0][2]) / len(target_labels):.2f}')
+    print('\nConfusion Matrix (% total points)')
+    print(tabulate(
+        [['Pred 1', (true_pos / len(target_labels)).__round__(3), (false_pos / len(target_labels)).__round__(3)],
+         ['Pred 0', (false_neg / len(target_labels)).__round__(3), (true_neg / len(target_labels)).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0']))
+    print('\nConfusion Matrix (% target per category)')
+    print(tabulate(
+        [['Pred 1', (true_pos / (true_pos + false_neg)).__round__(3),
+          (false_pos / (true_neg + false_pos)).__round__(3)],
+         ['Pred 0', (false_neg / (true_pos + false_neg)).__round__(3),
+          (true_neg / (true_neg + false_pos)).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0']))
+    print(f'Accuracy: {accuracy:.4f}\n'
+          f'Recall: {recall:.4f}\n'
+          f'Precision: {precision:.4f}\n'
+          f'f1: {f1:.4f}\n'
+          f'Distribution predicted (0:1): '
+          f'{(true_neg + false_neg) / len(target_labels):.2f}:{(true_pos + false_pos) / len(target_labels):.2f}\n'
+          f'Distribution target (0:1): '
+          f'{(true_neg + false_pos) / len(target_labels):.2f}:{(true_pos + false_neg) / len(target_labels):.2f}')
 
     if batch_num is not None:
         wandb.log({
@@ -271,10 +293,10 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
             "epoch": epoch,
             "confusion-matrix": {
                 "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
-                "true-positive": confusion_matrix_data[0][1],
-                "false-positive": confusion_matrix_data[0][3],
-                "true-negative": confusion_matrix_data[0][0],
-                "false-negative": confusion_matrix_data[0][2]
+                "true-positive": true_pos,
+                "false-positive": false_pos,
+                "true-negative": true_neg,
+                "false-negative": false_neg
             },
             'accuracy': accuracy,
             "pointcloud": {
@@ -283,8 +305,6 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
                 "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
             }
         }})
-
-
 
 
 def set_bn_training(model, v):
@@ -352,7 +372,7 @@ def main(args):
                                  block_size=args.block_size, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
     print("start loading test data ...")
     TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
-                                block_size=1.0, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
+                                block_size=1.0, sample_rate=args.test_sample_rate, transform=None, num_classes=NUM_CLASSES)
     # DEBUG
     # import pptk
     # all_points = [p for sublist in TRAIN_DATASET.room_points for p in sublist]
@@ -362,10 +382,10 @@ def main(args):
     # current_points, current_labels = TRAIN_DATASET.room_points[0], TRAIN_DATASET.room_labels[0]
     # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4,
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4,
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=0,
                                                  pin_memory=True, drop_last=True)
     weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
 
@@ -453,13 +473,16 @@ def main(args):
         if not args.validate_only:
             # TODO: Compare labeleweights (hist(batch_labels)) and maybe log this?
             # TODO: maybe even start logging the training vs prediction images?
+            all_train_points = []
+            all_train_pred = []
+            all_train_target = []
             for i, (points, target, room_idx) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader),
                                                       smoothing=0.9,
                                                       desc="Training"):
                 optimizer.zero_grad()
                 # Points: Global XYZ, IGB/255, XYZ/max(room_XYZ)
                 points = points.data.numpy()
-                # if args.log_clouds:
+                # if args.log_first_batch_cloud:
                 # Log points and their places
                 # v = pptk.viewer(np.vstack(points)[:, :3], np.hstack(target), np.repeat(room_idx, 4096),
                 #                 np.arange(20).repeat(4096))
@@ -486,10 +509,23 @@ def main(args):
                 total_seen += (BATCH_SIZE * NUM_POINT)
                 loss_sum += loss
 
-                if args.log_clouds and i == 0:  # Visualise the first batch in every sample
+                if args.log_merged_training_set and args.num_classes == 2:
+                    all_train_points.append(np.array(points.transpose(1, 2).cpu()))
+                    all_train_pred.append(pred_choice.reshape(args.batch_size, -1))
+                    all_train_target.append(np.array(target.cpu()).reshape(args.batch_size, -1))
+
+                if args.log_first_batch_cloud and i == 0:  # Visualise the first batch in every sample
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
                                     np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
                                     seg_pred.exp().cpu().data.numpy(), args.log_merged_training_batches)
+
+            if args.log_merged_training_set and args.num_classes == 2:
+                all_eval_points = np.vstack(np.vstack(all_eval_points))
+                all_eval_pred = np.hstack(np.vstack(all_eval_pred))
+                all_eval_target = np.hstack(np.vstack(all_eval_target))
+
+                visualise_prediction(all_eval_points[:, :3], all_eval_pred, all_eval_target, epoch,
+                                     "Train", wandb_section="Visualise-Merged")
 
             mean_loss = loss_sum / num_batches
             accuracy = total_correct / float(total_seen)
@@ -529,7 +565,6 @@ def main(args):
             all_eval_points = []
             all_eval_target = []
             all_eval_pred = []
-            all_eval_room_idx = []
             log_string('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
             for i, (points, target, room_idx) in tqdm(enumerate(testDataLoader), total=len(testDataLoader),
                                                       smoothing=0.9):
@@ -539,15 +574,15 @@ def main(args):
                 points = points.transpose(2, 1)
 
                 seg_pred, trans_feat = classifier(points)
-                pred_val = seg_pred.contiguous().cpu().data.numpy()
+                pred_choice = seg_pred.contiguous().cpu().data.numpy()
                 seg_pred = seg_pred.contiguous().view(-1, NUM_CLASSES)
 
                 batch_label = target.cpu().data.numpy()
                 target = target.view(-1, 1)[:, 0]
                 loss = criterion(seg_pred, target, trans_feat, weights)
                 loss_sum += loss
-                pred_val = np.argmax(pred_val, 2)
-                correct = np.sum((pred_val == batch_label))
+                pred_choice = np.argmax(pred_choice, 2)
+                correct = np.sum((pred_choice == batch_label))
                 total_correct += correct
                 total_seen += (BATCH_SIZE * NUM_POINT)
                 tmp, _ = np.histogram(batch_label, range(NUM_CLASSES + 1))
@@ -556,42 +591,28 @@ def main(args):
                 for l in range(NUM_CLASSES):
                     total_seen_class[l] += np.sum((batch_label == l))  # How many times the label was in the batch
                     total_correct_class[l] += np.sum(
-                        (pred_val == l) & (batch_label == l))  # How often the predicted label was correct in the batch
-                    total_iou_denominator_class[l] += np.sum(((pred_val == l) | (
+                        (pred_choice == l) & (
+                                batch_label == l))  # How often the predicted label was correct in the batch
+                    total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (
                             batch_label == l)))  # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
 
                 if args.log_merged_validation and args.num_classes == 2:
                     all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
-                    all_eval_pred.append(pred_val.reshape(args.batch_size, -1))
+                    all_eval_pred.append(pred_choice.reshape(args.batch_size, -1))
                     all_eval_target.append(np.array(target.cpu()).reshape(args.batch_size, -1))
-                    all_eval_room_idx += room_idx
-                if args.log_clouds and i == 0:
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_val.reshape(args.batch_size, -1),
+
+                if args.log_first_batch_cloud and i == 0:
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
                                     np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, "Validation",
                                     seg_pred.exp().cpu().numpy(), merged=args.log_merged_validation)
 
             if args.log_merged_validation and args.num_classes == 2:
-                stop_index = all_eval_room_idx.index(1) - 1
-                start_index = 0
-                for area in range(len(TEST_DATASET.room_points)):
-                    pnts = np.concatenate(all_eval_points, axis=0)
-                    pnts = pnts[start_index:stop_index]
-                    pnts = pnts.reshape(-1, 9)
+                all_eval_points = np.vstack(np.vstack(all_eval_points))
+                all_eval_pred = np.hstack(np.vstack(all_eval_pred))
+                all_eval_target = np.hstack(np.vstack(all_eval_target))
 
-                    targets = np.concatenate(all_eval_target, axis=0)
-                    targets = targets[start_index:stop_index]
-                    targets = targets.reshape(-1)
-
-                    preds = np.concatenate(all_eval_pred, axis=0)
-                    preds = preds[start_index:stop_index]
-                    preds = preds.reshape(-1)
-                    visualise_prediction(pnts[:, 6:], preds, targets, epoch,
-                                         "Validation", wandb_section="Visualise-Merged")
-
-                    # TODO: second validation set isn't displaying correctly...
-
-                    start_index = stop_index
-                    stop_index = len(all_eval_room_idx)
+                visualise_prediction(all_eval_points[:, :3], all_eval_pred, all_eval_target, epoch,
+                                     "Validation", wandb_section="Visualise-Merged")
 
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
             mIoU = np.mean(
@@ -619,19 +640,19 @@ def main(args):
                     seg_label_to_cat[l] + ' ' * (14 - len(seg_label_to_cat[l])), labelweights[l - 1],
                     total_correct_class[l] / float(total_iou_denominator_class[l]))  # refactor
 
-            """
-            ------- IoU --------
-            class keep           weight: 0.253, IoU: 0.493
-            class discard        weight: 0.747, IoU: 0.146
-            """
-            wandb.log({"Validation/IoU/": {
-                "class": seg_label_to_cat[l],
-                "weight": labelweights[l - 1],
-                "IoU": total_correct_class[l] / float(total_iou_denominator_class[l]),
-                "text": iou_per_class_str
-            }
-            }, commit=False)
-            # TODO Custom graph here
+            # """
+            # ------- IoU --------
+            # class keep           weight: 0.253, IoU: 0.493
+            # class discard        weight: 0.747, IoU: 0.146
+            # """
+            # wandb.log({"Validation/IoU/": {
+            #     "class": seg_label_to_cat[l],
+            #     "weight": labelweights[l - 1],
+            #     "IoU": total_correct_class[l] / float(total_iou_denominator_class[l]),
+            #     "text": iou_per_class_str
+            # }
+            # }, commit=False)
+            # # TODO Custom graph here
 
             log_string(iou_per_class_str)
             log_string('Eval mean loss: %f' % eval_mean_loss)
@@ -650,6 +671,7 @@ def main(args):
                 }
                 torch.save(state, savepath)
                 log_string('Saving model....')
+                wandb.save(savepath)
             log_string('Best mIoU: %f' % best_iou)
         global_epoch += 1
         wandb.log({})
@@ -702,11 +724,11 @@ def generate_bounding_cube(origin, size):
 
 if __name__ == '__main__':
     args = parse_args()
-    config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
+    config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 20, 'validation': 5}}
     config.update(args.__dict__)
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name='Church-Grid-GlobalXYZ')
+               config=config, name='SongoMnara-Grid-GlobalXYZ')
     main(args)
     wandb.finish()
     ################
