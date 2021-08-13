@@ -14,7 +14,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_semseg.py" />
-    <option name="PARAMETERS" value="--model pointnet2_sem_seg --batch_size 20 --test_area 2 --log_dir pointnet2_sem_seg_church --num_classes 2 --data_path church/ --epoch 30 --learning_rate 0.1 --block_size 1.0 --log_clouds --no_augment_points --log_merged_validation --log_merged_training_batches" />
+    <option name="PARAMETERS" value="--model pointnet2_sem_seg --batch_size 20 --test_area 2 --log_dir pointnet2_sem_seg_church --num_classes 2 --data_path church/ --epoch 30 --learning_rate 0.1 --block_size 1.0 --log_first_batch_cloud --log_merged_validation --log_merged_training_batches --log_merged_training_set" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

@@ -168,7 +168,6 @@ def parse_args():
     parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
     parser.add_argument('--test_sample_rate', default=1.0, type=float, help='How much to oversample the test set by')
 
-
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
     parser.add_argument('--psa1_group_all', action='store_true',
@@ -211,7 +210,7 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
     confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
     confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
-
+    # TODO Vecotrizethis
     confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask])
     pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
     target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
@@ -372,7 +371,8 @@ def main(args):
                                  block_size=args.block_size, sample_rate=1.0, transform=None, num_classes=NUM_CLASSES)
     print("start loading test data ...")
     TEST_DATASET = S3DISDataset(split='test', data_root=root, num_point=NUM_POINT, test_area=args.test_area,
-                                block_size=1.0, sample_rate=args.test_sample_rate, transform=None, num_classes=NUM_CLASSES)
+                                block_size=1.0, sample_rate=args.test_sample_rate, transform=None,
+                                num_classes=NUM_CLASSES)
     # DEBUG
     # import pptk
     # all_points = [p for sublist in TRAIN_DATASET.room_points for p in sublist]
@@ -382,11 +382,12 @@ def main(args):
     # current_points, current_labels = TRAIN_DATASET.room_points[0], TRAIN_DATASET.room_labels[0]
     # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=0,
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=0,
-                                                 pin_memory=True, drop_last=True)
+                                                 pin_memory=True,
+                                                 drop_last=(True if len(TEST_DATASET) // BATCH_SIZE else False))
     weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
 
     log_string("The number of training data is: %d" % len(TRAIN_DATASET))
@@ -515,16 +516,17 @@ def main(args):
                     all_train_target.append(np.array(target.cpu()).reshape(args.batch_size, -1))
 
                 if args.log_first_batch_cloud and i == 0:  # Visualise the first batch in every sample
+                    print(f"Visualising Epoch {epoch} Mini-Batch {i}")
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
                                     np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
                                     seg_pred.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
             if args.log_merged_training_set and args.num_classes == 2:
-                all_eval_points = np.vstack(np.vstack(all_eval_points))
-                all_eval_pred = np.hstack(np.vstack(all_eval_pred))
-                all_eval_target = np.hstack(np.vstack(all_eval_target))
+                all_train_points = np.vstack(np.vstack(all_train_points))
+                all_train_pred = np.hstack(np.vstack(all_train_pred))
+                all_train_target = np.hstack(np.vstack(all_train_target))
 
-                visualise_prediction(all_eval_points[:, :3], all_eval_pred, all_eval_target, epoch,
+                visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
                                      "Train", wandb_section="Visualise-Merged")
 
             mean_loss = loss_sum / num_batches
@@ -563,8 +565,8 @@ def main(args):
                 set_bn_training(classifier, True)
 
             all_eval_points = []
-            all_eval_target = []
             all_eval_pred = []
+            all_eval_target = []
             log_string('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
             for i, (points, target, room_idx) in tqdm(enumerate(testDataLoader), total=len(testDataLoader),
                                                       smoothing=0.9):
@@ -598,12 +600,12 @@ def main(args):
 
                 if args.log_merged_validation and args.num_classes == 2:
                     all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
-                    all_eval_pred.append(pred_choice.reshape(args.batch_size, -1))
-                    all_eval_target.append(np.array(target.cpu()).reshape(args.batch_size, -1))
+                    all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
+                    all_eval_target.append(np.array(target.cpu()).reshape(points.shape[0], -1))
 
                 if args.log_first_batch_cloud and i == 0:
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
-                                    np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, "Validation",
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(points.shape[0], -1),
+                                    np.array(target.cpu()).reshape(points.shape[0], -1), i, epoch, "Validation",
                                     seg_pred.exp().cpu().numpy(), merged=args.log_merged_validation)
 
             if args.log_merged_validation and args.num_classes == 2:
@@ -726,12 +728,20 @@ if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 20, 'validation': 5}}
     config.update(args.__dict__)
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
                config=config, name='SongoMnara-Grid-GlobalXYZ')
     main(args)
     wandb.finish()
     ################
+    # config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 1, 'validation': 1}}
+    # config.update(args.__dict__)
+    # # os.environ["WANDB_MODE"] = "dryrun"
+    # wandb.init(project="PointNet2-Pytorch",
+    #            config=config, name='Church-Overfitting-Testing')
+    # main(args)
+    # wandb.finish()
+    # ################
     #
     # args.__dict__.update({'npoint': 4096 * 2})
     # config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
