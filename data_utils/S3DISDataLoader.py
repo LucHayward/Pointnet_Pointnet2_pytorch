@@ -176,14 +176,10 @@ class S3DISDataset(Dataset):
         # TODO: try this https://ethankoch.medium.com/incredibly-fast-random-sampling-in-python-baf154bd836a
         while (True):  # Repeat until there are at least 1024 point_idxs selected
             if self.num_classes == 2 and 1 in labels:
-                while True:  # TODO fix this too
-                    tmp = np.arange(len(labels))[labels == 1]
-                    center_idx = tmp[np.random.randint(0, len(tmp))]
-                    # v.color_map(np.hstack((np.array(turbo_colormap_data), np.ones(len(turbo_colormap_data))[...,None]*0.5)))
-                    if labels[center_idx] == 1:
-                        break
-                    else:
-                        print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
+                tmp = np.arange(len(labels))[labels == 1]
+                center_idx = tmp[np.random.randint(0, len(tmp))]
+                if labels[center_idx] != 1:
+                    print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
             else:
                 center_idx = np.random.choice(N_points)
             center = points[center_idx][:3]  # Pick random point as center
@@ -207,6 +203,7 @@ class S3DISDataset(Dataset):
                 discard_point_mask = np.bool_(labels[point_idxs])
                 discard_point_idxs = point_idxs[discard_point_mask]
                 keep_point_idxs = point_idxs[~discard_point_mask]
+
                 if len(discard_point_idxs) >= self.num_point // 2 and len(keep_point_idxs) >= self.num_point // 2:
                     selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,
                                                                            replace=False),
