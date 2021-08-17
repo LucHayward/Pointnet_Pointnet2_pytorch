@@ -167,6 +167,7 @@ def parse_args():
                         help='merge all teh points used during training into one visualisation')
     parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
     parser.add_argument('--test_sample_rate', default=1.0, type=float, help='How much to oversample the test set by')
+    parser.add_argument('--shuffle_training_data', action='store_true', help='Shuffle the training data loader')
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
@@ -212,8 +213,8 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
     # TODO Vecotrizethis
     confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask])
-    pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
-    target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
+    # pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
+    # target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
     if confidences is not None:
         confidences_rgb255 = np.array([])
 
@@ -236,8 +237,6 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
             # Confidence of prediction intervals histogram
             print()
             print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6)))
-            v.attributes(pred, target_labels, confusion_mask,
-                         np.hstack((pred_rgb255 / 255, confidences.max(1).round(1)[:, None])))
             v.attributes(pred, target_labels, confusion_mask,
                          np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
         else:
@@ -300,8 +299,8 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
             'accuracy': accuracy,
             "pointcloud": {
                 "comparison": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
-                "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
-                "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
+                # "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
+                # "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
             }
         }})
 
@@ -312,6 +311,17 @@ def set_bn_training(model, v):
         model.training = v
     for module in model.children():
         set_bn_training(module, v)
+
+
+def pptk_full_dataset(dataset):
+    """
+    Visualise a given dataset object
+    :param dataset: S3DISDataLoader Dataset dataset containing points and labels
+    :return: pptk viewer instance
+    """
+    v = pptk.viewer(np.vstack(dataset.room_points)[:, :3], np.hstack(dataset.room_labels))
+    v.color_map(turbo_colormap_data)
+    return v
 
 
 def main(args):
@@ -382,7 +392,8 @@ def main(args):
     # current_points, current_labels = TRAIN_DATASET.room_points[0], TRAIN_DATASET.room_labels[0]
     # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4,
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
+                                                  shuffle=args.shuffle_training_data, num_workers=4,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=0,
@@ -525,7 +536,10 @@ def main(args):
                 all_train_points = np.vstack(np.vstack(all_train_points))
                 all_train_pred = np.hstack(np.vstack(all_train_pred))
                 all_train_target = np.hstack(np.vstack(all_train_target))
-
+                unique_points = np.unique(all_train_points[:, :3], axis=0).shape[0]
+                total_training_points = np.vstack(TRAIN_DATASET.room_points).shape[0]
+                print(
+                    f"Unique points: {unique_points}/{total_training_points} ({unique_points * 100 // total_training_points}%)")
                 visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
                                      "Train", wandb_section="Visualise-Merged")
 
@@ -726,11 +740,11 @@ def generate_bounding_cube(origin, size):
 
 if __name__ == '__main__':
     args = parse_args()
-    config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 20, 'validation': 5}}
+    config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 1, 'validation': 1}}  # TODO: Dynamically
     config.update(args.__dict__)
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name='SongoMnara-Grid-GlobalXYZ')
+               config=config, name='Songomnara-single-area-overfitting-test')
     main(args)
     wandb.finish()
     ################
