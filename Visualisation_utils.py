@@ -1,12 +1,11 @@
 import os
-# from line_profiler_pycharm import profile
 
 import numpy as np
-
+import pptk
+from tabulate import tabulate
 from tqdm import tqdm
-from torch.utils.data import Dataset
 
-import pptk  # For visualisation
+import wandb
 
 turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149], [0.19956, 0.09498, 0.29024],
                        [0.20415, 0.10652, 0.31844], [0.20860, 0.11802, 0.34607], [0.21291, 0.12947, 0.37314],
@@ -94,157 +93,186 @@ turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149],
                        [0.55852, 0.04028, 0.00579], [0.54583, 0.03593, 0.00638], [0.53295, 0.03169, 0.00705],
                        [0.51989, 0.02756, 0.00780], [0.50664, 0.02354, 0.00863], [0.49321, 0.01963, 0.00955],
                        [0.47960, 0.01583, 0.01055]]
-rng = np.random.default_rng()
 
 
-class ChurchDataset(Dataset):
-    def __init__(self, split='train', data_root=None, num_point=4096, valid_area=2, test_area=3, block_size=1.0,
-                 sample_rate=1.0, transform=None, num_classes=2):
-        """
-        Experiment to try and load the data directly.
-        Args:
-            split: Train/Valid/Test
-            data_root: the folder to get the data from
-            num_point: Always 2
-            valid_area: Which AREA in the dataset to reserve as the test area
-            block_size: Size of a square column (z=0) as side length
-            sample_rate: Rate at which to oversample the data (CHECK)
-            transform:
-        """
-        super().__init__()
-        self.num_point = num_point
-        self.block_size = block_size
-        self.transform = transform
-        self.num_classes = num_classes
+def convert_class_to_turborgb255(class_num, max_class):
+    if class_num == 0:
+        return np.multiply(turbo_colormap_data[0], 255)
+    elif class_num == max_class:
+        return np.multiply(turbo_colormap_data[-1], 255)
+    else:
+        return np.multiply(turbo_colormap_data[len(turbo_colormap_data) // max_class * class_num], 255)
 
-        segments = sorted(os.listdir(data_root))
-        segments = [segment for segment in segments if 'Area_' in segment]
-        if split == 'train':
-            segments_split = [segment for segment in segments if
-                           not (f'Area_{valid_area}' in segment or f'Area_{test_area}' in segment)]
-        elif split == 'valid':
-            segments_split = [segment for segment in segments if f'Area_{valid_area}' in segment]
+
+def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, confidences=False, merged=False):
+    if merged:
+        visualise_prediction(np.vstack(points)[:, :3], np.hstack(pred), np.hstack(target_labels), epoch, data_split,
+                             batch_num, confidences=confidences, wandb_section='Visualise-Batch')
+    else:
+        for idx, points_batch in tqdm(enumerate(points), total=len(points), desc="visualise_batch"):
+            # print(f'\nEpoch {epoch} batch {batch_num} sample {idx}:')
+            visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
+                                 wandb_section='Visualise-Batch')
+
+
+def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
+                         wandb_section=None):
+    confusion_mask = np.zeros(len(points), dtype=int)  # pptk/wandb
+    # confusion_mask[(pred == target_labels) & (pred == 1)] = 3  # tp (red)
+    # confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
+    # confusion_mask[(pred != target_labels) & (pred == 1)] = 1  # fp (green)
+    # confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
+    confusion_mask[(pred != target_labels) & (pred == 1)] = 3  # fp (red)
+    confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
+    confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
+    confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
+    # TODO Vecotrizethis
+    confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask]) # TODO: vectorize
+    # pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
+    # target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
+    if confidences is not None:
+        confidences_rgb255 = np.array([])
+
+    confusion_matrix_data = np.histogram(confusion_mask, [0, 1, 2, 3, 4])
+    true_neg, true_pos, false_neg, false_pos = confusion_matrix_data[0]
+    accuracy = np.sum(pred == target_labels) / len(pred)
+    # Precision = of all the positive predications how many are correct (high Precision = low FP)
+    precision = true_pos / (true_pos + false_pos)
+    # Of all the possible positives, how many do we predict (high recall = low fN)
+    recall = true_pos / (true_pos + false_neg)
+    f1 = 2 * (recall * precision) / (recall + precision)
+
+    if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
+        v = pptk.viewer(points)
+        v.color_map(turbo_colormap_data)
+        v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
+
+        if confidences is not None:
+            # Could do this by applying it as a label or as a alpha mask
+            # Confidence of prediction intervals histogram
+            print()
+            print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6)))
+            v.attributes(pred, target_labels, confusion_mask,
+                         np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
         else:
-            segments_split = [segment for segment in segments if f'Area_{test_area}' in segment]
+            v.attributes(pred, target_labels, confusion_mask)
 
-        self.segment_points, self.segment_labels = [], []
-        num_point_all = []  # number of points per segment
-        labelweights = np.zeros(num_classes)  # Count of labels across all segments
+        # import open3d as o3d
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(points)
+        # pcd.colors = o3d.utility.Vector3dVector(confusion_mask_rgb255 / 255)
+        # o3d.visualization.draw_geometries([pcd])
 
-        for segment_name in tqdm(segments_split, total=len(segments_split)):
-            segment_path = os.path.join(data_root, segment_name)
-            segment_data = np.load(segment_path)  # (global)XYZL
-            points, labels = segment_data[:, 0:3], segment_data[:, 3]  # xyz, l
-            tmp, _ = np.histogram(labels, range(num_classes + 1))  # count of class labels in segment
-            labelweights += tmp
-            self.segment_points.append(points), self.segment_labels.append(labels)
-            num_point_all.append(labels.size)
+    print('\nConfusion Matrix (numPoints)')
+    print(tabulate([['Pred 1', true_pos, false_pos],
+                    ['Pred 0', false_neg, true_neg]],
+                   headers=['', 'Actual 1', 'Actual 0']))
+    print('\nConfusion Matrix (% total points)')
+    print(tabulate(
+        [['Pred 1', (true_pos / len(target_labels)).__round__(3), (false_pos / len(target_labels)).__round__(3)],
+         ['Pred 0', (false_neg / len(target_labels)).__round__(3), (true_neg / len(target_labels)).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0']))
+    print('\nConfusion Matrix (% target per category)')
+    print(tabulate(
+        [['Pred 1', (true_pos / (true_pos + false_neg)).__round__(3),
+          (false_pos / (true_neg + false_pos)).__round__(3)],
+         ['Pred 0', (false_neg / (true_pos + false_neg)).__round__(3),
+          (true_neg / (true_neg + false_pos)).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0']))
+    print(f'Accuracy: {accuracy:.4f}\n'
+          f'Recall: {recall:.4f}\n'
+          f'Precision: {precision:.4f}\n'
+          f'f1: {f1:.4f}\n'
+          f'Distribution predicted (0:1): '
+          f'{(true_neg + false_neg) / len(target_labels):.2f}:{(true_pos + false_pos) / len(target_labels):.2f}\n'
+          f'Distribution target (0:1): '
+          f'{(true_neg + false_pos) / len(target_labels):.2f}:{(true_pos + false_neg) / len(target_labels):.2f}')
 
-        labelweights = labelweights.astype(np.float32)
-        labelweights = labelweights / np.sum(labelweights)  # Labelweights = proportion of each label
-        self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0) #(number of times smaller than max weight)^0.33
-
-        print(f'Labelweights={self.labelweights}')
-
-        sample_prob = num_point_all / np.sum(num_point_all)  # Sample more from segments with more points
-        num_iter = int(np.sum(num_point_all) * sample_rate / num_point) # sample enough times to see every point
-        segment_idxs = []
-        for index in range(len(segments_split)):
-            segment_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
-        self.segment_idxs = np.array(segment_idxs)
-
-        print("Totally {} samples in {} set.".format(len(self.segment_idxs), split))
-
-
-    def __getitem__(self, idx):
-        """
-        Given a segment ID returns self.num_point points, labels
-        Args:
-            idx ():
-
-        Returns: points (Global XYZ, IGB/255, XYZ/max(segment_XYZ)), labels
-
-        """
-        segment_idx = self.segment_idxs[idx]
-        points = self.segment_points[segment_idx]  # N * 6
-        labels = self.segment_labels[segment_idx]  # N
-        N_points = points.shape[0]
-        # print(f"DEBUG: labelHist = {np.histogram(labels, [0, 1, 2])}")
-        # print(f"DEBUG: AvailablePoints/numPoints = {labels.size}/{self.num_point}={labels.size / self.num_point}")
-        # TODO more even class sampling, maybe
-        # DEBUG: v = pptk.viewer(points[:,:3],labels)
-        # TODO: try this https://ethankoch.medium.com/incredibly-fast-random-sampling-in-python-baf154bd836a
-        while (True):  # Repeat until there are at least 1024 point_idxs selected
-            if self.num_classes == 2 and 1 in labels:
-                tmp = np.arange(len(labels))[labels == 1]
-                center_idx = tmp[np.random.randint(0, len(tmp))]
-                if labels[center_idx] != 1:
-                    print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
-            else:
-                center_idx = np.random.choice(N_points)
-            center = points[center_idx][:3]  # Pick random point as center
-            block_min = center - [self.block_size / 2.0, self.block_size / 2.0,
-                                  0]  # Get a square column (z=0) of size block_size
-            block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-            point_idxs = np.where(
-                (points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (
-                        points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
-            # print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
-            # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
-            if point_idxs.size > 1024:
-                break
-            else:
-                self.block_size *= 2
-                print(f'DEBUG: increasing block size to {self.block_size}')
-
-        if point_idxs.size >= self.num_point:  # Select points from the point_idxs up until self.num_point, with replacement if necessary\
-            # TODO Fix this shit
-            if self.num_classes == 2:
-                discard_point_mask = np.bool_(labels[point_idxs])
-                discard_point_idxs = point_idxs[discard_point_mask]
-                keep_point_idxs = point_idxs[~discard_point_mask]
-                if len(discard_point_idxs) >= self.num_point // 2 and len(keep_point_idxs) >= self.num_point // 2:
-                    selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,
-                                                                           replace=False),
-                                                          np.random.choice(keep_point_idxs, self.num_point // 2,
-                                                                           replace=False)))  # TODO Look into changing the sampling here
-                elif len(keep_point_idxs) <= self.num_point // 2:
-                    selected_point_idxs = np.concatenate((np.array(keep_point_idxs),
-                                                          np.random.choice(discard_point_idxs,
-                                                                           self.num_point - len(keep_point_idxs),
-                                                                           replace=False)))
-                else:
-                    selected_point_idxs = np.concatenate((np.array(discard_point_idxs),
-                                                          np.random.choice(keep_point_idxs,
-                                                                           self.num_point - len(discard_point_idxs),
-                                                                           replace=False)))
-            else:
-                selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
-        else:
-            selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=True)
-
-        # print(f"DEBUG: Selected_labelHist = {np.histogram(labels[selected_point_idxs], [0, 1, 2])}")
-
-        # normalize
-        selected_points = points[selected_point_idxs, :]  # num_point * 6
-
-            # (self.num_point, 9))  # num_point * 9 (last three store XYZ/max(segment_XYZ) aka Normalised) CHECK not true now
-        # current_points[:, 6] = selected_points[:, 0] / self.segment_coord_max[segment_idx][0]
-        # current_points[:, 7] = selected_points[:, 1] / self.segment_coord_max[segment_idx][1]
-        # current_points[:, 8] = selected_points[:, 2] / self.segment_coord_max[segment_idx][2]
-        # selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
-        # selected_points[:, 1] = selected_points[:, 1] - center[1]
-        # selected_points[:, 3:6] /= 255.0 #TODO Fix this
-        current_points = selected_points # Global XYZ
-        current_labels = labels[selected_point_idxs]
-        if self.transform is not None:
-            current_points, current_labels = self.transform(current_points, current_labels)
-        # pptk.viewer(np.concatenate((current_points[:,:3], current_points[:,6:],generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[0],generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[0], generate_bounding_cube([0,0,0],1)[0])), np.concatenate((current_labels+2,current_labels,generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[1][:,0], generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[1][:,0], generate_bounding_cube([0,0,0],1)[1][:,0])))
-        return current_points, current_labels, segment_idx
-
-    def __len__(self):
-        return len(self.segment_idxs)
+    if batch_num is not None:
+        wandb.log({
+            f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+                'batch': batch_num}},
+            commit=False)
+    if confidences is not None:
+        pass
+        # wandb.log({
+        #     f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+        #         "pointcloud": {
+        #             "confidence": wandb.Object3D(np.hstack((points, confidences_rgb255)))
+        #
+        #         }}}, commit=False)
+    wandb.log({
+        f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+            "epoch": epoch,
+            "confusion-matrix": {
+                "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
+                "true-positive": true_pos,
+                "false-positive": false_pos,
+                "true-negative": true_neg,
+                "false-negative": false_neg
+            },
+            'accuracy': accuracy,
+            "pointcloud": {
+                "comparison": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
+                # "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
+                # "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
+            }
+        }})
 
 
-if __name__ == '__main__':
-    print("This shouldn't be run")
+def generate_points_on_sphere(r, n, offset=None):
+    if offset is None:
+        offset = [0, 0, 0]
+    points = []
+    alpha = 4.0 * np.pi * r * r / n
+    d = np.sqrt(alpha)
+    m_nu = int(np.round(np.pi / d))
+    d_nu = np.pi / m_nu
+    d_phi = alpha / d_nu
+    count = 0
+    for m in range(0, m_nu):
+        nu = np.pi * (m + 0.5) / m_nu
+        m_phi = int(np.round(2 * np.pi * np.sin(nu) / d_phi))
+        for n in range(0, m_phi):
+            phi = 2 * np.pi * n / m_phi
+            xp = r * np.sin(nu) * np.cos(phi)
+            yp = r * np.sin(nu) * np.sin(phi)
+            zp = r * np.cos(nu)
+            count = count + 1
+            points.append([xp, yp, zp])
+
+    return np.array(points) + offset
+
+
+def generate_bounding_wireframe_points(min, max, number):
+    points = [np.linspace(min, [max[0], min[1], min[2]], number), np.linspace(min, [min[0], max[1], min[2]], number),
+              np.linspace(min, [min[0], min[1], max[2]], number),
+              np.linspace([min[0], min[1], max[2]], [max[0], min[1], max[2]], number),
+              np.linspace([min[0], min[1], max[2]], [min[0], max[1], max[2]], number),
+              np.linspace([min[0], max[1], min[2]], [max[0], max[1], min[2]], number),
+              np.linspace([min[0], max[1], min[2]], [min[0], max[1], max[2]], number),
+              np.linspace([max[0], min[1], min[2]], [max[0], max[1], min[2]], number),
+              np.linspace([max[0], min[1], min[2]], [max[0], min[1], max[2]], number),
+              np.linspace(max, [min[0], max[1], max[2]], number), np.linspace(max, [max[0], min[1], max[2]], number),
+              np.linspace(max, [max[0], max[1], min[2]], number)]
+
+    points = np.vstack(points)
+    colours = np.ones(points.shape)
+    # vv = pptk.viewer(points, colours)
+    # vv.set(point_size=0.01)
+    return points, colours
+
+
+def generate_bounding_cube(origin, size):
+    return generate_bounding_wireframe_points(np.array(origin), np.array(origin) + size, 10 * size)
+
+
+def pptk_full_dataset(dataset):
+    """
+    Visualise a given dataset object
+    :param dataset: S3DISDataLoader Dataset dataset containing points and labels
+    :return: pptk viewer instance
+    """
+    v = pptk.viewer(np.vstack(dataset.room_points)[:, :3], np.hstack(dataset.room_labels))
+    v.color_map(turbo_colormap_data)
+    return v

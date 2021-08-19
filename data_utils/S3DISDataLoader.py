@@ -1,7 +1,6 @@
 import os
 from line_profiler_pycharm import profile
 
-
 import numpy as np
 
 from tqdm import tqdm
@@ -150,10 +149,6 @@ class S3DISDataset(Dataset):
             room_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
-        # TODO check what the room_coord_min values are
-        # print(f"DEGUG: room_coord_min:\n{self.room_coord_min}")
-        # print(f"DEGUG: room_coord_min.min(): {np.min(self.room_coord_min)}")
-        # print(f"DEGUG: room_coord_min.max(): {np.max(self.room_coord_min)}")
 
     @profile
     def __getitem__(self, idx):
