@@ -102,6 +102,15 @@ class ChurchDataset(Dataset):
                  sample_rate=1.0, transform=None, num_classes=2):
         """
         Experiment to try and load the data directly.
+        Given a dataset directory, load all the segments from that directory.
+        Each segment represents a KxK column(TODO: refactor block size)
+        Draw num_point samples from each segment
+        - Possibly remove the randomisation and get a fixed subset of the points where there are more than num_point datapoints?
+        - Can't use a fixed random sequence (out of bounds errors)
+        - Could simply get an equal interval across the data
+        Sample from the segments based on the number of points present in the segment proportionally
+        TODO: Change the way we split the data up from training
+
         Args:
             split: Train/Valid/Test
             data_root: the folder to get the data from
