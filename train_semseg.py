@@ -308,7 +308,7 @@ def main(args):
                                     np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
                                     seg_pred.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
-            if args.log_merged_training_set and args.num_classes == 2:
+            if args.log_merged_training_set and args.num_classes == 2 :
                 all_train_points = np.vstack(np.vstack(all_train_points))
                 all_train_pred = np.hstack(np.vstack(all_train_pred))
                 all_train_target = np.hstack(np.vstack(all_train_target))
@@ -317,8 +317,8 @@ def main(args):
                 total_training_points = np.vstack(TRAIN_DATASET.room_points).shape[0]
                 print(
                     f"Unique points: {num_unique_points}/{total_training_points} ({num_unique_points * 100 // total_training_points}%)")
-                visualise_prediction(all_train_points[unique_indices, :3], all_train_pred[unique_indices],
-                                     all_train_target[unique_indices], epoch,
+                visualise_prediction(all_train_points[:, :3], all_train_pred,
+                                     all_train_target, epoch,
                                      "Train", wandb_section="Visualise-Merged")
 
             mean_loss = loss_sum / num_batches
@@ -410,8 +410,8 @@ def main(args):
                 print(
                     f"Unique points: {num_unique_points}/{total_eval_points} ({num_unique_points * 100 // total_eval_points}%)")
 
-                visualise_prediction(all_eval_points[unique_indices, :3], all_eval_pred[unique_indices],
-                                     all_eval_target[unique_indices], epoch,
+                visualise_prediction(all_eval_points[:, :3], all_eval_pred,
+                                     all_eval_target, epoch,
                                      "Validation", wandb_section="Visualise-Merged")
 
             labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
@@ -481,7 +481,7 @@ if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 10, 'validation': 2}}  # TODO: Dynamically
     config.update(args.__dict__)
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
                config=config, name='Church-globalXYZ-only')
     main(args)
