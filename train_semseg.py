@@ -5,7 +5,7 @@ Date: Nov 2019
 import argparse
 import os
 
-from Visualisation_utils import visualise_batch, visualise_prediction
+from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data
 from data_utils.S3DISDataLoader import S3DISDataset
 import torch
 import datetime
@@ -18,6 +18,7 @@ from tqdm import tqdm
 import provider
 import numpy as np
 import time
+import pptk
 
 import wandb
 
@@ -297,6 +298,13 @@ def main(args):
                 total_seen += (BATCH_SIZE * NUM_POINT)
                 loss_sum += loss
 
+                wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
+                           'Train/inner_epoch_accuracy_sum': total_correct/total_seen,
+                           'Train/inner_epoch_loss': loss,
+                           'Train/inner_epoch_accuracy': correct / len(batch_label),
+                           'epoch': epoch,
+                           'Train/inner_epoch_step': (i+epoch*len(trainDataLoader))})
+
                 if args.log_merged_training_set and args.num_classes == 2:
                     all_train_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_train_pred.append(pred_choice.reshape(args.batch_size, -1))
@@ -312,7 +320,7 @@ def main(args):
                 all_train_points = np.vstack(np.vstack(all_train_points))
                 all_train_pred = np.hstack(np.vstack(all_train_pred))
                 all_train_target = np.hstack(np.vstack(all_train_target))
-                _, unique_indices = np.unique(all_train_points[:, :3], axis=0, return_index=True)
+                _, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True, return_counts=True)
                 num_unique_points = len(unique_indices)
                 total_training_points = np.vstack(TRAIN_DATASET.room_points).shape[0]
                 print(
@@ -347,7 +355,7 @@ def main(args):
             total_correct = 0
             total_seen = 0
             loss_sum = 0
-            labelweights = np.zeros(NUM_CLASSES)
+            labelweights = np.zeros(NUM_CLASSES)  # only used for printing metrics
             total_seen_class = [0 for _ in range(NUM_CLASSES)]
             total_correct_class = [0 for _ in range(NUM_CLASSES)]
             total_iou_denominator_class = [0 for _ in range(NUM_CLASSES)]
@@ -480,10 +488,11 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 10, 'validation': 2}}  # TODO: Dynamically
+    config = {}
     config.update(args.__dict__)
     os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name='Church-globalXYZ-only')
+               config=config, name='Test-Working-Benchmark', resume=True)
     main(args)
     wandb.finish()
     ################
