@@ -96,8 +96,14 @@ turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149],
                        [0.47960, 0.01583, 0.01055]]
 rng = np.random.default_rng()
 
+class MastersDataset(Dataset):
+    def __init__(self, split, data_root, num_point=4096, ):
+        pass
 
-class ChurchDataset(Dataset):
+    def __getitem__(self, index: int):
+        
+
+class MastersDataset(Dataset):
     def __init__(self, split='train', data_root=None, num_point=4096, valid_area=2, test_area=3, block_size=1.0,
                  sample_rate=1.0, transform=None, num_classes=2):
         """

@@ -490,25 +490,8 @@ if __name__ == '__main__':
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 10, 'validation': 2}}  # TODO: Dynamically
     config = {}
     config.update(args.__dict__)
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name='Test-Working-Benchmark', resume=True)
+               config=config, name='SongoMnara-Double-Points', resume=True)
     main(args)
     wandb.finish()
-    ################
-    # config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 1, 'validation': 1}}
-    # config.update(args.__dict__)
-    # # os.environ["WANDB_MODE"] = "dryrun"
-    # wandb.init(project="PointNet2-Pytorch",
-    #            config=config, name='Church-Overfitting-Testing')
-    # main(args)
-    # wandb.finish()
-    # ################
-    #
-    # args.__dict__.update({'npoint': 4096 * 2})
-    # config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 9, 'validation': 2}}
-    # config.update(args.__dict__)
-    # # os.environ["WANDB_MODE"] = "dryrun"
-    # wandb.init(project="PointNet2-Pytorch",
-    #            config=config, name="Church-Grid")
-    # main(args)
