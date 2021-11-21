@@ -170,10 +170,10 @@ def main(args):
     # v = pptk.viewer(current_points[:,:3], current_points[:,:3], current_labels)
 
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
-                                                  shuffle=args.shuffle_training_data, num_workers=4,
+                                                  shuffle=args.shuffle_training_data, num_workers=0,
                                                   pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4,
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=0,
                                                  pin_memory=True,
                                                  drop_last=(True if len(TEST_DATASET) // BATCH_SIZE else False))
     weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
@@ -299,11 +299,11 @@ def main(args):
                 loss_sum += loss
 
                 wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
-                           'Train/inner_epoch_accuracy_sum': total_correct/total_seen,
+                           'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
                            'Train/inner_epoch_loss': loss,
                            'Train/inner_epoch_accuracy': correct / len(batch_label),
                            'epoch': epoch,
-                           'Train/inner_epoch_step': (i+epoch*len(trainDataLoader))})
+                           'Train/inner_epoch_step': (i + epoch * len(trainDataLoader))})
 
                 if args.log_merged_training_set and args.num_classes == 2:
                     all_train_points.append(np.array(points.transpose(1, 2).cpu()))
@@ -316,11 +316,12 @@ def main(args):
                                     np.array(target.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
                                     seg_pred.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
-            if args.log_merged_training_set and args.num_classes == 2 :
+            if args.log_merged_training_set and args.num_classes == 2:
                 all_train_points = np.vstack(np.vstack(all_train_points))
                 all_train_pred = np.hstack(np.vstack(all_train_pred))
                 all_train_target = np.hstack(np.vstack(all_train_target))
-                _, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True, return_counts=True)
+                _, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
+                                                             return_counts=True)
                 num_unique_points = len(unique_indices)
                 total_training_points = np.vstack(TRAIN_DATASET.room_points).shape[0]
                 print(
@@ -493,5 +494,7 @@ if __name__ == '__main__':
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
                config=config, name='SongoMnara-Double-Points', resume=True)
+    wandb.run.log_code(".")
     main(args)
     wandb.finish()
+

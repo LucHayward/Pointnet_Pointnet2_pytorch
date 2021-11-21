@@ -105,7 +105,7 @@ class S3DISDataset(Dataset):
         Args:
             split:
             data_root:
-            num_point:
+            num_point: Number of points to return
             test_area: Which AREA in the dataset to reserve as the test area
             block_size: Size of a square column (z=0) as side length
             sample_rate:
