@@ -264,6 +264,12 @@ def generate_bounding_wireframe_points(min, max, number):
 
 
 def generate_bounding_cube(origin, size):
+    """
+
+    :param origin: eg: [0,0,0]
+    :param size: the length of the sides
+    :return: (points, colours,)
+    """
     return generate_bounding_wireframe_points(np.array(origin), np.array(origin) + size, 10 * size)
 
 

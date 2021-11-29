@@ -96,25 +96,92 @@ turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149],
                        [0.47960, 0.01583, 0.01055]]
 rng = np.random.default_rng()
 
+
 class MastersDataset(Dataset):
+    """
+    Dataset contains the points for an area (possibly split by train/validation). Access is via a segment_idx
+    weighted by the number of points in the segment, i.e. segments with more points will be sampled more times than
+    those with fewer points. We do this (rather than simply split the segments up further) to allow for better
+    separation during cross validation.
+    """
+
     def __init__(self, split, data_root, num_point=4096, block_size=1.0):
         """
         Setup the dataset for the heritage data
         :param split: {train, validate, test}
         :param data_root: location of the data files
         :param num_point: Number of points to be returned when __get_item__() is called
-        :param block_size:
+        :param block_size: size of the
         """
-        pass
+        self.split = split
+        self.num_point = num_point
+        self.block_size = block_size
 
-    def __getitem__(self, index: int):
+        # Given the data_root
+        # Load all the segments that are for this split
+        segment_paths = sorted(data_root.glob('*.npy'))
+        if split is not None:  # if split is None then just load all the .ply files
+            segment_paths = [path for path in segment_paths if split in path]
+
+        self.segment_points = []
+        self.segment_labels = []
+        num_points_per_segment = []
+        labelweights = np.zeros(2)
+
+        # For each segment load all the points and split the labels out, recording their relative weights
+        for path in tqdm(segment_paths):
+            xyzir = np.load(path)
+            points, labels = xyzir[:, :-1], xyzir[:, -1]
+            self.segment_points.append(points)
+            self.segment_labels.append(labels)
+            weights, _ = np.histogram(labels, [0, 1, 2])
+            labelweights += weights
+            num_points_per_segment.append(len(labels))
+
+        # Weights as inverse ratio (ie if labels=[10,20] labelweights = [2,1])
+        labelweights = labelweights / np.sum(labelweights)
+        labelweights = np.amax(labelweights) / labelweights
+        # Cube root of labelweights has log-like effect for when labels are very imbalanced
+        self.labelweights = np.power(labelweights, 1 / 3.0)
+
+        total_points = np.sum(num_points_per_segment)
+        sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
+        num_iterations = int(total_points / num_point)  # iterations required to sample each point in theory
+        segment_idxs = []
+        for i in range(len(segment_paths)):
+            segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
+        self.segments_idxs = np.array(segment_idxs)
+
+    def __getitem__(self, idx: int):
         """
-        Return the sampled points from the segment
-        :param index: index of segment to sample from
+        Return the sampled points (n=self.num_points) from the segment
+        :param idx: index of segment to sample from
         :return: (points, labels,)
         """
-        pass
-        
+        segment_idx = self.segments_idxs[idx]
+        points = self.segment_points[idx]
+        labels = self.segment_labels[idx]
+        num_points_in_segment = points.shape[0]
+
+        if num_points_in_segment <= 1024:
+            print("DEBUG ALERT: num_points_in_segment <= 1024")
+            point_idxs = range(num_points_in_segment)
+        else:
+            # todo: choose the center such that the column does not extend past the bounds of the segment.
+            #  Adjust the center position away from the segment boundary
+            # Pick a centroid for the column
+            center_idx = np.random.choice(num_points_in_segment)
+            center = points[center_idx][:3]
+            column_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
+            column_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
+            point_idxs = np.where(  # Get all the points that fall within the column
+                (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
+                & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
+            )[0]
+
+    def __len__(self):
+        return len(self.segments_idxs)
+
 
 # class MastersDataset(Dataset):
 #     def __init__(self, split='train', data_root=None, num_point=4096, valid_area=2, test_area=3, block_size=1.0,
@@ -276,3 +343,4 @@ class MastersDataset(Dataset):
 
 if __name__ == '__main__':
     print("This shouldn't be run")
+    dataset = MastersDataset('train', 'data/PatrickData/Church')
