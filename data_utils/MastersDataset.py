@@ -105,16 +105,16 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split, data_root, num_point=4096, block_size=1.0):
+    def __init__(self, split, data_root, num_points=4096, block_size=1.0):
         """
         Setup the dataset for the heritage data
         :param split: {train, validate, test}
         :param data_root: location of the data files
-        :param num_point: Number of points to be returned when __get_item__() is called
+        :param num_points: Number of points to be returned when __get_item__() is called
         :param block_size: size of the
         """
         self.split = split
-        self.num_point = num_point
+        self.num_points = num_points
         self.block_size = block_size
 
         # Given the data_root
@@ -123,8 +123,9 @@ class MastersDataset(Dataset):
         if split is not None:  # if split is None then just load all the .ply files
             segment_paths = [path for path in segment_paths if split in path]
 
-        self.segment_points = []
-        self.segment_labels = []
+        self.segment_points, self.segment_labels = [], []
+        self.segment_coord_min, self.segment_coord_max = [], []
+
         num_points_per_segment = []
         labelweights = np.zeros(2)
 
@@ -134,7 +135,13 @@ class MastersDataset(Dataset):
             points, labels = xyzir[:, :-1], xyzir[:, -1]
             self.segment_points.append(points)
             self.segment_labels.append(labels)
+            self.segment_coord_min.append(np.min(points[:, :3], axis=0))
+            self.segment_coord_max.append(np.max(points[:, :3], axis=0))
+            assert (np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:, :2] >= block_size, \
+                "segments smaller than block_size"
+
             weights, _ = np.histogram(labels, [0, 1, 2])
+
             labelweights += weights
             num_points_per_segment.append(len(labels))
 
@@ -146,199 +153,64 @@ class MastersDataset(Dataset):
 
         total_points = np.sum(num_points_per_segment)
         sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
-        num_iterations = int(total_points / num_point)  # iterations required to sample each point in theory
+        num_iterations = int(total_points / num_points)  # iterations required to sample each point in theory
         segment_idxs = []
         for i in range(len(segment_paths)):
             segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
         self.segments_idxs = np.array(segment_idxs)
 
-    def __getitem__(self, idx: int):
-        """
-        Return the sampled points (n=self.num_points) from the segment
-        :param idx: index of segment to sample from
-        :return: (points, labels,)
-        """
-        segment_idx = self.segments_idxs[idx]
-        points = self.segment_points[idx]
-        labels = self.segment_labels[idx]
-        num_points_in_segment = points.shape[0]
 
-        if num_points_in_segment <= 1024:
-            print("DEBUG ALERT: num_points_in_segment <= 1024")
-            point_idxs = range(num_points_in_segment)
-        else:
-            # todo: choose the center such that the column does not extend past the bounds of the segment.
-            #  Adjust the center position away from the segment boundary
-            # Pick a centroid for the column
-            center_idx = np.random.choice(num_points_in_segment)
-            center = points[center_idx][:3]
-            column_min = center - [self.block_size / 2.0, self.block_size / 2.0, 0]
-            column_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-            point_idxs = np.where(  # Get all the points that fall within the column
-                (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
-                & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
-            )[0]
+def __getitem__(self, idx: int):
+    """
+    Return the sampled points (n=self.num_points) from the segment
+    :param idx: index of segment to sample from
+    :return: (points, labels,)
+    """
+    segment_idx = self.segments_idxs[idx]
+    points = self.segment_points[idx]
+    labels = self.segment_labels[idx]
+    num_points_in_segment = points.shape[0]
 
-    def __len__(self):
-        return len(self.segments_idxs)
+    # We want at least 1024 points otherwise we should just take everything
+    if num_points_in_segment <= 1024:
+        print("DEBUG ALERT: num_points_in_segment <= 1024")
+        point_idxs = range(num_points_in_segment)
+    else:
+        # todo: choose the center such that the column does not extend past the bounds of the segment.
+        #  Adjust the center position away from the segment boundary
+        # Pick a centroid for the column
+        center_idx = rng.choice(num_points_in_segment)
+
+        # Adjust the center to be correct
+        center = points[center_idx][:2]
+        column_min = center - self.block_size / 2.0
+        column_max = center + self.block_size / 2.0
+
+        if column_min < self.segment_coord_min[idx, :2]:
+            offset = column_min - self.segment_coord_min[idx, :2]
+            column_min += offset
+            column_max += offset
+        if column_max > self.segment_coord_max[idx, :2]:
+            offset = column_max - self.segment_coord_max[idx, :2]
+            column_min -= offset
+            column_max -= offset
+
+        point_idxs = np.where(  # Get all the points that fall within the column
+            (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
+            & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
+        )[0]
+
+    if point_idxs >= self.num_points:
+        point_idxs = rng.choice(point_idxs,1024, replace=False)
+    else:
+        point_idxs = rng.choice(point_idxs,1024, replace=True)
+
+    return points[point_idxs], labels[point_idxs]
 
 
-# class MastersDataset(Dataset):
-#     def __init__(self, split='train', data_root=None, num_point=4096, valid_area=2, test_area=3, block_size=1.0,
-#                  sample_rate=1.0, transform=None, num_classes=2):
-#         """
-#         Experiment to try and load the data directly.
-#         Given a dataset directory, load all the segments from that directory.
-#         Each segment represents a KxK column(TODO: refactor block size)
-#         Draw num_point samples from each segment
-#         - Possibly remove the randomisation and get a fixed subset of the points where there are more than num_point datapoints?
-#         - Can't use a fixed random sequence (out of bounds errors)
-#         - Could simply get an equal interval across the data
-#         Sample from the segments based on the number of points present in the segment proportionally
-#         TODO: Change the way we split the data up from training
-#
-#         Args:
-#             split: Train/Valid/Test
-#             data_root: the folder to get the data from
-#             num_point: Always 2
-#             valid_area: Which AREA in the dataset to reserve as the test area
-#             block_size: Size of a square column (z=0) as side length
-#             sample_rate: Rate at which to oversample the data (CHECK)
-#             transform:
-#         """
-#         super().__init__()
-#         self.num_point = num_point
-#         self.block_size = block_size
-#         self.transform = transform
-#         self.num_classes = num_classes
-#
-#         segments = sorted(os.listdir(data_root))
-#         segments = [segment for segment in segments if 'Area_' in segment]
-#         if split == 'train':
-#             segments_split = [segment for segment in segments if
-#                            not (f'Area_{valid_area}' in segment or f'Area_{test_area}' in segment)]
-#         elif split == 'valid':
-#             segments_split = [segment for segment in segments if f'Area_{valid_area}' in segment]
-#         else:
-#             segments_split = [segment for segment in segments if f'Area_{test_area}' in segment]
-#
-#         self.segment_points, self.segment_labels = [], []
-#         num_point_all = []  # number of points per segment
-#         labelweights = np.zeros(num_classes)  # Count of labels across all segments
-#
-#         for segment_name in tqdm(segments_split, total=len(segments_split)):
-#             segment_path = os.path.join(data_root, segment_name)
-#             segment_data = np.load(segment_path)  # (global)XYZL
-#             points, labels = segment_data[:, 0:3], segment_data[:, 3]  # xyz, l
-#             tmp, _ = np.histogram(labels, range(num_classes + 1))  # count of class labels in segment
-#             labelweights += tmp
-#             self.segment_points.append(points), self.segment_labels.append(labels)
-#             num_point_all.append(labels.size)
-#
-#         labelweights = labelweights.astype(np.float32)
-#         labelweights = labelweights / np.sum(labelweights)  # Labelweights = proportion of each label
-#         self.labelweights = np.power(np.amax(labelweights) / labelweights, 1 / 3.0) #(number of times smaller than max weight)^0.33
-#
-#         print(f'Labelweights={self.labelweights}')
-#
-#         sample_prob = num_point_all / np.sum(num_point_all)  # Sample more from segments with more points
-#         num_iter = int(np.sum(num_point_all) * sample_rate / num_point) # sample enough times to see every point
-#         segment_idxs = []
-#         for index in range(len(segments_split)):
-#             segment_idxs.extend([index] * int(round(sample_prob[index] * num_iter)))
-#         self.segment_idxs = np.array(segment_idxs)
-#
-#         print("Totally {} samples in {} set.".format(len(self.segment_idxs), split))
-#
-#
-#     def __getitem__(self, idx):
-#         """
-#         Given a segment ID returns self.num_point points, labels
-#         Args:
-#             idx ():
-#
-#         Returns: points (Global XYZ, IGB/255, XYZ/max(segment_XYZ)), labels
-#
-#         """
-#         segment_idx = self.segment_idxs[idx]
-#         points = self.segment_points[segment_idx]  # N * 6
-#         labels = self.segment_labels[segment_idx]  # N
-#         N_points = points.shape[0]
-#         # print(f"DEBUG: labelHist = {np.histogram(labels, [0, 1, 2])}")
-#         # print(f"DEBUG: AvailablePoints/numPoints = {labels.size}/{self.num_point}={labels.size / self.num_point}")
-#         # TODO more even class sampling, maybe
-#         # DEBUG: v = pptk.viewer(points[:,:3],labels)
-#         # TODO: try this https://ethankoch.medium.com/incredibly-fast-random-sampling-in-python-baf154bd836a
-#         while (True):  # Repeat until there are at least 1024 point_idxs selected
-#             if self.num_classes == 2 and 1 in labels:
-#                 tmp = np.arange(len(labels))[labels == 1]
-#                 center_idx = tmp[np.random.randint(0, len(tmp))]
-#                 if labels[center_idx] != 1:
-#                     print("PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM<>PROBLEM")
-#             else:
-#                 center_idx = np.random.choice(N_points)
-#             center = points[center_idx][:3]  # Pick random point as center
-#             block_min = center - [self.block_size / 2.0, self.block_size / 2.0,
-#                                   0]  # Get a square column (z=0) of size block_size
-#             block_max = center + [self.block_size / 2.0, self.block_size / 2.0, 0]
-#             point_idxs = np.where(
-#                 (points[:, 0] >= block_min[0]) & (points[:, 0] <= block_max[0]) & (points[:, 1] >= block_min[1]) & (
-#                         points[:, 1] <= block_max[1]))[0]  # Get all points that fall within the square column
-#             # print(f'DEBUG: Center Column Hist = {np.histogram(labels[point_idxs], [0, 1, 2])}')
-#             # DEBUG: v = pptk.viewer(points[point_idxs,:3],labels[point_idxs])
-#             if point_idxs.size > 1024:
-#                 break
-#             else:
-#                 self.block_size *= 2
-#                 print(f'DEBUG: increasing block size to {self.block_size}')
-#
-#         if point_idxs.size >= self.num_point:  # Select points from the point_idxs up until self.num_point, with replacement if necessary\
-#             # TODO Fix this shit
-#             if self.num_classes == 2:
-#                 discard_point_mask = np.bool_(labels[point_idxs])
-#                 discard_point_idxs = point_idxs[discard_point_mask]
-#                 keep_point_idxs = point_idxs[~discard_point_mask]
-#                 if len(discard_point_idxs) >= self.num_point // 2 and len(keep_point_idxs) >= self.num_point // 2:
-#                     selected_point_idxs = np.concatenate((np.random.choice(discard_point_idxs, self.num_point // 2,
-#                                                                            replace=False),
-#                                                           np.random.choice(keep_point_idxs, self.num_point // 2,
-#                                                                            replace=False)))  # TODO Look into changing the sampling here
-#                 elif len(keep_point_idxs) <= self.num_point // 2:
-#                     selected_point_idxs = np.concatenate((np.array(keep_point_idxs),
-#                                                           np.random.choice(discard_point_idxs,
-#                                                                            self.num_point - len(keep_point_idxs),
-#                                                                            replace=False)))
-#                 else:
-#                     selected_point_idxs = np.concatenate((np.array(discard_point_idxs),
-#                                                           np.random.choice(keep_point_idxs,
-#                                                                            self.num_point - len(discard_point_idxs),
-#                                                                            replace=False)))
-#             else:
-#                 selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=False)
-#         else:
-#             selected_point_idxs = np.random.choice(point_idxs, self.num_point, replace=True)
-#
-#         # print(f"DEBUG: Selected_labelHist = {np.histogram(labels[selected_point_idxs], [0, 1, 2])}")
-#
-#         # normalize
-#         selected_points = points[selected_point_idxs, :]  # num_point * 6
-#
-#             # (self.num_point, 9))  # num_point * 9 (last three store XYZ/max(segment_XYZ) aka Normalised) CHECK not true now
-#         # current_points[:, 6] = selected_points[:, 0] / self.segment_coord_max[segment_idx][0]
-#         # current_points[:, 7] = selected_points[:, 1] / self.segment_coord_max[segment_idx][1]
-#         # current_points[:, 8] = selected_points[:, 2] / self.segment_coord_max[segment_idx][2]
-#         # selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
-#         # selected_points[:, 1] = selected_points[:, 1] - center[1]
-#         # selected_points[:, 3:6] /= 255.0 #TODO Fix this
-#         current_points = selected_points # Global XYZ
-#         current_labels = labels[selected_point_idxs]
-#         if self.transform is not None:
-#             current_points, current_labels = self.transform(current_points, current_labels)
-#         # pptk.viewer(np.concatenate((current_points[:,:3], current_points[:,6:],generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[0],generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[0], generate_bounding_cube([0,0,0],1)[0])), np.concatenate((current_labels+2,current_labels,generate_bounding_wireframe_points(current_points[:,:3].min(axis=0), current_points[:,:3].max(axis=0),50)[1][:,0], generate_bounding_wireframe_points(current_points[:,6:].min(axis=0), current_points[:,6:].max(axis=0),50)[1][:,0], generate_bounding_cube([0,0,0],1)[1][:,0])))
-#         return current_points, current_labels, segment_idx
-#
-#     def __len__(self):
-#         return len(self.segment_idxs)
+
+def __len__(self):
+    return len(self.segments_idxs)
 
 
 if __name__ == '__main__':
