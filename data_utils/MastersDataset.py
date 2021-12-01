@@ -97,6 +97,32 @@ turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149],
 rng = np.random.default_rng()
 
 
+def _adjust_column(column_max, column_min, segment_coord_min, segment_coord_max):
+    """
+    Adjusts the column boundaries to be within the current segments boundaries
+    :param column_max: max (x,y,z,)
+    :param column_min: min (x,y,z,)
+    :param segment_coord_max: max_boundary_coords (x,y,z,)
+    :param segment_coord_min: min_boundary_coords (x,y,z,)
+    """
+    if column_min[0] < segment_coord_min[0]:
+        offset_x = column_min[0] - segment_coord_min[0]
+        column_min[0] -= offset_x
+        column_max[0] -= offset_x
+    if column_min[1] < segment_coord_min[1]:
+        offset_y = column_min[1] - segment_coord_min[1]
+        column_min[1] -= offset_y
+        column_max[1] -= offset_y
+    if column_max[0] > segment_coord_max[0]:
+        offset_x = column_max - segment_coord_max[0]
+        column_min[0] += offset_x
+        column_max[0] += offset_x
+    if column_max[1] > segment_coord_max[1]:
+        offset_y = column_max - segment_coord_max[1]
+        column_min[1] += offset_y
+        column_max[1] += offset_y
+
+
 class MastersDataset(Dataset):
     """
     Dataset contains the points for an area (possibly split by train/validation). Access is via a segment_idx
@@ -181,8 +207,8 @@ class MastersDataset(Dataset):
                 column_min = center - self.block_size / 2.0
                 column_max = center + self.block_size / 2.0
 
-                self._adjust_column(column_max, column_min,
-                                    self.segment_coord_min[idx], self.segment_coord_max[idx])
+                _adjust_column(column_max, column_min,
+                               self.segment_coord_min[idx], self.segment_coord_max[idx])
 
                 assert np.all((column_min >= self.segment_coord_min[idx][:2],
                                column_max <= self.segment_coord_max[idx][:2])), "Column bounds outside segment bounds"
@@ -198,6 +224,15 @@ class MastersDataset(Dataset):
             else:
                 point_idxs = rng.choice(point_idxs, 1024, replace=True)
             point_returned_cnt[point_idxs] += 1
+
+        print("Sampled:\n", np.unique(point_sample_cnt, return_counts=True))
+        print("Returned:\n", np.unique(point_returned_cnt, return_counts=True))
+
+        v = pptk.viewer(dataset.segment_points[0][point_sample_cnt > 0, :3],
+                        dataset.segment_labels[0][point_sample_cnt > 0])
+        v_all = pptk.viewer(dataset.segment_points[0][:, :3], dataset.segment_labels[0])
+        v_returned = pptk.viewer(dataset.segment_points[0][point_returned_cnt > 0, :3],
+                                 dataset.segment_labels[0][point_returned_cnt > 0])
 
         return point_sample_cnt, point_returned_cnt
 
@@ -225,9 +260,8 @@ class MastersDataset(Dataset):
             column_min = center - self.block_size / 2.0
             column_max = center + self.block_size / 2.0
 
-            self._adjust_column(column_max, column_min,
-                                self.segment_coord_min[idx], self.segment_coord_max[idx])
-
+            _adjust_column(column_max, column_min,
+                           self.segment_coord_min[idx], self.segment_coord_max[idx])
 
             assert np.all((column_min >= self.segment_coord_min[idx][:2],
                            column_max <= self.segment_coord_max[idx][:2])), \
@@ -245,31 +279,6 @@ class MastersDataset(Dataset):
 
         return points[point_idxs], labels[point_idxs]
 
-    def _adjust_column(self, column_max, column_min, segment_coord_min, segment_coord_max):
-        """
-        Adjusts the column boundaries to be within the current segments boundaries
-        :param column_max: max (x,y,z,)
-        :param column_min: min (x,y,z,)
-        :param segment_coord_max: max_boundary_coords (x,y,z,)
-        :param segment_coord_min: min_boundary_coords (x,y,z,)
-        """
-        if column_min[0] < segment_coord_min[0]:
-            offset_x = column_min[0] - segment_coord_min[0]
-            column_min[0] -= offset_x
-            column_max[0] -= offset_x
-        if column_min[1] < segment_coord_min[1]:
-            offset_y = column_min[1] - segment_coord_min[1]
-            column_min[1] -= offset_y
-            column_max[1] -= offset_y
-        if column_max[0] > segment_coord_max[0]:
-            offset_x = column_max - segment_coord_max[0]
-            column_min[0] += offset_x
-            column_max[0] += offset_x
-        if column_max[1] > segment_coord_max[1]:
-            offset_y = column_max - segment_coord_max[1]
-            column_min[1] += offset_y
-            column_max[1] += offset_y
-
     def __len__(self):
         return len(self.segments_idxs)
 
@@ -279,6 +288,7 @@ if __name__ == '__main__':
 
     print("This shouldn't be run")
     dataset = MastersDataset(None, Path('../data/PatrickData/Church'))
+    dataset._test_coverage(0, 400)
     for i in range(400):
         data_iter = iter(dataset)
         points, labels = next(data_iter)
