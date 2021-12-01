@@ -303,9 +303,11 @@ class ScannetDatasetWholeScene():
                             points[:, 1] <= e_y + self.padding))[0]
                 if point_idxs.size == 0:
                     continue
-                num_batch = int(np.ceil(point_idxs.size / self.block_points))
+                num_batch = int(np.ceil(point_idxs.size / self.block_points)) # batches required
+                # If there are
                 point_size = int(num_batch * self.block_points)
                 replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+
                 point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
                 point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
                 np.random.shuffle(point_idxs)

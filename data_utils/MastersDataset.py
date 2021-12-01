@@ -131,17 +131,19 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split, data_root, num_points=4096, block_size=1.0):
+    def __init__(self, split, data_root, num_points=4096, block_size=1.0, sample_all_points=False):
         """
         Setup the dataset for the heritage data
         :param split: {train, validate, test}
         :param data_root: location of the data files
         :param num_points: Number of points to be returned when __get_item__() is called
-        :param block_size: size of the
+        :param block_size: size of the sampling column
+        :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
         self.split = split
         self.num_points = num_points
         self.block_size = block_size
+        self.sample_all_points = sample_all_points
 
         # Given the data_root
         # Load all the segments that are for this split
@@ -161,8 +163,10 @@ class MastersDataset(Dataset):
             points, labels = xyzir[:, :-1], xyzir[:, -1]
             self.segment_points.append(points)
             self.segment_labels.append(labels)
-            self.segment_coord_min.append(np.min(points[:, :3], axis=0))
-            self.segment_coord_max.append(np.max(points[:, :3], axis=0))
+
+            coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+            self.segment_coord_min.append(coord_min)
+            self.segment_coord_max.append(coord_max)
             assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
                 "segments smaller than block_size"
 
@@ -171,19 +175,26 @@ class MastersDataset(Dataset):
             labelweights += weights
             num_points_per_segment.append(len(labels))
 
+
+
         # Weights as inverse ratio (ie if labels=[10,20] labelweights = [2,1])
         labelweights = labelweights / np.sum(labelweights)
         labelweights = np.amax(labelweights) / labelweights
         # Cube root of labelweights has log-like effect for when labels are very imbalanced
         self.labelweights = np.power(labelweights, 1 / 3.0)
 
-        total_points = np.sum(num_points_per_segment)
-        sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
-        num_iterations = int(total_points / num_points)  # iterations required to sample each point in theory
-        segment_idxs = []
-        for i in range(len(segment_paths)):
-            segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
-        self.segments_idxs = np.array(segment_idxs)
+        if not sample_all_points:
+            total_points = np.sum(num_points_per_segment)
+            sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
+            num_iterations = int(total_points / num_points)  # iterations required to sample each point in theory
+            segment_idxs = []
+
+            for i in range(len(segment_paths)):
+                segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
+            self.segments_idxs = np.array(segment_idxs)
+        else:
+            grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
+            grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
 
     def _test_coverage(self, idx: int, iterations):
         segment_idx = self.segments_idxs[idx]
@@ -280,7 +291,10 @@ class MastersDataset(Dataset):
         return points[point_idxs], labels[point_idxs]
 
     def __len__(self):
-        return len(self.segments_idxs)
+        if self.sample_all_points:
+            return len(self.segments_idxs)
+        else:
+            return
 
 
 if __name__ == '__main__':
