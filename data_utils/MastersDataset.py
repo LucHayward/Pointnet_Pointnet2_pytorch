@@ -137,7 +137,7 @@ class MastersDataset(Dataset):
             self.segment_labels.append(labels)
             self.segment_coord_min.append(np.min(points[:, :3], axis=0))
             self.segment_coord_max.append(np.max(points[:, :3], axis=0))
-            assert (np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:, :2] >= block_size, \
+            assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
                 "segments smaller than block_size"
 
             weights, _ = np.histogram(labels, [0, 1, 2])
@@ -159,60 +159,126 @@ class MastersDataset(Dataset):
             segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
         self.segments_idxs = np.array(segment_idxs)
 
+    def _test_coverage(self, idx: int, iterations):
+        segment_idx = self.segments_idxs[idx]
+        points = self.segment_points[idx]
+        labels = self.segment_labels[idx]
+        num_points_in_segment = points.shape[0]
+        point_sample_cnt = np.zeros(len(points))
+        point_returned_cnt = np.zeros(len(points))
 
-def __getitem__(self, idx: int):
-    """
-    Return the sampled points (n=self.num_points) from the segment
-    :param idx: index of segment to sample from
-    :return: (points, labels,)
-    """
-    segment_idx = self.segments_idxs[idx]
-    points = self.segment_points[idx]
-    labels = self.segment_labels[idx]
-    num_points_in_segment = points.shape[0]
+        for i in tqdm(range(iterations)):
+            # We want at least 1024 points otherwise we should just take everything
+            if num_points_in_segment <= 1024:
+                print("DEBUG ALERT: num_points_in_segment <= 1024")
+                point_idxs = range(num_points_in_segment)
+            else:
+                # Pick a starting centroid for the column
+                center_idx = rng.choice(num_points_in_segment)
 
-    # We want at least 1024 points otherwise we should just take everything
-    if num_points_in_segment <= 1024:
-        print("DEBUG ALERT: num_points_in_segment <= 1024")
-        point_idxs = range(num_points_in_segment)
-    else:
-        # todo: choose the center such that the column does not extend past the bounds of the segment.
-        #  Adjust the center position away from the segment boundary
-        # Pick a centroid for the column
-        center_idx = rng.choice(num_points_in_segment)
+                # Adjust the center to be correct
+                center = points[center_idx][:2]
+                column_min = center - self.block_size / 2.0
+                column_max = center + self.block_size / 2.0
 
-        # Adjust the center to be correct
-        center = points[center_idx][:2]
-        column_min = center - self.block_size / 2.0
-        column_max = center + self.block_size / 2.0
+                self._adjust_column(column_max, column_min,
+                                    self.segment_coord_min[idx], self.segment_coord_max[idx])
 
-        if column_min < self.segment_coord_min[idx, :2]:
-            offset = column_min - self.segment_coord_min[idx, :2]
-            column_min += offset
-            column_max += offset
-        if column_max > self.segment_coord_max[idx, :2]:
-            offset = column_max - self.segment_coord_max[idx, :2]
-            column_min -= offset
-            column_max -= offset
+                assert np.all((column_min >= self.segment_coord_min[idx][:2],
+                               column_max <= self.segment_coord_max[idx][:2])), "Column bounds outside segment bounds"
 
-        point_idxs = np.where(  # Get all the points that fall within the column
-            (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
-            & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
-        )[0]
+                point_idxs = np.where(  # Get all the points that fall within the column
+                    (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
+                    & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
+                )[0]
+            point_sample_cnt[point_idxs] += 1
 
-    if point_idxs >= self.num_points:
-        point_idxs = rng.choice(point_idxs,1024, replace=False)
-    else:
-        point_idxs = rng.choice(point_idxs,1024, replace=True)
+            if len(point_idxs) >= self.num_points:
+                point_idxs = rng.choice(point_idxs, 1024, replace=False)
+            else:
+                point_idxs = rng.choice(point_idxs, 1024, replace=True)
+            point_returned_cnt[point_idxs] += 1
 
-    return points[point_idxs], labels[point_idxs]
+        return point_sample_cnt, point_returned_cnt
+
+    def __getitem__(self, idx: int):
+        """
+        Return the sampled points (n=self.num_points) from the segment
+        :param idx: index of segment to sample from
+        :return: (points, labels,)
+        """
+        segment_idx = self.segments_idxs[idx]
+        points = self.segment_points[idx]
+        labels = self.segment_labels[idx]
+        num_points_in_segment = points.shape[0]
+
+        # We want at least 1024 points otherwise we should just take everything
+        if num_points_in_segment <= 1024:
+            print("DEBUG ALERT: num_points_in_segment <= 1024")
+            point_idxs = range(num_points_in_segment)
+        else:
+            # Pick a starting centroid for the column
+            center_idx = rng.choice(num_points_in_segment)
+
+            # Adjust the center to be correct
+            center = points[center_idx][:2]
+            column_min = center - self.block_size / 2.0
+            column_max = center + self.block_size / 2.0
+
+            self._adjust_column(column_max, column_min,
+                                self.segment_coord_min[idx], self.segment_coord_max[idx])
 
 
+            assert np.all((column_min >= self.segment_coord_min[idx][:2],
+                           column_max <= self.segment_coord_max[idx][:2])), \
+                f"Column bounds outside segment bounds:\nmin={column_min}\nmax={column_max}"
 
-def __len__(self):
-    return len(self.segments_idxs)
+            point_idxs = np.where(  # Get all the points that fall within the column
+                (points[:, 0] >= column_min[0]) & (points[:, 0] <= column_max[0])
+                & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
+            )[0]
+
+        if len(point_idxs) >= self.num_points:
+            point_idxs = rng.choice(point_idxs, 1024, replace=False)
+        else:
+            point_idxs = rng.choice(point_idxs, 1024, replace=True)
+
+        return points[point_idxs], labels[point_idxs]
+
+    def _adjust_column(self, column_max, column_min, segment_coord_min, segment_coord_max):
+        """
+        Adjusts the column boundaries to be within the current segments boundaries
+        :param column_max: max (x,y,z,)
+        :param column_min: min (x,y,z,)
+        :param segment_coord_max: max_boundary_coords (x,y,z,)
+        :param segment_coord_min: min_boundary_coords (x,y,z,)
+        """
+        if column_min[0] < segment_coord_min[0]:
+            offset_x = column_min[0] - segment_coord_min[0]
+            column_min[0] -= offset_x
+            column_max[0] -= offset_x
+        if column_min[1] < segment_coord_min[1]:
+            offset_y = column_min[1] - segment_coord_min[1]
+            column_min[1] -= offset_y
+            column_max[1] -= offset_y
+        if column_max[0] > segment_coord_max[0]:
+            offset_x = column_max - segment_coord_max[0]
+            column_min[0] += offset_x
+            column_max[0] += offset_x
+        if column_max[1] > segment_coord_max[1]:
+            offset_y = column_max - segment_coord_max[1]
+            column_min[1] += offset_y
+            column_max[1] += offset_y
+
+    def __len__(self):
+        return len(self.segments_idxs)
 
 
 if __name__ == '__main__':
+    from pathlib import Path
+
     print("This shouldn't be run")
-    dataset = MastersDataset('train', 'data/PatrickData/Church')
+    dataset = MastersDataset(None, Path('../data/PatrickData/Church'))
+    for i in range(400):
+        data_iter = iter(dataset)
+        points, labels = next(data_iter)
