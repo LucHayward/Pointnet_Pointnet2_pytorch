@@ -133,7 +133,7 @@ class MastersDataset(Dataset):
 
     def __init__(self, split, data_root, num_points=4096, block_size=1.0, sample_all_points=False):
         """
-        Setup the dataset for the heritage data
+        Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test}
         :param data_root: location of the data files
         :param num_points: Number of points to be returned when __get_item__() is called
@@ -148,7 +148,7 @@ class MastersDataset(Dataset):
         # Given the data_root
         # Load all the segments that are for this split
         segment_paths = sorted(data_root.glob('*.npy'))
-        if split is not None:  # if split is None then just load all the .ply files
+        if split is not None:  # if split is None then just load all the .npy files
             segment_paths = [path for path in segment_paths if split in path]
 
         self.segment_points, self.segment_labels = [], []
@@ -167,8 +167,8 @@ class MastersDataset(Dataset):
             coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
             self.segment_coord_min.append(coord_min)
             self.segment_coord_max.append(coord_max)
-            assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
-                "segments smaller than block_size"
+            # assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
+            #     "segments smaller than block_size"
 
             weights, _ = np.histogram(labels, [0, 1, 2])
 
@@ -184,6 +184,7 @@ class MastersDataset(Dataset):
         self.labelweights = np.power(labelweights, 1 / 3.0)
 
         if not sample_all_points:
+            # Sample from each segment based on the relative number of points.
             total_points = np.sum(num_points_per_segment)
             sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
             num_iterations = int(total_points / num_points)  # iterations required to sample each point in theory
@@ -301,7 +302,7 @@ if __name__ == '__main__':
     from pathlib import Path
 
     print("This shouldn't be run")
-    dataset = MastersDataset(None, Path('../data/PatrickData/Church'))
+    dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/5/'))
     dataset._test_coverage(0, 400)
     for i in range(400):
         data_iter = iter(dataset)
