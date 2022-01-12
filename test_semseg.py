@@ -122,23 +122,23 @@ def main(args):
             whole_scene_label = TEST_DATASET_WHOLE_SCENE.semantic_labels_list[batch_idx]
             vote_label_pool = np.zeros((whole_scene_label.shape[0], NUM_CLASSES))
             for _ in tqdm(range(args.num_votes), total=args.num_votes):
-                scene_data, scene_label, scene_smpw, scene_point_index = TEST_DATASET_WHOLE_SCENE[batch_idx]
+                scene_data, scene_label, scene_sampleweight, scene_point_index = TEST_DATASET_WHOLE_SCENE[batch_idx]
                 num_blocks = scene_data.shape[0]
-                s_batch_num = (num_blocks + BATCH_SIZE - 1) // BATCH_SIZE
+                scene_batch_num = (num_blocks + BATCH_SIZE - 1) // BATCH_SIZE
                 batch_data = np.zeros((BATCH_SIZE, NUM_POINT, 9))
 
                 batch_label = np.zeros((BATCH_SIZE, NUM_POINT))
                 batch_point_index = np.zeros((BATCH_SIZE, NUM_POINT))
-                batch_smpw = np.zeros((BATCH_SIZE, NUM_POINT))
+                batch_sampleweight = np.zeros((BATCH_SIZE, NUM_POINT))
 
-                for sbatch in range(s_batch_num):
-                    start_idx = sbatch * BATCH_SIZE
-                    end_idx = min((sbatch + 1) * BATCH_SIZE, num_blocks)
+                for scene_batch in range(scene_batch_num):
+                    start_idx = scene_batch * BATCH_SIZE
+                    end_idx = min((scene_batch + 1) * BATCH_SIZE, num_blocks)
                     real_batch_size = end_idx - start_idx
                     batch_data[0:real_batch_size, ...] = scene_data[start_idx:end_idx, ...]
                     batch_label[0:real_batch_size, ...] = scene_label[start_idx:end_idx, ...]
                     batch_point_index[0:real_batch_size, ...] = scene_point_index[start_idx:end_idx, ...]
-                    batch_smpw[0:real_batch_size, ...] = scene_smpw[start_idx:end_idx, ...]
+                    batch_sampleweight[0:real_batch_size, ...] = scene_sampleweight[start_idx:end_idx, ...]
                     batch_data[:, :, 3:6] /= 1.0
 
                     torch_data = torch.Tensor(batch_data)
@@ -149,7 +149,7 @@ def main(args):
 
                     vote_label_pool = add_vote(vote_label_pool, batch_point_index[0:real_batch_size, ...],
                                                batch_pred_label[0:real_batch_size, ...],
-                                               batch_smpw[0:real_batch_size, ...])
+                                               batch_sampleweight[0:real_batch_size, ...])
 
             pred_label = np.argmax(vote_label_pool, 1)
 
