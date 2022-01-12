@@ -131,19 +131,22 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split, data_root, num_points=4096, block_size=1.0, sample_all_points=False):
+    def __init__(self, split, data_root, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test}
         :param data_root: location of the data files
-        :param num_points: Number of points to be returned when __get_item__() is called
+        :param num_points_in_block: Number of points to be returned when __get_item__() is called
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
         self.split = split
-        self.num_points = num_points
+        self.num_points_in_block = num_points_in_block
         self.block_size = block_size
+
         self.sample_all_points = sample_all_points
+        self.stride = block_size
+        self.padding = 0.001
 
         # Given the data_root
         # Load all the segments that are for this split
@@ -175,27 +178,36 @@ class MastersDataset(Dataset):
             labelweights += weights
             num_points_per_segment.append(len(labels))
 
-
-
         # Weights as inverse ratio (ie if labels=[10,20] labelweights = [2,1])
         labelweights = labelweights / np.sum(labelweights)
         labelweights = np.amax(labelweights) / labelweights
         # Cube root of labelweights has log-like effect for when labels are very imbalanced
         self.labelweights = np.power(labelweights, 1 / 3.0)
 
-        if not sample_all_points:
+        if not self.sample_all_points:
             # Sample from each segment based on the relative number of points.
             total_points = np.sum(num_points_per_segment)
             sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
-            num_iterations = int(total_points / num_points)  # iterations required to sample each point in theory
+            num_iterations = int(
+                total_points / num_points_in_block)  # iterations required to sample each point in theory
             segment_idxs = []
 
             for i in range(len(segment_paths)):
                 segment_idxs.extend([i] * int(round(sample_probability[i] * num_iterations)))
             self.segments_idxs = np.array(segment_idxs)
         else:
-            grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
-            grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
+            # Sample every point in the segment in turn following a grid pattern.
+            # Just need to return all the points in one go.
+            self.segments_idxs = np.arange(len(self.segment_points))
+
+            # # Get the number of samples needed (rounded up) to slide a block over the grid.
+            # # Check: if this is not working well you may need to adjust the striding to not be so exact.
+            # samples_needed = [int(np.ceil(x / self.num_points_in_block)) for x in num_points_per_segment]
+            # segment_idxs = []
+            # for i in range(len(segment_paths)):
+            #     segment_idxs.extend([i] * int(samples_needed[i]))
+            # self.segments_idxs = np.array(segment_idxs)
+            # self.samples_remaining_for_segment = samples_needed
 
     def _test_coverage(self, idx: int, iterations):
         segment_idx = self.segments_idxs[idx]
@@ -231,7 +243,7 @@ class MastersDataset(Dataset):
                 )[0]
             point_sample_cnt[point_idxs] += 1
 
-            if len(point_idxs) >= self.num_points:
+            if len(point_idxs) >= self.num_points_in_block:
                 point_idxs = rng.choice(point_idxs, 1024, replace=False)
             else:
                 point_idxs = rng.choice(point_idxs, 1024, replace=True)
@@ -248,15 +260,17 @@ class MastersDataset(Dataset):
 
         return point_sample_cnt, point_returned_cnt
 
-    def __getitem__(self, idx: int):
+    def _get_item(self, idx: int):
         """
-        Return the sampled points (n=self.num_points) from the segment
+        Return the sampled points (N=self.num_points_in_block) from the segment
+        This is a subset of the points in the segment via selecting a random position for a square column
+        (sides of length self.block_size) and randomly sampling N points within that column.
         :param idx: index of segment to sample from
         :return: (points, labels,)
         """
         segment_idx = self.segments_idxs[idx]
-        points = self.segment_points[idx]
-        labels = self.segment_labels[idx]
+        points = self.segment_points[segment_idx]
+        labels = self.segment_labels[segment_idx]
         num_points_in_segment = points.shape[0]
 
         # We want at least 1024 points otherwise we should just take everything
@@ -264,6 +278,7 @@ class MastersDataset(Dataset):
             print("DEBUG ALERT: num_points_in_segment <= 1024")
             point_idxs = range(num_points_in_segment)
         else:
+
             # Pick a starting centroid for the column
             center_idx = rng.choice(num_points_in_segment)
 
@@ -284,18 +299,104 @@ class MastersDataset(Dataset):
                 & (points[:, 1] >= column_min[1]) & (points[:, 1] <= column_max[1])
             )[0]
 
-        if len(point_idxs) >= self.num_points:
+        if len(point_idxs) >= self.num_points_in_block:
             point_idxs = rng.choice(point_idxs, 1024, replace=False)
         else:
             point_idxs = rng.choice(point_idxs, 1024, replace=True)
 
+        # # Get Normalized (-1,1) xyz values
+        # normlized_xyz = np.zeros((len(point_idxs), 3))
+        # normlized_xyz[:, 0] = points[point_idxs, 0] / self.segment_coord_max[0]
+        # normlized_xyz[:, 1] = points[point_idxs, 1] / self.segment_coord_max[1]
+        # normlized_xyz[:, 2] = points[point_idxs, 2] / self.segment_coord_max[2]
+        # return np.hstack((points[point_idsx],normalized_xyz)), labels[point_idxs]
+
         return points[point_idxs], labels[point_idxs]
 
-    def __len__(self):
-        if self.sample_all_points:
-            return len(self.segments_idxs)
+    def _get_item_all(self, idx: int):
+        """
+        Return the points in this segment[idx] as a 2darray of points,labels, [x,y](points, labels)
+        """
+        points = self.segment_points[idx]
+        labels = self.segment_labels[idx]
+        num_points_in_segment = points.shape[0]
+        coord_min, coord_max = self.segment_coord_min[idx], self.segment_coord_max[idx]
+
+        # split the segment into cell grids
+        grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
+        grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
+
+        data_segment, labels_segment, sample_weight_segment, point_idxs_segment = np.array([]), np.array([]), np.array(
+            []), np.array([])
+        return_grid = np.zeros((grid_x, grid_y))
+        for index_y in range(0, grid_x):
+            for index_x in range(0, grid_y):
+                # For each cell in the grid get the start/end coords of the cell
+                s_x = coord_min[0] + index_x * self.stride
+                e_x = min(s_x + self.block_size, coord_max[0])
+                s_x = e_x - self.block_size
+                s_y = coord_min[1] + index_y * self.stride
+                e_y = min(s_y + self.block_size, coord_max[1])
+                s_y = e_y - self.block_size
+
+                # Get all the points within the cell (or continue if empty), padding ensures edge cases are well covered
+                point_idxs = np.where(
+                    (points[:, 0] >= s_x - self.padding) & (points[:, 0] <= e_x + self.padding) & (
+                            points[:, 1] >= s_y - self.padding) & (
+                            points[:, 1] <= e_y + self.padding))[0]
+                if point_idxs.size == 0:
+                    continue
+
+                # Get batches required
+                num_batches = int(np.ceil(point_idxs.size / self.num_points_in_block))
+                # If there are not enough points to fill the last batch, set it to replace points.
+                point_size = int(num_batches * self.num_points_in_block)
+                replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+
+                # add on some extra point_idxs and shuffle them.
+                point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
+                point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
+                np.random.shuffle(point_idxs)
+                data_batch = points[point_idxs, :]
+
+                # Get Normalized (-1,1) xyz values
+                # normlized_xyz = np.zeros((point_size, 3))
+                # normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
+                # normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
+                # normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
+
+                #        # Shift XY to start at (0,0)
+                #         data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
+                #         data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
+                #         data_batch[:, 3:6] /= 255.0
+
+                # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                label_batch = labels[point_idxs].astype(int)
+                batch_weight = self.labelweights[label_batch]
+
+                # One segments data can be returned in the form [x,y](points, labels)
+                return_grid[grid_x, grid_y] = (data_batch, label_batch)
+
+        #         # Stack all the points/labels from this cell with the previous cells
+        #         data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
+        #         labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
+        #         sample_weight_segment = np.hstack([sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
+        #         point_idxs_segment = np.hstack([point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
+        #
+        # return data_segment, labels_segment, sample_weight_segment, point_idxs_segment
+        return return_grid
+
+    def __getitem__(self, idx: int):
+        """
+        Returns a set of sampled points from the segment, or all points if sampling all points.
+        """
+        if not self.sample_all_points:
+            return self._get_item(idx)
         else:
-            return
+            return self._get_item_all(idx)
+
+    def __len__(self):
+            return len(self.segments_idxs)
 
 
 if __name__ == '__main__':
