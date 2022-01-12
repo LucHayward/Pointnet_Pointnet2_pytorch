@@ -114,13 +114,16 @@ def _adjust_column(column_max, column_min, segment_coord_min, segment_coord_max)
         column_min[1] -= offset_y
         column_max[1] -= offset_y
     if column_max[0] > segment_coord_max[0]:
-        offset_x = column_max - segment_coord_max[0]
-        column_min[0] += offset_x
-        column_max[0] += offset_x
+        offset_x = column_max[0] - segment_coord_max[0]
+        column_min[0] -= offset_x
+        column_max[0] -= offset_x
     if column_max[1] > segment_coord_max[1]:
-        offset_y = column_max - segment_coord_max[1]
-        column_min[1] += offset_y
-        column_max[1] += offset_y
+        offset_y = column_max[1] - segment_coord_max[1]
+        column_min[1] -= offset_y
+        column_max[1] -= offset_y
+
+    assert np.all((column_min >= segment_coord_min[:2],
+                   column_max <= segment_coord_max[:2])), "Column bounds outside segment bounds"
 
 
 class MastersDataset(Dataset):
@@ -401,9 +404,10 @@ class MastersDataset(Dataset):
 
 if __name__ == '__main__':
     from pathlib import Path
+    import pptk
 
     print("This shouldn't be run")
-    dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/5/'))
+    dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'))
     dataset._test_coverage(0, 400)
     for i in range(400):
         data_iter = iter(dataset)
