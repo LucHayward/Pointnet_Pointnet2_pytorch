@@ -186,6 +186,7 @@ class MastersDataset(Dataset):
         labelweights = np.amax(labelweights) / labelweights
         # Cube root of labelweights has log-like effect for when labels are very imbalanced
         self.labelweights = np.power(labelweights, 1 / 3.0)
+        self.num_points_per_segment = num_points_per_segment
 
         if not self.sample_all_points:
             # Sample from each segment based on the relative number of points.
@@ -388,7 +389,6 @@ class MastersDataset(Dataset):
                 # One segments data can be returned in the form [x, y, points, labels]
                 return_grid[index_x][index_y] = (data_batch, label_batch)
 
-
         #         # Stack all the points/labels from this cell with the previous cells
         #         data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
         #         labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
@@ -421,13 +421,25 @@ if __name__ == '__main__':
         Loads in a dummy dataset as a sample all points set and tests that all points are sampled correctly.
         """
         dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'), sample_all_points=True)
-        for i, grid_data in tqdm(enumerate(dataset)):
+        all_points_data = []
+        all_points_labels = []
+        all_points_predictions = []
+        for i, grid_data in tqdm(enumerate(dataset), total=len(dataset)):
             for y in grid_data:
                 for x in y:
                     points, labels = x
-                    print(f"Run inference on data({len(data)} points)")
-                    print(f"Compare the prediciton with the ground truth")
-                    print(f"Calculate the loss function")
+                    # Run inference on data({len(points)} points)
+                    predictions = np.round(np.random.random(len(labels)))
+                    all_points_data.append(points)
+                    all_points_labels.append(labels)
+                    all_points_predictions.append(predictions)
+                    # Compare the prediciton with the ground truth
+                    # Calculate the loss function
+
+        all_points_data = np.vstack(all_points_data)
+        all_points_labels = np.hstack(all_points_labels)
+        all_points_predictions = np.hstack(all_points_predictions)
+
 
 
     print("This shouldn't be run")
