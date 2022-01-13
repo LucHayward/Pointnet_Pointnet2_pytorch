@@ -439,7 +439,10 @@ if __name__ == '__main__':
         all_points_data = np.vstack(all_points_data)
         all_points_labels = np.hstack(all_points_labels)
         all_points_predictions = np.hstack(all_points_predictions)
-
+        assert len(np.unique(all_points_data, axis=0)) == np.sum(
+            dataset.num_points_per_segment), f"Did not sample all points, number of points in dataset" \
+                                             f"({np.sum(dataset.num_points_per_segment)}) != unique sampled points" \
+                                             f"({np.unique(all_points_data, axis=0)})."
 
 
     print("This shouldn't be run")
