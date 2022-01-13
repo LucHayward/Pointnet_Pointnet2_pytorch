@@ -213,6 +213,10 @@ class MastersDataset(Dataset):
             # self.samples_remaining_for_segment = samples_needed
 
     def _test_coverage(self, idx: int, iterations):
+        """
+        Samples the dataset[idx] for n iterations and returns the number of points sampled and returned k times (i.e.
+        X number of points sampled K times).
+        """
         segment_idx = self.segments_idxs[idx]
         points = self.segment_points[idx]
         labels = self.segment_labels[idx]
@@ -329,9 +333,9 @@ class MastersDataset(Dataset):
         grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
         grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
 
-        data_segment, labels_segment, sample_weight_segment, point_idxs_segment = np.array([]), np.array([]), np.array(
-            []), np.array([])
-        return_grid = np.zeros((grid_x, grid_y))
+        data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
+            np.array([]), np.array([]), np.array([]), np.array([])
+        return_grid = [[[] for _ in range(10)] for _ in range(10)]
         for index_y in range(0, grid_x):
             for index_x in range(0, grid_y):
                 # For each cell in the grid get the start/end coords of the cell
@@ -352,6 +356,8 @@ class MastersDataset(Dataset):
 
                 # Get batches required
                 num_batches = int(np.ceil(point_idxs.size / self.num_points_in_block))
+
+                # Check: May not be necessary to actually pad out the batch like this for inference.
                 # If there are not enough points to fill the last batch, set it to replace points.
                 point_size = int(num_batches * self.num_points_in_block)
                 replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
@@ -374,11 +380,14 @@ class MastersDataset(Dataset):
                 #         data_batch[:, 3:6] /= 255.0
 
                 # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
+                # batch? It's actually getting a weight to assign to each point though.
                 label_batch = labels[point_idxs].astype(int)
                 batch_weight = self.labelweights[label_batch]
 
-                # One segments data can be returned in the form [x,y](points, labels)
-                return_grid[grid_x, grid_y] = (data_batch, label_batch)
+                # One segments data can be returned in the form [x, y, points, labels]
+                return_grid[index_x][index_y] = (data_batch, label_batch)
+
 
         #         # Stack all the points/labels from this cell with the previous cells
         #         data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
@@ -399,16 +408,29 @@ class MastersDataset(Dataset):
             return self._get_item_all(idx)
 
     def __len__(self):
-            return len(self.segments_idxs)
+        return len(self.segments_idxs)
 
 
 if __name__ == '__main__':
     from pathlib import Path
     import pptk
 
+
+    def _test_sample_all_points():
+        """
+        Loads in a dummy dataset as a sample all points set and tests that all points are sampled correctly.
+        """
+        dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'), sample_all_points=True)
+        for i, grid_data in tqdm(enumerate(dataset)):
+            for y in grid_data:
+                for x in y:
+                    points, labels = x
+                    print(f"Run inference on data({len(data)} points)")
+                    print(f"Compare the prediciton with the ground truth")
+                    print(f"Calculate the loss function")
+
+
     print("This shouldn't be run")
-    dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'))
-    dataset._test_coverage(0, 400)
-    for i in range(400):
-        data_iter = iter(dataset)
-        points, labels = next(data_iter)
+    # dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'))
+    # dataset._test_coverage(0, 400)
+    _test_sample_all_points()
