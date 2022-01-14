@@ -4,6 +4,7 @@ import os
 
 from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data
 from data_utils.MastersDataset import MastersDataset
+import provider
 
 import torch
 import datetime
@@ -105,7 +106,7 @@ def main(args):
             torch.nn.init.xavier_normal_(m.weight.data)
             torch.nn.init.constant_(m.bias.data, 0.0)
 
-    def setup_logging_dir(args):
+    def setup_logging_dir():
         # Create logging directory
         timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
         experiment_dir = Path('./log/')
@@ -122,12 +123,10 @@ def main(args):
         checkpoints_dir.mkdir(exist_ok=True)
         log_dir = experiment_dir.joinpath('logs/')
         log_dir.mkdir(exist_ok=True)
-        return experiment_dir, log_dir
+        return experiment_dir, log_dir, checkpoints_dir
 
-    def setup_logger(args, log_dir):
+    def setup_logger():
         # Setup logger (might ditch this)
-        global logger
-        logger = logging.getLogger("Model")
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler = logging.FileHandler('%s/%s.txt' % (log_dir, args.model))
@@ -137,7 +136,7 @@ def main(args):
         log_string('PARAMETER ...')
         log_string(args)
 
-    def setup_data_loaders(BATCH_SIZE, BLOCK_SIZE, DATA_PATH, NUM_POINTS, args, log_string):
+    def setup_data_loaders():
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
         log_string("Loading the validation dataset")
@@ -156,7 +155,7 @@ def main(args):
                              'num_test-data': len(VAL_DATASET)})
         return TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights
 
-    def setup_model(args, experiment_dir, log_string, weights_init):
+    def setup_model():
         # Loading the model
         # TODO log this file in wandb
         MODEL = importlib.import_module(args.model)
@@ -188,12 +187,55 @@ def main(args):
         else:
             optimizer = torch.optim.SGD(classifier.parameters(), lr=args.learning_rate, momentum=0.9)
 
-        return classifier, criterion, optimizer
+        return classifier, criterion, optimizer, start_epoch
+
+    def update_lr_momentum():
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+        momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
+        if momentum < 0.01:
+            momentum = 0.01
+        print('BN momentum updated to: %f' % momentum)
+        wandb.log({'bn_momentum': momentum, 'epoch': epoch}, commit=False)
+        return lr, momentum
+
+    def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target):
+        if args.log_merged_training_set:
+            all_train_points = np.vstack(np.vstack(all_train_points))
+            all_train_pred = np.hstack(np.vstack(all_train_pred))
+            all_train_target = np.hstack(np.vstack(all_train_target))
+            _, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
+                                                         return_counts=True)
+            num_unique_points = len(unique_indices)
+            total_training_points = np.vstack(TRAIN_DATASET.segment_points).shape[0]
+            print(f"Unique points: {num_unique_points}/{total_training_points} "
+                  f"({num_unique_points * 100 // total_training_points}%)")
+            visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
+                                 "Train", wandb_section="Visualise-Merged")
+        mean_loss = loss_sum / num_batches
+        accuracy = total_correct / float(total_seen)
+        log_string('Training mean loss: %f' % mean_loss)
+        log_string('Training accuracy: %f' % accuracy)
+        wandb.log({'Train/mean_loss': mean_loss,
+                   'Train/accuracy': accuracy, 'epoch': epoch}, commit=False)
+        if epoch % 5 == 0:
+            logger.info('Save model...')
+            savepath = str(checkpoints_dir) + '/model.pth'  # Should use .pt
+            log_string('Saving at %s' % savepath)
+            state = {
+                'epoch': epoch,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
+            torch.save(state, savepath)
+            log_string('Saving model....')
+            wandb.save(savepath)
 
     # HYPER PARAMETER
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-    experiment_dir, log_dir = setup_logging_dir(args)
-    setup_logger(args, log_dir, log_string)
+    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir()
+    logger = logging.getLogger("Model")
+    setup_logger()
 
     # Define constants
     DATA_PATH = args.data_path
@@ -212,15 +254,71 @@ def main(args):
     TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights = setup_data_loaders(BATCH_SIZE, BLOCK_SIZE,
                                                                                                  DATA_PATH, NUM_POINTS,
                                                                                                  args, log_string)
-    classifier, criterion, optimizer = setup_model(args, experiment_dir, log_string, weights_init)
-
+    classifier, criterion, optimizer, start_epoch = setup_model(args, experiment_dir, log_string, weights_init)
 
     # Training loop
     global_epoch = 0
     best_iou = 0
+    for epoch in range(start_epoch, args.epoch):
+        log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
+        lr, momentum = update_lr_momentum()  # TODO how to get around passing in the variables?
 
+        classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
+        num_batches = len(train_data_loader)
+        total_correct = 0
+        total_seen = 0
+        loss_sum = 0
+        classifier = classifier.train()  # Set model to training mode
 
+        if not args.validate_only:
+            all_train_points, all_train_pred, all_train_target = [], [], []
+            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),
+                                                   desc="Training"):
+                optimizer.zero_grad()
 
+                points = points.data.numpy  # CHECK is this needed
+                if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
+                points = torch.Tensor(points)
+                points, target_labels = points.float().cuda(), target_labels.long().cuda()
+                points = points.transpose(2, 1)  # Convert points to num_batches * channels * num_points
+
+                pred_labels, trans_feat = classifier(points)
+                pred_labels = pred_labels.contiguous().view(-1, 2)
+
+                # CHECK whats happening here?
+                batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
+                target_labels = target_labels.view(-1, 1)[:, 0]
+
+                loss = criterion(pred_labels, target_labels, trans_feat, weights)
+                loss.backward()
+                optimizer.step()
+
+                pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
+                correct = np.sum(pred_choice == batch_labels)
+                total_correct += correct
+                total_seen += (BATCH_SIZE * NUM_POINTS)
+                loss_sum += loss
+
+                wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
+                           'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
+                           'Train/inner_epoch_loss': loss,
+                           'Train/inner_epoch_accuracy': correct / len(batch_labels),
+                           'epoch': epoch,
+                           'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
+                if args.log_merged_training_set:
+                    all_train_points.append(np.array(points.transpose(1, 2).cpu()))
+                    all_train_pred.append(pred_choice.reshape(args.batch_size, -1))
+                    all_train_target.append(np.array(target_labels.cpu()).reshape(args.batch_size, -1))
+                # Visualise the first batch in every sample
+                if args.log_first_batch_cloud and i == 0:
+                    print(f"Visualising Epoch {epoch} Mini-Batch {i}")
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
+                                    np.array(target_labels.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
+                                    pred_labels.exp().cpu().data.numpy(), args.log_merged_training_batches)
+
+            post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target)
+
+# TODO Validation loop
 
 
 
