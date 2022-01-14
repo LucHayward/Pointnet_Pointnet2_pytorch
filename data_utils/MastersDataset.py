@@ -134,15 +134,16 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split, data_root, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
+    def __init__(self, split: str, data_root, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
-        :param split: {train, validate, test}
+        :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
         :param data_root: location of the data files
         :param num_points_in_block: Number of points to be returned when __get_item__() is called
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
+        assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test"'
         self.split = split
         self.num_points_in_block = num_points_in_block
         self.block_size = block_size
@@ -154,8 +155,8 @@ class MastersDataset(Dataset):
         # Given the data_root
         # Load all the segments that are for this split
         segment_paths = sorted(data_root.glob('*.npy'))
-        if split is not None:  # if split is None then just load all the .npy files
-            segment_paths = [path for path in segment_paths if split in path]
+        if not sample_all_points and split is not None :  # if split is None then just load all the .npy files
+            segment_paths = [path for path in segment_paths if split in str(path)]
 
         self.segment_points, self.segment_labels = [], []
         self.segment_coord_min, self.segment_coord_max = [], []
@@ -449,3 +450,17 @@ if __name__ == '__main__':
     # dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'))
     # dataset._test_coverage(0, 400)
     _test_sample_all_points()
+    print("Done🎉")
+
+    # r = []
+    # for y in range(5):
+    #     for x in range(6):
+    #         dd = np.random.random((np.random.randint(1000,2000000), 5))
+    #         (dd[:,:2])*10
+    #         dd[:,0]+x*10
+    #         dd[:,1]+y*10
+    #         dd[:, -1] = np.round(dd[:, -1])
+    #         r.append(dd)
+    #         np.save(f"/Users/luc/Development/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/dummy_big/{'validate' if x==y else 'train'}{6*y+x}.npy", dd)
+    # r=np.vstack(r)
+    # v = pptk.viewer(r[:,:3], r[:,-1])
