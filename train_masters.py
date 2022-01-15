@@ -231,6 +231,82 @@ def main(args):
             log_string('Saving model....')
             wandb.save(savepath)
 
+    def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou):
+        if args.log_merged_validation:
+            all_eval_points = np.vstack(np.vstack(all_eval_points))
+            all_eval_pred = np.hstack(np.vstack(all_eval_pred))
+            all_eval_target = np.hstack(np.vstack(all_eval_target))
+            _, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
+            num_unique_points = len(unique_indices)
+            total_eval_points = np.vstack(VAL_DATASET.room_points).shape[0]
+            print(
+                f"Unique points: {num_unique_points}/{total_eval_points} ({num_unique_points * 100 // total_eval_points}%)")
+
+            visualise_prediction(all_eval_points[:, :3], all_eval_pred,
+                                 all_eval_target, epoch,
+                                 "Validation", wandb_section="Visualise-Merged")
+
+        labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
+        mIoU = np.mean(
+            np.array(total_correct_class) / (np.array(total_iou_denominator_class,
+                                                      dtype=np.float) + 1e-6))  # correct prediction/class occurrences + false prediction
+        eval_mean_loss = loss_sum / float(num_batches)
+        eval_point_accuracy = total_correct / float(total_seen)
+        eval_point_avg_class_accuracy = np.mean(
+            np.array(total_correct_class) / (np.array(total_seen_class, dtype=np.float) + 1e-6))
+        log_string('eval mean loss: %f' % eval_mean_loss)
+        log_string('eval point avg class IoU: %f' % mIoU)
+        log_string('eval point accuracy: %f' % eval_point_accuracy)
+        log_string('eval point avg class acc: %f' % eval_point_avg_class_accuracy)
+
+        wandb.log({'Validation/eval_mean_loss': eval_mean_loss,
+                   'Validation/eval_point_mIoU': mIoU,
+                   'Validation/eval_point_accuracy': eval_point_accuracy,
+                   'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
+                   'epoch': epoch}, commit=False)
+        # TODO: Want to log:
+
+        iou_per_class_str = '------- IoU --------\n'
+        for l in range(NUM_CLASSES):
+            iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
+                str(l) + ' ' * (14 - 1), labelweights[l - 1],
+                total_correct_class[l] / float(total_iou_denominator_class[l]))  # refactor
+
+        # """
+        # ------- IoU --------
+        # class keep           weight: 0.253, IoU: 0.493
+        # class discard        weight: 0.747, IoU: 0.146
+        # """
+        # wandb.log({"Validation/IoU/": {
+        #     "class": seg_label_to_cat[l],
+        #     "weight": labelweights[l - 1],
+        #     "IoU": total_correct_class[l] / float(total_iou_denominator_class[l]),
+        #     "text": iou_per_class_str
+        # }
+        # }, commit=False)
+        # # TODO Custom graph here
+
+        log_string(iou_per_class_str)
+        log_string('Eval mean loss: %f' % eval_mean_loss)
+        log_string('Eval accuracy: %f' % eval_point_accuracy)
+
+        if mIoU >= best_iou:
+            best_iou = mIoU
+            logger.info('Save model...')
+            savepath = str(checkpoints_dir) + '/best_model.pth'
+            log_string('Saving at %s' % savepath)
+            state = {
+                'epoch': epoch,
+                'class_avg_iou': mIoU,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
+            torch.save(state, savepath)
+            log_string('Saving model....')
+            wandb.save(savepath)
+        log_string('Best mIoU: %f' % best_iou)
+        return best_iou
+
     # HYPER PARAMETER
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     experiment_dir, log_dir, checkpoints_dir = setup_logging_dir()
@@ -318,10 +394,70 @@ def main(args):
 
             post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target)
 
-# TODO Validation loop
+        # TODO Validation loop
+        with torch.no_grad():
+            num_batches = len(train_data_loader)
+            total_correct, total_seen, loss_sum = 0, 0, 0
 
+            labelweights = np.zeros(2)  # only used for printing metrics
+            total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
+
+            classifier = classifier.eval()
+            all_eval_points, all_eval_pred, all_eval_target = [], [], []
+
+            log_string('---- EPOCH %03d VALDIATION ----' % (global_epoch + 1))
+            for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
+                                                   desc="Validation"):
+                points = points.data.numpy()
+                points = torch.Tensor(points)
+                points, target = points.float().cuda(), target.long().cuda()
+                points = points.transpose(2, 1)
+
+                pred_labels, trans_feat = classifier(points)
+                pred_labels = pred_labels.contiguous().view(-1, 2)
+
+                # CHECK whats happening here?
+                batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
+                target_labels = target_labels.view(-1, 1)[:, 0]
+
+                loss = criterion(pred_labels, target_labels, trans_feat, weights)
+
+                pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
+                correct = np.sum(pred_choice == batch_labels)
+                total_correct += correct
+                total_seen += (BATCH_SIZE * NUM_POINTS)
+                loss_sum += loss
+                tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
+                labelweights += tmp
+
+                # Logging and visualisation and IoU
+                for l in range(NUM_CLASSES):
+                    total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
+                    # How often the predicted label was correct in the batch
+                    total_correct_class[l] += np.sum((pred_choice == l) & (batch_labels == l))
+                    # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
+                    total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
+                if args.log_merged_validation:
+                    all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
+                    all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
+                    all_eval_target.append(np.array(target.cpu()).reshape(points.shape[0], -1))
+                if args.log_first_batch_cloud and i == 0:
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(points.shape[0], -1),
+                                    np.array(target.cpu()).reshape(points.shape[0], -1), i, epoch, "Validation",
+                                    pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
+
+            best_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights,
+                                                       best_iou)
+
+        global_epoch += 1
+        wandb.log({})
+
+    log_string("Finished")
 
 
 if __name__ == '__main__':
     args = parse_args()
     wandb.init(project="Masters", config=args, resume=True, name='Church-baseline')
+    wandb.run.log_code(".")
+    main(args)
+    wandb.finish()
