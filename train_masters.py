@@ -136,6 +136,15 @@ def main(args):
         log_string(args)
 
     def setup_data_loaders():
+
+        def _debug_loaders():
+            train_points = all_train_points
+            train_labels = np.vstack(TRAIN_DATASET.segment_labels)
+            val_points = all_val_points
+            val_labels = np.vstack(VAL_DATASET.segment_labels)
+            vt = pptk.viewer(train_points[:,:3], train_labels)
+            vv = pptk.viewer(val_points[:,:3], val_labels)
+
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
         log_string("Loading the validation dataset")
@@ -148,8 +157,15 @@ def main(args):
                                                       shuffle=False, num_workers=0, pin_memory=True,
                                                       drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
         weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
-        log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments with {len(TRAIN_DATASET)} samples")
-        log_string(f"The size of the validation data is {len(TRAIN_DATASET.segment_points)} segments with {len(VAL_DATASET)} samples")
+        all_train_points = np.vstack(TRAIN_DATASET.segment_points)
+        sum_all_train_points = np.sum(all_train_points)
+        all_val_points = np.vstack(VAL_DATASET.segment_points)
+        sum_all_val_points = np.sum(all_val_points)
+        log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments making up "
+                   f"{len(TRAIN_DATASET)} samples and a {sum_all_train_points}:{len(all_train_points) - sum_all_train_points} label distribution.")
+        log_string(f"The size of the validation data is {len(TRAIN_DATASET.segment_points)} segments making up "
+                   f"{len(VAL_DATASET)} samples and a {sum_all_val_points}:{len(all_val_points) - sum_all_val_points} label distribution.")
+        # _debug_loaders()
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
                              'num_test_data': len(VAL_DATASET)})
         return TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights
