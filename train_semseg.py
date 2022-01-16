@@ -181,7 +181,7 @@ def main(args):
     log_string("The number of training data is: %d" % len(TRAIN_DATASET))
     log_string("The number of test data is: %d" % len(TEST_DATASET))
     wandb.config.update({'num_training_data': len(TRAIN_DATASET),
-                         'num_test-data': len(TEST_DATASET)})
+                         'num_test_data': len(TEST_DATASET)})
 
     '''MODEL LOADING'''
     MODEL = importlib.import_module(args.model)

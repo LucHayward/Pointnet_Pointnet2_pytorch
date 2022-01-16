@@ -25,7 +25,7 @@ sys.path.append("models")
 
 
 def inplace_relu(m):
-    classname = m.__clas__.__name__
+    classname = m.__class__.__name__
     if classname.find('ReLU') != -1:
         m.inplace = True
 
@@ -117,7 +117,6 @@ def main(args):
             experiment_dir = experiment_dir.joinpath(timestr)
         else:
             experiment_dir = experiment_dir.joinpath(args.log_dir)
-        experiment_dir = experiment_dir.joinpath(timestr)
         experiment_dir.mkdir(exist_ok=True)
         checkpoints_dir = experiment_dir.joinpath('checkpoints/')
         checkpoints_dir.mkdir(exist_ok=True)
@@ -140,7 +139,7 @@ def main(args):
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
         log_string("Loading the validation dataset")
-        VAL_DATASET = MastersDataset("validation", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
+        VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
         train_data_loader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
                                                         shuffle=args.shuffle_training_data, num_workers=0,
                                                         pin_memory=True,
@@ -149,10 +148,10 @@ def main(args):
                                                       shuffle=False, num_workers=0, pin_memory=True,
                                                       drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
         weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
-        log_string(f"The size of the training data is {len(TRAIN_DATASET)} segments")
-        log_string(f"The size of the validation data is {len(VAL_DATASET)} segments")
+        log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments with {len(TRAIN_DATASET)} samples")
+        log_string(f"The size of the validation data is {len(TRAIN_DATASET.segment_points)} segments with {len(VAL_DATASET)} samples")
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
-                             'num_test-data': len(VAL_DATASET)})
+                             'num_test_data': len(VAL_DATASET)})
         return TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights
 
     def setup_model():
@@ -161,7 +160,7 @@ def main(args):
         MODEL = importlib.import_module(args.model)
         shutil.copy('models/%s.py' % args.model, str(experiment_dir))
         shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
-        classifier = MODEL.get_model(2).cuda()
+        classifier = MODEL.get_model(2, points_vector_size=4).cuda()
         criterion = MODEL.get_loss().cuda()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
@@ -190,6 +189,9 @@ def main(args):
         return classifier, criterion, optimizer, start_epoch
 
     def update_lr_momentum():
+        lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
+        log_string('Learning rate:%f' % lr)
+        wandb.log({'lr': lr, 'epoch': epoch}, commit=False)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
@@ -314,7 +316,7 @@ def main(args):
     setup_logger()
 
     # Define constants
-    DATA_PATH = args.data_path
+    DATA_PATH = Path(args.data_path)
     NUM_CLASSES = 2
 
     NUM_POINTS = args.npoint
@@ -327,10 +329,8 @@ def main(args):
     MOMENTUM_DECCAY_STEP = args.step_size
 
     # Setup data_loaders and classifier
-    TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights = setup_data_loaders(BATCH_SIZE, BLOCK_SIZE,
-                                                                                                 DATA_PATH, NUM_POINTS,
-                                                                                                 args, log_string)
-    classifier, criterion, optimizer, start_epoch = setup_model(args, experiment_dir, log_string, weights_init)
+    TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights = setup_data_loaders()
+    classifier, criterion, optimizer, start_epoch = setup_model()
 
     # Training loop
     global_epoch = 0
@@ -352,7 +352,7 @@ def main(args):
                                                    desc="Training"):
                 optimizer.zero_grad()
 
-                points = points.data.numpy  # CHECK is this needed
+                points = points.data.numpy()
                 if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
                 points, target_labels = points.float().cuda(), target_labels.long().cuda()
@@ -405,12 +405,13 @@ def main(args):
             classifier = classifier.eval()
             all_eval_points, all_eval_pred, all_eval_target = [], [], []
 
-            log_string('---- EPOCH %03d VALDIATION ----' % (global_epoch + 1))
+            log_string('---- EPOCH %03d VALIDATION ----' % (global_epoch + 1))
             for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                    desc="Validation"):
-                points = points.data.numpy()
-                points = torch.Tensor(points)
-                points, target = points.float().cuda(), target.long().cuda()
+                # points = points.data.numpy()
+                # points = torch.Tensor(points)
+                points, target_labels = points.float().cuda(), target_labels.long().cuda()
+
                 points = points.transpose(2, 1)
 
                 pred_labels, trans_feat = classifier(points)
@@ -440,10 +441,10 @@ def main(args):
                 if args.log_merged_validation:
                     all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
-                    all_eval_target.append(np.array(target.cpu()).reshape(points.shape[0], -1))
+                    all_eval_target.append(np.array(target_labels.cpu()).reshape(points.shape[0], -1))
                 if args.log_first_batch_cloud and i == 0:
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(points.shape[0], -1),
-                                    np.array(target.cpu()).reshape(points.shape[0], -1), i, epoch, "Validation",
+                                    np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch, "Validation",
                                     pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
 
             best_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights,
@@ -457,7 +458,8 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    wandb.init(project="Masters", config=args, resume=True, name='Church-baseline')
+    os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=args, resume=True, name='mac_testing')
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
