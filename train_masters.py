@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--model', type=str, default='pointnet2_sem_seg',
                         help='model name [default: pointnet2_sem_seg]')
     parser.add_argument('--gpu', type=str, default='0', help='GPU to use [default: GPU 0]')
-    parser.add_argument('--data_path', default="data/PatrickData/Church/MastersFormat/dummy",
+    parser.add_argument('--data_path', default="data/dummy_big",
                         help='The path to the folder containing the data in .npy formats')
     parser.add_argument('--log_dir', type=str, default=None, help="Log path [default: None]")
 
