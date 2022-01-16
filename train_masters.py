@@ -138,12 +138,8 @@ def main(args):
     def setup_data_loaders():
 
         def _debug_loaders():
-            train_points = all_train_points
-            train_labels = np.vstack(TRAIN_DATASET.segment_labels)
-            val_points = all_val_points
-            val_labels = np.vstack(VAL_DATASET.segment_labels)
-            vt = pptk.viewer(train_points[:,:3], train_labels)
-            vv = pptk.viewer(val_points[:,:3], val_labels)
+            vt = pptk.viewer(all_train_points[:,:3], all_train_labels)
+            vv = pptk.viewer(all_val_points[:,:3], all_val_labels)
 
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
@@ -157,14 +153,17 @@ def main(args):
                                                       shuffle=False, num_workers=0, pin_memory=True,
                                                       drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
         weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
+
         all_train_points = np.vstack(TRAIN_DATASET.segment_points)
-        sum_all_train_points = np.sum(all_train_points)
+        all_train_labels = np.hstack(TRAIN_DATASET.segment_labels)
+        sum_all_train_labels = np.sum(all_train_labels)
         all_val_points = np.vstack(VAL_DATASET.segment_points)
-        sum_all_val_points = np.sum(all_val_points)
+        all_val_labels = np.hstack(VAL_DATASET.segment_labels)
+        sum_all_val_labels = np.sum(all_val_labels)
         log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments making up "
-                   f"{len(TRAIN_DATASET)} samples and a {sum_all_train_points}:{len(all_train_points) - sum_all_train_points} label distribution.")
-        log_string(f"The size of the validation data is {len(TRAIN_DATASET.segment_points)} segments making up "
-                   f"{len(VAL_DATASET)} samples and a {sum_all_val_points}:{len(all_val_points) - sum_all_val_points} label distribution.")
+                   f"{len(TRAIN_DATASET)} samples and a {np.round(sum_all_train_labels/len(all_train_labels), 3)}:{np.round((len(all_train_labels) - sum_all_train_labels)/len(all_train_labels), 3)} label distribution.")
+        log_string(f"The size of the validation data is {len(VAL_DATASET.segment_points)} segments making up "
+                   f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels/len(all_val_labels),2)}:{np.round((len(all_val_labels) - sum_all_val_labels)/len(all_val_labels),2)} label distribution.")
         # _debug_loaders()
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
                              'num_test_data': len(VAL_DATASET)})
