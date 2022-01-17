@@ -311,9 +311,9 @@ class MastersDataset(Dataset):
             )[0]
 
         if len(point_idxs) >= self.num_points_in_block:
-            point_idxs = rng.choice(point_idxs, 1024, replace=False)
+            point_idxs = rng.choice(point_idxs, self.num_points_in_block, replace=False)
         else:
-            point_idxs = rng.choice(point_idxs, 1024, replace=True)
+            point_idxs = rng.choice(point_idxs, self.num_points_in_block, replace=True)
 
         # # Get Normalized (-1,1) xyz values
         # normlized_xyz = np.zeros((len(point_idxs), 3))
