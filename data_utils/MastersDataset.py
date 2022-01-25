@@ -136,11 +136,11 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split: str, data_root: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
+    def __init__(self, split: str, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
-        :param data_root: location of the data files
+        :param data_path: location of the data files
         :param num_points_in_block: Number of points to be returned when __get_item__() is called
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
@@ -154,9 +154,9 @@ class MastersDataset(Dataset):
         self.stride = block_size
         self.padding = 0.001
 
-        # Given the data_root
+        # Given the data_path
         # Load all the segments that are for this split
-        segment_paths = sorted(data_root.glob('*.npy'))
+        segment_paths = sorted(data_path.glob('*.npy'))
         if not sample_all_points and split is not None:  # if split is None then just load all the .npy files
             segment_paths = [path for path in segment_paths if split in str(path)]
         assert len(segment_paths) > 0, "No segments in path"
