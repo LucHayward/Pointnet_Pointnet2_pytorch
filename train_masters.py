@@ -258,6 +258,22 @@ def main(args):
             print(
                 f"Unique points: {num_unique_points}/{total_eval_points} ({num_unique_points * 100 // total_eval_points}%)")
 
+            from collections import Counter
+            preds = {}
+            cnt = 0
+            ids = []
+            voted_preds = []
+            for i in tqdm(range(len(all_eval_pred))):
+                preds.setdefault(tuple(all_eval_points[i, :3]), []).append(
+                    np.array((all_eval_pred[i], all_eval_target[i], i)))
+            for item in preds.items():
+                val = item[1][0][:2]
+                cnt += len(np.unique(val)) - 1
+                if len(np.unique(val)) > 1: ids.append(item[1][0][2])
+                voted_preds = Counter(val).most_common(1)[0][0]
+            print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
+
+
             visualise_prediction(all_eval_points[:, :3], all_eval_pred,
                                  all_eval_target, epoch,
                                  "Validation", wandb_section="Visualise-Merged")
