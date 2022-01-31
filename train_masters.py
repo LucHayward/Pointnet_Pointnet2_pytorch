@@ -15,7 +15,6 @@ import shutil
 
 from tqdm import tqdm
 import numpy as np
-import time
 import pptk
 
 import wandb
