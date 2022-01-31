@@ -253,6 +253,7 @@ def main(args):
             all_eval_pred = np.hstack(np.vstack(all_eval_pred))
             all_eval_target = np.hstack(np.vstack(all_eval_target))
             _, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
+            unique_preds = np.copy(all_eval_pred[unique_indices])
             num_unique_points = len(unique_indices)
             total_eval_points = np.vstack(VAL_DATASET.segment_points).shape[0]
             print(
@@ -261,16 +262,16 @@ def main(args):
             from collections import Counter
             preds = {}
             cnt = 0
-            ids = []
-            voted_preds = []
+            multiclassified_idxs = []
+            voted_preds = np.copy(all_eval_pred)
             for i in tqdm(range(len(all_eval_pred))):
                 preds.setdefault(tuple(all_eval_points[i, :3]), []).append(
                     np.array((all_eval_pred[i], all_eval_target[i], i)))
-            for item in preds.items():
-                val = item[1][0][:2]
-                cnt += len(np.unique(val)) - 1
-                if len(np.unique(val)) > 1: ids.append(item[1][0][2])
-                voted_preds = Counter(val).most_common(1)[0][0]
+            for item in tqdm(preds.items()):
+                val = np.array(item[1])
+                cnt += len(np.unique(val[:,:2])) - 1
+                if len(np.unique(val[:,:2])) > 1: multiclassified_idxs += val[:,2].tolist()
+                voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
             print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
 
 
