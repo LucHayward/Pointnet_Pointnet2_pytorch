@@ -227,8 +227,8 @@ def main(args):
             total_training_points = np.vstack(TRAIN_DATASET.segment_points).shape[0]
             print(f"Unique points: {num_unique_points}/{total_training_points} "
                   f"({num_unique_points * 100 // total_training_points}%)")
-            visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
-                                 "Train", wandb_section="Visualise-Merged")
+            # visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
+            #                      "Train", wandb_section="Visualise-Merged")
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
         log_string('Training mean loss: %f' % mean_loss)
@@ -255,7 +255,7 @@ def main(args):
             all_eval_target = np.hstack(np.vstack(all_eval_target))
             _, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
             num_unique_points = len(unique_indices)
-            total_eval_points = np.vstack(VAL_DATASET.room_points).shape[0]
+            total_eval_points = np.vstack(VAL_DATASET.segment_points).shape[0]
             print(
                 f"Unique points: {num_unique_points}/{total_eval_points} ({num_unique_points * 100 // total_eval_points}%)")
 
@@ -474,7 +474,7 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=True, name='mac_testing')
+    wandb.init(project="Masters", config=args, resume=True, name='desktop-remote')
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
