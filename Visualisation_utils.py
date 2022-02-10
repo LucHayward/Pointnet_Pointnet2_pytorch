@@ -279,6 +279,6 @@ def pptk_full_dataset(dataset):
     :param dataset: S3DISDataLoader Dataset dataset containing points and labels
     :return: pptk viewer instance
     """
-    v = pptk.viewer(np.vstack(dataset.room_points)[:, :3], np.hstack(dataset.room_labels))
+    v = pptk.viewer(np.vstack(dataset.segment_points)[:, :3], np.hstack(dataset.segment_labels))
     v.color_map(turbo_colormap_data)
     return v

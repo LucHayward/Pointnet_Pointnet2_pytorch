@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_masters.py" />
-    <option name="PARAMETERS" value="--data_path &quot;data/PatrickData/Church/MastersFormat/5&quot; --epoch 50 --log_dir 2022-01-16_20-29_Baseline --log_merged_training_set --log_merged_validation --validate_only" />
+    <option name="PARAMETERS" value="--data_path &quot;data/PatrickData/Church/MastersFormat/5&quot; --epoch 50 --log_dir 2022-01-16_20-29_Baseline --log_merged_training_set" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

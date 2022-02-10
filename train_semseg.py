@@ -72,6 +72,7 @@ def parse_args():
     parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
     parser.add_argument('--test_sample_rate', default=1.0, type=float, help='How much to oversample the test set by')
     parser.add_argument('--shuffle_training_data', action='store_true', help='Shuffle the training data loader')
+    parser.add_argument('--best_iou', default=0, help='Use this to start with a given mIoU for validation/best model saving')
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options
@@ -188,7 +189,7 @@ def main(args):
     shutil.copy('models/%s.py' % args.model, str(experiment_dir))
     shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
 
-    classifier = MODEL.get_model(NUM_CLASSES).cuda()
+    classifier = MODEL.get_model(NUM_CLASSES, points_vector_size=4).cuda()
     criterion = MODEL.get_loss().cuda()
     classifier.apply(inplace_relu)
 
@@ -234,7 +235,7 @@ def main(args):
     MOMENTUM_DECCAY_STEP = args.step_size
 
     global_epoch = 0
-    best_iou = 0
+    best_iou = args.best_iou
 
     training_examples_seen = 0
     for epoch in range(start_epoch, args.epoch):
@@ -279,7 +280,7 @@ def main(args):
                 # print(np.asarray(np.unique(room_idx, return_counts=True)).T)
                 # CHECK Should we be augmenting? I think it helps the model be more robust
                 if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
-                points = torch.Tensor(points)
+                points = torch.Tensor(points[:,:,:4])
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)  # Convert points to num_batches * 9 * num_points, No idea why though
 
@@ -372,7 +373,7 @@ def main(args):
             for i, (points, target, room_idx) in tqdm(enumerate(testDataLoader), total=len(testDataLoader),
                                                       smoothing=0.9):
                 points = points.data.numpy()
-                points = torch.Tensor(points)
+                points = torch.Tensor(points[:,:,:4])
                 points, target = points.float().cuda(), target.long().cuda()
                 points = points.transpose(2, 1)
 
@@ -470,7 +471,7 @@ def main(args):
             if mIoU >= best_iou:
                 best_iou = mIoU
                 logger.info('Save model...')
-                savepath = str(checkpoints_dir) + '/best_model.pth'
+                savepath = str(checkpoints_dir) + '/best_mmodel.pth'
                 log_string('Saving at %s' % savepath)
                 state = {
                     'epoch': epoch,
@@ -493,7 +494,7 @@ if __name__ == '__main__':
     config.update(args.__dict__)
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
-               config=config, name='SongoMnara-Double-Points', resume=True)
+               config=config, name='random validation 1:4', resume=False)
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

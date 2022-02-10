@@ -220,12 +220,24 @@ def main(args):
             all_train_points = np.vstack(np.vstack(all_train_points))
             all_train_pred = np.hstack(np.vstack(all_train_pred))
             all_train_target = np.hstack(np.vstack(all_train_target))
-            _, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
+            unique_points, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
                                                          return_counts=True)
             num_unique_points = len(unique_indices)
+
+            train_dataset_points = np.vstack(TRAIN_DATASET.segment_points)
+            train_dataset_points = train_dataset_points.astype('float32')
+            trained_idxs = (np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+                train_dataset_points[:, 2], unique_points[:, 2])).nonzero()
+            trained_idxs = trained_idxs[0]
+            trained_mask = np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+                train_dataset_points[:, 2], unique_points[:, 2])
+            v = pptk.viewer(train_dataset_points[:, :3], np.hstack(TRAIN_DATASET.segment_labels), trained_mask)
+            vmissed = pptk.viewer(train_dataset_points[~trained_mask, :3], np.hstack(TRAIN_DATASET.segment_labels)[~trained_mask])
+
             total_training_points = np.vstack(TRAIN_DATASET.segment_points).shape[0]
-            print(f"Unique points: {num_unique_points}/{total_training_points} "
+            print(f"Unique points sampled: {num_unique_points}/{total_training_points} "
                   f"({num_unique_points * 100 // total_training_points}%)")
+
             # visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
             #                      "Train", wandb_section="Visualise-Merged")
         mean_loss = loss_sum / num_batches
@@ -252,12 +264,23 @@ def main(args):
             all_eval_points = np.vstack(np.vstack(all_eval_points))
             all_eval_pred = np.hstack(np.vstack(all_eval_pred))
             all_eval_target = np.hstack(np.vstack(all_eval_target))
-            _, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
+            unique_points, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
             unique_preds = np.copy(all_eval_pred[unique_indices])
             num_unique_points = len(unique_indices)
             total_eval_points = np.vstack(VAL_DATASET.segment_points).shape[0]
-            print(
-                f"Unique points: {num_unique_points}/{total_eval_points} ({num_unique_points * 100 // total_eval_points}%)")
+            print(f"Unique points: {num_unique_points}/{total_eval_points} "
+                  f"({num_unique_points * 100 // total_eval_points}%)")
+
+
+            validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
+            validation_dataset_points = validation_dataset_points.astype('float32')
+            trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+                validation_dataset_points[:, 2], unique_points[:, 2])).nonzero()
+            trained_idxs = trained_idxs[0]
+            trained_mask = np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+                validation_dataset_points[:, 2], unique_points[:, 2])
+            v = pptk.viewer(validation_dataset_points[:, :3], np.hstack(VAL_DATASET.segment_labels), trained_mask)
+            vmissed = pptk.viewer(validation_dataset_points[~trained_mask, :3], np.hstack(VAL_DATASET.segment_labels)[~trained_mask])
 
             from collections import Counter
             preds = {}
@@ -427,7 +450,7 @@ def main(args):
 
         # TODO Validation loop
         with torch.no_grad():
-            num_batches = len(train_data_loader)
+            num_batches = len(val_data_loader)
             total_correct, total_seen, loss_sum = 0, 0, 0
 
             labelweights = np.zeros(2)  # only used for printing metrics
@@ -490,7 +513,7 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=True, name='desktop-remote')
+    wandb.init(project="Masters", config=args, resume=False, name='hand selected validation - visualising')
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

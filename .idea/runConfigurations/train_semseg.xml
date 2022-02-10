@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_semseg.py" />
-    <option name="PARAMETERS" value="--model pointnet2_sem_seg --test_area 5 --log_dir pointnet2_sem_seg --augment_points --shuffle_training_data --epoch 300 --validate_only" />
+    <option name="PARAMETERS" value="--model pointnet2_sem_seg --test_area 5 --log_dir pointnet2_XYZI_pretrain_s3dis3 --augment_points --shuffle_training_data --epoch 300 --learning_rate 0.002" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
