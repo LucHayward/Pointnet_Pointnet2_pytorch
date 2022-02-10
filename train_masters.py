@@ -242,10 +242,17 @@ def main(args):
             #                      "Train", wandb_section="Visualise-Merged")
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
+
+        mIoU = np.mean(
+            np.array(total_correct_class) / (np.array(total_iou_denominator_class,
+                                                      dtype=np.float) + 1e-6))  # correct prediction/class occurrences + false prediction
+
         log_string('Training mean loss: %f' % mean_loss)
         log_string('Training accuracy: %f' % accuracy)
+        log_string('Training mIoU: %f' % mIoU)
         wandb.log({'Train/mean_loss': mean_loss,
-                   'Train/accuracy': accuracy, 'epoch': epoch}, commit=False)
+                   'Train/accuracy': accuracy,
+                   'Train/mIoU': mIoU, 'epoch': epoch}, commit=False)
         if epoch % 5 == 0:
             logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/model.pth'  # Should use .pt
@@ -296,7 +303,6 @@ def main(args):
                 if len(np.unique(val[:,:2])) > 1: multiclassified_idxs += val[:,2].tolist()
                 voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
             print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
-
 
             visualise_prediction(all_eval_points[:, :3], all_eval_pred,
                                  all_eval_target, epoch,
@@ -395,15 +401,15 @@ def main(args):
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
         num_batches = len(train_data_loader)
-        total_correct = 0
-        total_seen = 0
-        loss_sum = 0
+        total_correct, total_seen, loss_sum = 0, 0, 0
+
         classifier = classifier.train()  # Set model to training mode
 
         if not args.validate_only:
             all_train_points, all_train_pred, all_train_target = [], [], []
-            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),
-                                                   desc="Training"):
+            total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
+
+            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),                                                   desc="Training"):
                 optimizer.zero_grad()
 
                 points = points.data.numpy()
@@ -428,6 +434,14 @@ def main(args):
                 total_correct += correct
                 total_seen += (BATCH_SIZE * NUM_POINTS)
                 loss_sum += loss
+
+                # Logging and visualisation and IoU
+                for l in range(NUM_CLASSES):
+                    total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
+                    # How often the predicted label was correct in the batch
+                    total_correct_class[l] += np.sum((pred_choice == l) & (batch_labels == l))
+                    # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
+                    total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
 
                 wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
                            'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
@@ -484,6 +498,13 @@ def main(args):
                 loss_sum += loss
                 tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
                 labelweights += tmp
+
+                wandb.log({'Validation/inner_epoch_loss_sum': loss_sum,
+                           'Validation/inner_epoch_accuracy_sum': total_correct / total_seen,
+                           'Validation/inner_epoch_loss': loss,
+                           'Validation/inner_epoch_accuracy': correct / len(batch_labels),
+                           'epoch': epoch,
+                           'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
 
                 # Logging and visualisation and IoU
                 for l in range(NUM_CLASSES):
