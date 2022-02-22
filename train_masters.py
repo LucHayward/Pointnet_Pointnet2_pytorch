@@ -137,8 +137,8 @@ def main(args):
     def setup_data_loaders():
 
         def _debug_loaders():
-            vt = pptk.viewer(all_train_points[:,:3], all_train_labels)
-            vv = pptk.viewer(all_val_points[:,:3], all_val_labels)
+            vt = pptk.viewer(all_train_points[:, :3], all_train_labels)
+            vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
 
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
@@ -160,9 +160,9 @@ def main(args):
         all_val_labels = np.hstack(VAL_DATASET.segment_labels)
         sum_all_val_labels = np.sum(all_val_labels)
         log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments making up "
-                   f"{len(TRAIN_DATASET)} samples and a {np.round(sum_all_train_labels/len(all_train_labels), 3)}:{np.round((len(all_train_labels) - sum_all_train_labels)/len(all_train_labels), 3)} label distribution.")
+                   f"{len(TRAIN_DATASET)} samples and a {np.round(sum_all_train_labels / len(all_train_labels), 3)}:{np.round((len(all_train_labels) - sum_all_train_labels) / len(all_train_labels), 3)} label distribution.")
         log_string(f"The size of the validation data is {len(VAL_DATASET.segment_points)} segments making up "
-                   f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels/len(all_val_labels),2)}:{np.round((len(all_val_labels) - sum_all_val_labels)/len(all_val_labels),2)} label distribution.")
+                   f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels / len(all_val_labels), 2)}:{np.round((len(all_val_labels) - sum_all_val_labels) / len(all_val_labels), 2)} label distribution.")
         # _debug_loaders()
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
                              'num_test_data': len(VAL_DATASET)})
@@ -221,18 +221,18 @@ def main(args):
             all_train_pred = np.hstack(np.vstack(all_train_pred))
             all_train_target = np.hstack(np.vstack(all_train_target))
             unique_points, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
-                                                         return_counts=True)
+                                                                     return_counts=True)
             num_unique_points = len(unique_indices)
 
             train_dataset_points = np.vstack(TRAIN_DATASET.segment_points)
             train_dataset_points = train_dataset_points.astype('float32')
-            trained_idxs = (np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
-                train_dataset_points[:, 2], unique_points[:, 2])).nonzero()
-            trained_idxs = trained_idxs[0]
-            trained_mask = np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
-                train_dataset_points[:, 2], unique_points[:, 2])
-            v = pptk.viewer(train_dataset_points[:, :3], np.hstack(TRAIN_DATASET.segment_labels), trained_mask)
-            vmissed = pptk.viewer(train_dataset_points[~trained_mask, :3], np.hstack(TRAIN_DATASET.segment_labels)[~trained_mask])
+            # trained_idxs = (np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            #     train_dataset_points[:, 2], unique_points[:, 2])).nonzero()
+            # trained_idxs = trained_idxs[0]
+            # trained_mask = np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            #     train_dataset_points[:, 2], unique_points[:, 2])
+            # v = pptk.viewer(train_dataset_points[:, :3], np.hstack(TRAIN_DATASET.segment_labels), trained_mask)
+            # vmissed = pptk.viewer(train_dataset_points[~trained_mask, :3], np.hstack(TRAIN_DATASET.segment_labels)[~trained_mask])
 
             total_training_points = np.vstack(TRAIN_DATASET.segment_points).shape[0]
             print(f"Unique points sampled: {num_unique_points}/{total_training_points} "
@@ -278,31 +278,30 @@ def main(args):
             print(f"Unique points: {num_unique_points}/{total_eval_points} "
                   f"({num_unique_points * 100 // total_eval_points}%)")
 
-
             validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
-            validation_dataset_points = validation_dataset_points.astype('float32')
-            trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
-                validation_dataset_points[:, 2], unique_points[:, 2])).nonzero()
-            trained_idxs = trained_idxs[0]
-            trained_mask = np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
-                validation_dataset_points[:, 2], unique_points[:, 2])
-            v = pptk.viewer(validation_dataset_points[:, :3], np.hstack(VAL_DATASET.segment_labels), trained_mask)
-            vmissed = pptk.viewer(validation_dataset_points[~trained_mask, :3], np.hstack(VAL_DATASET.segment_labels)[~trained_mask])
+            # validation_dataset_points = validation_dataset_points.astype('float32')
+            # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            #     validation_dataset_points[:, 2], unique_points[:, 2])).nonzero()
+            # trained_idxs = trained_idxs[0]
+            # trained_mask = np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            #     validation_dataset_points[:, 2], unique_points[:, 2])
+            # v = pptk.viewer(validation_dataset_points[:, :3], np.hstack(VAL_DATASET.segment_labels), trained_mask)
+            # vmissed = pptk.viewer(validation_dataset_points[~trained_mask, :3], np.hstack(VAL_DATASET.segment_labels)[~trained_mask])
 
-            from collections import Counter
-            preds = {}
-            cnt = 0
-            multiclassified_idxs = []
-            voted_preds = np.copy(all_eval_pred)
-            for i in tqdm(range(len(all_eval_pred))):
-                preds.setdefault(tuple(all_eval_points[i, :3]), []).append(
-                    np.array((all_eval_pred[i], all_eval_target[i], i)))
-            for item in tqdm(preds.items()):
-                val = np.array(item[1])
-                cnt += len(np.unique(val[:,:2])) - 1
-                if len(np.unique(val[:,:2])) > 1: multiclassified_idxs += val[:,2].tolist()
-                voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
-            print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
+            # from collections import Counter
+            # preds = {}
+            # cnt = 0
+            # multiclassified_idxs = []
+            # voted_preds = np.copy(all_eval_pred)
+            # for i in tqdm(range(len(all_eval_pred))):
+            #     preds.setdefault(tuple(all_eval_points[i, :3]), []).append(
+            #         np.array((all_eval_pred[i], all_eval_target[i], i)))
+            # for item in tqdm(preds.items()):
+            #     val = np.array(item[1])
+            #     cnt += len(np.unique(val[:,:2])) - 1
+            #     if len(np.unique(val[:,:2])) > 1: multiclassified_idxs += val[:,2].tolist()
+            #     voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
+            # print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
 
             visualise_prediction(all_eval_points[:, :3], all_eval_pred,
                                  all_eval_target, epoch,
@@ -409,7 +408,8 @@ def main(args):
             all_train_points, all_train_pred, all_train_target = [], [], []
             total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 
-            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),                                                   desc="Training"):
+            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),
+                                                   desc="Training"):
                 optimizer.zero_grad()
 
                 points = points.data.numpy()
@@ -504,7 +504,7 @@ def main(args):
                            'Validation/inner_epoch_loss': loss,
                            'Validation/inner_epoch_accuracy': correct / len(batch_labels),
                            'epoch': epoch,
-                           'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
+                           'Validation/inner_epoch_step': (i + epoch * len(val_data_loader))})
 
                 # Logging and visualisation and IoU
                 for l in range(NUM_CLASSES):
@@ -533,8 +533,11 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False, name='hand selected validation - visualising')
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=args, resume=False,
+               name='hand selected validation starting pretrained all layers',
+               notes="Using the hand selected validation dataset and starting with the pretrained S3DIS model "
+                     "we finetune the model across all layers.")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
