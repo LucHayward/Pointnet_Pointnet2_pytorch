@@ -240,6 +240,11 @@ def main(args):
 
             # visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
             #                      "Train", wandb_section="Visualise-Merged")
+
+            wandb.log({'Train/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_train_target,
+                                                                                  preds=all_train_pred,
+                                                                                  class_names=["keep", "discard"])})
+
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
 
@@ -307,6 +312,10 @@ def main(args):
                                  all_eval_target, epoch,
                                  "Validation", wandb_section="Visualise-Merged")
 
+            wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
+                                                                       preds=all_eval_pred,
+                                                                       class_names=["keep", "discard"])})
+
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
             np.array(total_correct_class) / (np.array(total_iou_denominator_class,
@@ -325,27 +334,14 @@ def main(args):
                    'Validation/eval_point_accuracy': eval_point_accuracy,
                    'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
                    'epoch': epoch}, commit=False)
-        # TODO: Want to log:
+
+
 
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
             iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
                 str(l) + ' ' * (14 - 1), labelweights[l - 1],
                 total_correct_class[l] / float(total_iou_denominator_class[l]))  # refactor
-
-        # """
-        # ------- IoU --------
-        # class keep           weight: 0.253, IoU: 0.493
-        # class discard        weight: 0.747, IoU: 0.146
-        # """
-        # wandb.log({"Validation/IoU/": {
-        #     "class": seg_label_to_cat[l],
-        #     "weight": labelweights[l - 1],
-        #     "IoU": total_correct_class[l] / float(total_iou_denominator_class[l]),
-        #     "text": iou_per_class_str
-        # }
-        # }, commit=False)
-        # # TODO Custom graph here
 
         log_string(iou_per_class_str)
         log_string('Eval mean loss: %f' % eval_mean_loss)
