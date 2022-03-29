@@ -65,6 +65,10 @@ def parse_args():
     # Debugging parameters
     parser.add_argument('--validate_only', action='store_true', help='Skip training and only run the validation step')
     parser.add_argument('--shuffle_training_data', action='store_true', help='Shuffle the training data loader')
+    parser.add_argument('--force_even', action='store_true',
+                        help='Force the label distribution per batch to be approximately even')
+    parser.add_argument('--sample_all_validation', action='store_true',
+                        help='Samples all the points in a grid for the validation')
 
     # Exposing model hparams
     # Pointnet Set Abstraction: Group All options
@@ -137,21 +141,29 @@ def main(args):
     def setup_data_loaders():
 
         def _debug_loaders():
-            vt = pptk.viewer(all_train_points[:,:3], all_train_labels)
-            vv = pptk.viewer(all_val_points[:,:3], all_val_labels)
+            vt = pptk.viewer(all_train_points[:, :3], all_train_labels)
+            vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
 
         log_string("Loading the train dataset")
-        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
+        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even)
         log_string("Loading the validation dataset")
-        VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE)
+        VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
+                                     sample_all_points=args.sample_all_validation)
         train_data_loader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
                                                         shuffle=args.shuffle_training_data, num_workers=0,
                                                         pin_memory=True,
                                                         drop_last=True)
-        val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
-                                                      shuffle=False, num_workers=0, pin_memory=True,
-                                                      drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
-        weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
+        # Only use the dataloader for the normal sampling, otherwise we use custom logic
+        if not args.sample_all_validation:
+            val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
+                                                          shuffle=False, num_workers=0, pin_memory=True,
+                                                          drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
+        if args.force_even:
+            TRAIN_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
+            VAL_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
+
+        # weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
+        weights = torch.Tensor(TRAIN_DATASET.labelweights)
 
         all_train_points = np.vstack(TRAIN_DATASET.segment_points)
         all_train_labels = np.hstack(TRAIN_DATASET.segment_labels)
@@ -160,9 +172,9 @@ def main(args):
         all_val_labels = np.hstack(VAL_DATASET.segment_labels)
         sum_all_val_labels = np.sum(all_val_labels)
         log_string(f"The size of the training data is {len(TRAIN_DATASET.segment_points)} segments making up "
-                   f"{len(TRAIN_DATASET)} samples and a {np.round(sum_all_train_labels/len(all_train_labels), 3)}:{np.round((len(all_train_labels) - sum_all_train_labels)/len(all_train_labels), 3)} label distribution.")
+                   f"{len(TRAIN_DATASET)} samples and a {np.round(sum_all_train_labels / len(all_train_labels), 3)}:{np.round((len(all_train_labels) - sum_all_train_labels) / len(all_train_labels), 3)} label distribution.")
         log_string(f"The size of the validation data is {len(VAL_DATASET.segment_points)} segments making up "
-                   f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels/len(all_val_labels),2)}:{np.round((len(all_val_labels) - sum_all_val_labels)/len(all_val_labels),2)} label distribution.")
+                   f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels / len(all_val_labels), 2)}:{np.round((len(all_val_labels) - sum_all_val_labels) / len(all_val_labels), 2)} label distribution.")
         # _debug_loaders()
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
                              'num_test_data': len(VAL_DATASET)})
@@ -174,8 +186,10 @@ def main(args):
         MODEL = importlib.import_module(args.model)
         shutil.copy('models/%s.py' % args.model, str(experiment_dir))
         shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
-        classifier = MODEL.get_model(2, points_vector_size=4).cuda()
-        criterion = MODEL.get_loss().cuda()
+        # classifier = MODEL.get_model(2, points_vector_size=4).cuda()
+        # criterion = MODEL.get_loss().cuda()
+        classifier = MODEL.get_model(2, points_vector_size=4)
+        criterion = MODEL.get_loss()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
         # Check for models that have already been trained.
@@ -221,18 +235,23 @@ def main(args):
             all_train_pred = np.hstack(np.vstack(all_train_pred))
             all_train_target = np.hstack(np.vstack(all_train_target))
             unique_points, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
-                                                         return_counts=True)
+                                                                     return_counts=True)
             num_unique_points = len(unique_indices)
 
             train_dataset_points = np.vstack(TRAIN_DATASET.segment_points)
             train_dataset_points = train_dataset_points.astype('float32')
-            trained_idxs = (np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            trained_idxs = (
+                    np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1],
+                                                                                       unique_points[:,
+                                                                                       1]) & np.isin(
                 train_dataset_points[:, 2], unique_points[:, 2])).nonzero()
             trained_idxs = trained_idxs[0]
-            trained_mask = np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            trained_mask = np.isin(train_dataset_points[:, 0], unique_points[:, 0]) & np.isin(
+                train_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
                 train_dataset_points[:, 2], unique_points[:, 2])
             v = pptk.viewer(train_dataset_points[:, :3], np.hstack(TRAIN_DATASET.segment_labels), trained_mask)
-            vmissed = pptk.viewer(train_dataset_points[~trained_mask, :3], np.hstack(TRAIN_DATASET.segment_labels)[~trained_mask])
+            vmissed = pptk.viewer(train_dataset_points[~trained_mask, :3],
+                                  np.hstack(TRAIN_DATASET.segment_labels)[~trained_mask])
 
             total_training_points = np.vstack(TRAIN_DATASET.segment_points).shape[0]
             print(f"Unique points sampled: {num_unique_points}/{total_training_points} "
@@ -278,16 +297,18 @@ def main(args):
             print(f"Unique points: {num_unique_points}/{total_eval_points} "
                   f"({num_unique_points * 100 // total_eval_points}%)")
 
-
             validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
             validation_dataset_points = validation_dataset_points.astype('float32')
-            trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(
+                validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
                 validation_dataset_points[:, 2], unique_points[:, 2])).nonzero()
             trained_idxs = trained_idxs[0]
-            trained_mask = np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
+            trained_mask = np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(
+                validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
                 validation_dataset_points[:, 2], unique_points[:, 2])
             v = pptk.viewer(validation_dataset_points[:, :3], np.hstack(VAL_DATASET.segment_labels), trained_mask)
-            vmissed = pptk.viewer(validation_dataset_points[~trained_mask, :3], np.hstack(VAL_DATASET.segment_labels)[~trained_mask])
+            vmissed = pptk.viewer(validation_dataset_points[~trained_mask, :3],
+                                  np.hstack(VAL_DATASET.segment_labels)[~trained_mask])
 
             from collections import Counter
             preds = {}
@@ -299,9 +320,9 @@ def main(args):
                     np.array((all_eval_pred[i], all_eval_target[i], i)))
             for item in tqdm(preds.items()):
                 val = np.array(item[1])
-                cnt += len(np.unique(val[:,:2])) - 1
-                if len(np.unique(val[:,:2])) > 1: multiclassified_idxs += val[:,2].tolist()
-                voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
+                cnt += len(np.unique(val[:, :2])) - 1
+                if len(np.unique(val[:, :2])) > 1: multiclassified_idxs += val[:, 2].tolist()
+                voted_preds[val[:, 2]] = (Counter(val[:, 0]).most_common(1)[0][0])
             print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
 
             visualise_prediction(all_eval_points[:, :3], all_eval_pred,
@@ -409,13 +430,15 @@ def main(args):
             all_train_points, all_train_pred, all_train_target = [], [], []
             total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 
-            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),                                                   desc="Training"):
+            for i, (points, target_labels) in tqdm(enumerate(train_data_loader), total=len(train_data_loader),
+                                                   desc="Training"):
                 optimizer.zero_grad()
 
                 points = points.data.numpy()
                 if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
-                points, target_labels = points.float().cuda(), target_labels.long().cuda()
+                # points, target_labels = points.float().cuda(), target_labels.long().cuda()
+                points, target_labels = points.float(), target_labels.long()
                 points = points.transpose(2, 1)  # Convert points to num_batches * channels * num_points
 
                 pred_labels, trans_feat = classifier(points)
@@ -451,13 +474,13 @@ def main(args):
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
                 if args.log_merged_training_set:
                     all_train_points.append(np.array(points.transpose(1, 2).cpu()))
-                    all_train_pred.append(pred_choice.reshape(args.batch_size, -1))
-                    all_train_target.append(np.array(target_labels.cpu()).reshape(args.batch_size, -1))
+                    all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
+                    all_train_target.append(np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1))
                 # Visualise the first batch in every sample
                 if args.log_first_batch_cloud and i == 0:
                     print(f"Visualising Epoch {epoch} Mini-Batch {i}")
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(args.batch_size, -1),
-                                    np.array(target_labels.cpu()).reshape(args.batch_size, -1), i, epoch, 'Train',
+                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(BATCH_SIZE, -1),
+                                    np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1), i, epoch, 'Train',
                                     pred_labels.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
             post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target)
@@ -474,53 +497,32 @@ def main(args):
             all_eval_points, all_eval_pred, all_eval_target = [], [], []
 
             log_string('---- EPOCH %03d VALIDATION ----' % (global_epoch + 1))
-            for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
-                                                   desc="Validation"):
-                # points = points.data.numpy()
-                # points = torch.Tensor(points)
-                points, target_labels = points.float().cuda(), target_labels.long().cuda()
+            if not args.sample_all_validation:
+                for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
+                                                       desc="Validation"):
+                    labelweights = validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred,
+                                                    all_eval_target, args, classifier, criterion, epoch, i,
+                                                    labelweights,
+                                                    loss_sum, points, target_labels, total_correct, total_correct_class,
+                                                    total_iou_denominator_class, total_seen, total_seen_class,
+                                                    train_data_loader, weights)
+            else:
+                for i, grid_data in tqdm(enumerate(VAL_DATASET), total=len(VAL_DATASET)):
+                    # grid_data = data_segment, labels_segment, sample_weight_segment, point_idxs_segment
+                    available_batches = grid_data[0].shape[0]
+                    num_batches = int(np.ceil(available_batches / BATCH_SIZE))
+                    for batch in range(num_batches):
+                        points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], \
+                                                grid_data[1][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
 
-                points = points.transpose(2, 1)
-
-                pred_labels, trans_feat = classifier(points)
-                pred_labels = pred_labels.contiguous().view(-1, 2)
-
-                # CHECK whats happening here?
-                batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
-                target_labels = target_labels.view(-1, 1)[:, 0]
-
-                loss = criterion(pred_labels, target_labels, trans_feat, weights)
-
-                pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
-                correct = np.sum(pred_choice == batch_labels)
-                total_correct += correct
-                total_seen += (BATCH_SIZE * NUM_POINTS)
-                loss_sum += loss
-                tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
-                labelweights += tmp
-
-                wandb.log({'Validation/inner_epoch_loss_sum': loss_sum,
-                           'Validation/inner_epoch_accuracy_sum': total_correct / total_seen,
-                           'Validation/inner_epoch_loss': loss,
-                           'Validation/inner_epoch_accuracy': correct / len(batch_labels),
-                           'epoch': epoch,
-                           'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
-
-                # Logging and visualisation and IoU
-                for l in range(NUM_CLASSES):
-                    total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
-                    # How often the predicted label was correct in the batch
-                    total_correct_class[l] += np.sum((pred_choice == l) & (batch_labels == l))
-                    # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
-                    total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
-                if args.log_merged_validation:
-                    all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
-                    all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
-                    all_eval_target.append(np.array(target_labels.cpu()).reshape(points.shape[0], -1))
-                if args.log_first_batch_cloud and i == 0:
-                    visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(points.shape[0], -1),
-                                    np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch, "Validation",
-                                    pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
+                        labelweights = validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points,
+                                                        all_eval_pred,
+                                                        all_eval_target, args, classifier, criterion, epoch, i,
+                                                        labelweights,
+                                                        loss_sum, points, target_labels, total_correct,
+                                                        total_correct_class,
+                                                        total_iou_denominator_class, total_seen, total_seen_class,
+                                                        train_data_loader, weights)
 
             best_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights,
                                                        best_iou)
@@ -529,6 +531,54 @@ def main(args):
         wandb.log({})
 
     log_string("Finished")
+
+
+def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
+                     classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
+                     total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
+                     weights):
+    # points = points.data.numpy()
+    # points = torch.Tensor(points)
+    # points, target_labels = points.float().cuda(), target_labels.long().cuda()
+    points, target_labels = points.float(), target_labels.long()
+    points = points.transpose(2, 1)
+    pred_labels, trans_feat = classifier(points)
+    pred_labels = pred_labels.contiguous().view(-1, 2)
+    # CHECK whats happening here?
+    batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
+    target_labels = target_labels.view(-1, 1)[:, 0]
+    loss = criterion(pred_labels, target_labels, trans_feat, weights)
+    pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
+    correct = np.sum(pred_choice == batch_labels)
+    total_correct += correct
+    total_seen += (BATCH_SIZE * NUM_POINTS)
+    loss_sum += loss
+    tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
+    labelweights += tmp
+    wandb.log({'Validation/inner_epoch_loss_sum': loss_sum,
+               'Validation/inner_epoch_accuracy_sum': total_correct / total_seen,
+               'Validation/inner_epoch_loss': loss,
+               'Validation/inner_epoch_accuracy': correct / len(batch_labels),
+               'epoch': epoch,
+               'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
+    # Logging and visualisation and IoU
+    for l in range(NUM_CLASSES):
+        total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
+        # How often the predicted label was correct in the batch
+        total_correct_class[l] += np.sum((pred_choice == l) & (batch_labels == l))
+        # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
+        total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
+    if args.log_merged_validation:
+        all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
+        all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
+        all_eval_target.append(np.array(target_labels.cpu()).reshape(points.shape[0], -1))
+    if args.log_first_batch_cloud and i == 0:
+        visualise_batch(np.array(points.transpose(1, 2).cpu()),
+                        pred_choice.reshape(points.shape[0], -1),
+                        np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch,
+                        "Validation",
+                        pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
+    return labelweights
 
 
 if __name__ == '__main__':

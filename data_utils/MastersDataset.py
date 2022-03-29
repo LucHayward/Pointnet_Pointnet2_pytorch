@@ -136,7 +136,8 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    def __init__(self, split: str, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False):
+    def __init__(self, split: str, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
+                 force_even=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
@@ -154,10 +155,14 @@ class MastersDataset(Dataset):
         self.stride = block_size
         self.padding = 0.001
 
+        # if force_even:
+        #     self.batch_label_counts = None
+        #     self.
+
         # Given the data_path
         # Load all the segments that are for this split
         segment_paths = sorted(data_path.glob('*.npy'))
-        if not sample_all_points and split is not None:  # if split is None then just load all the .npy files
+        if split is not None:  # if split is None then just load all the .npy files
             segment_paths = [path for path in segment_paths if split in str(path)]
         assert len(segment_paths) > 0, "No segments in path"
         self.segment_points, self.segment_labels = [], []
@@ -193,6 +198,7 @@ class MastersDataset(Dataset):
 
         if not self.sample_all_points:
             # Sample from each segment based on the relative number of points.
+            # Only sets a segment to be sampled if it has at least num_points_per_segment(4096) points int it
             total_points = np.sum(num_points_per_segment)
             sample_probability = num_points_per_segment / total_points  # probability to sample from each segment
             num_iterations = int(
@@ -289,6 +295,9 @@ class MastersDataset(Dataset):
             print("DEBUG ALERT: num_points_in_segment <= 1024")
             point_idxs = range(num_points_in_segment)
         else:
+            if hasattr(self, 'batch_label_counts'):
+                num_discard_labels = np.sum(labels)
+                discard_label_proportion = num_discard_labels / len(labels)
 
             # Pick a starting centroid for the column
             center_idx = rng.choice(num_points_in_segment)
@@ -299,7 +308,8 @@ class MastersDataset(Dataset):
             column_max = center + self.block_size / 2.0
 
             column_min, column_max = _adjust_column(column_max, column_min,
-                           self.segment_coord_min[segment_idx], self.segment_coord_max[segment_idx])
+                                                    self.segment_coord_min[segment_idx],
+                                                    self.segment_coord_max[segment_idx])
 
             assert np.all((column_min >= self.segment_coord_min[segment_idx][:2],
                            column_max <= self.segment_coord_max[segment_idx][:2])), \
@@ -339,9 +349,9 @@ class MastersDataset(Dataset):
 
         data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
             np.array([]), np.array([]), np.array([]), np.array([])
-        return_grid = [[[] for _ in range(10)] for _ in range(10)]
-        for index_y in range(0, grid_x):
-            for index_x in range(0, grid_y):
+        return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
+        for index_y in tqdm(range(0, grid_y)):
+            for index_x in range(0, grid_x):
                 # For each cell in the grid get the start/end coords of the cell
                 s_x = coord_min[0] + index_x * self.stride
                 e_x = min(s_x + self.block_size, coord_max[0])
@@ -392,13 +402,21 @@ class MastersDataset(Dataset):
                 # One segments data can be returned in the form [x, y, points, labels]
                 return_grid[index_x][index_y] = (data_batch, label_batch)
 
-        #         # Stack all the points/labels from this cell with the previous cells
-        #         data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
-        #         labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
-        #         sample_weight_segment = np.hstack([sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
-        #         point_idxs_segment = np.hstack([point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
-        #
-        # return data_segment, labels_segment, sample_weight_segment, point_idxs_segment
+                # Stack all the points/labels from this cell with the previous cells
+                data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
+                labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
+                sample_weight_segment = np.hstack(
+                    [sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
+                point_idxs_segment = np.hstack(
+                    [point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
+
+        # Given all the points/labels reshape them to be returned as self.block_points batches.
+        # This DOES mean some of the "blocks" will stretch over the cells.
+        data_segment = data_segment.reshape((-1, self.num_points_in_block, data_segment.shape[1]))
+        labels_segment = labels_segment.reshape((-1, self.num_points_in_block))
+        sample_weight_segment = sample_weight_segment.reshape((-1, self.num_points_in_block))
+        point_idxs_segment = point_idxs_segment.reshape((-1, self.num_points_in_block))
+        return data_segment, labels_segment, sample_weight_segment, point_idxs_segment
         return return_grid
 
     def __getitem__(self, idx: int):
@@ -423,35 +441,44 @@ if __name__ == '__main__':
         """
         Loads in a dummy dataset as a sample all points set and tests that all points are sampled correctly.
         """
-        dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'), sample_all_points=True)
+        dataset = MastersDataset("validate", Path('../data/PatrickData/Church/MastersFormat/hand_selected/'),
+                                 sample_all_points=True)
+
+        BATCH_SIZE = 16
+
         all_points_data = []
         all_points_labels = []
         all_points_predictions = []
         for i, grid_data in tqdm(enumerate(dataset), total=len(dataset)):
-            for y in grid_data:
-                for x in y:
-                    points, labels = x
-                    # Run inference on data({len(points)} points)
-                    predictions = np.round(np.random.random(len(labels)))
-                    all_points_data.append(points)
-                    all_points_labels.append(labels)
-                    all_points_predictions.append(predictions)
-                    # Compare the prediciton with the ground truth
-                    # Calculate the loss function
+            # grid_data = data_segment, labels_segment, sample_weight_segment, point_idxs_segment
+            available_batches = grid_data[0].shape[0]
+            num_batches = int(np.ceil(available_batches / BATCH_SIZE))
+            for batch in range(num_batches):
+                points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], grid_data[1][
+                                                                                                          batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
 
-        all_points_data = np.vstack(all_points_data)
-        all_points_labels = np.hstack(all_points_labels)
-        all_points_predictions = np.hstack(all_points_predictions)
-        assert len(np.unique(all_points_data, axis=0)) == np.sum(
-            dataset.num_points_per_segment), f"Did not sample all points, number of points in dataset" \
-                                             f"({np.sum(dataset.num_points_per_segment)}) != unique sampled points" \
-                                             f"({np.unique(all_points_data, axis=0)})."
+                # Run inference on data({len(points)} points)
+                predictions = np.round(np.random.random(target_labels.size))
+                all_points_data.append(points)
+                all_points_labels.append(target_labels)
+                all_points_predictions.append(predictions)
+                # Compare the prediciton with the ground truth
+                # Calculate the loss function
+
+        all_points_data = np.vstack(np.vstack(all_points_data))
+        all_points_labels = np.hstack(np.vstack(all_points_labels))
+        all_points_predictions = np.concatenate(all_points_predictions)
+        if (len(np.unique(all_points_data, axis=0)) == np.unique(dataset.segment_points[0], axis=0).shape[0]):
+            print(f"Did not sample all points, number of points in dataset" \
+                  f"({np.unique(dataset.segment_points[0], axis=0).shape[0]}) != unique sampled points" \
+                  f"({np.unique(all_points_data, axis=0)}).")
 
 
     print("This shouldn't be run")
-    # dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/dummy/'))
+    dataset = MastersDataset("validate", Path('../data/PatrickData/Church/MastersFormat/hand_selected/'),
+                             sample_all_points=True)
     # dataset._test_coverage(0, 400)
-    # _test_sample_all_points()
+    _test_sample_all_points()
     print("Done🎉")
 
     # r = []

@@ -131,7 +131,7 @@ class S3DISDataset(Dataset):
         for room_name in tqdm(rooms_split, total=len(rooms_split)):
             room_path = os.path.join(data_root, room_name)
             room_data = np.load(room_path)  # xyzrgbl, N*7
-            points, labels = room_data[:, 0:6], room_data[:, 6]  # xyzrgb, N*6; l, N
+            points, labels = room_data[:, 0:3], room_data[:, -1]  # xyzrgb, N*6; l, N
             tmp, _ = np.histogram(labels, range(num_classes + 1))  # count of class labels in room
             labelweights += tmp
             coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
@@ -231,7 +231,7 @@ class S3DISDataset(Dataset):
         # selected_points[:, 0] = selected_points[:, 0] - center[0]  # Translate XY so last center is at origin
         # selected_points[:, 1] = selected_points[:, 1] - center[1]
         # selected_points[:, 3:6] /= 255.0 #TODO Fix this
-        current_points[:, 0:6] = selected_points  # Global XYZ, IGB/255, XYZ/max(room_XYZ)
+        current_points[:, 0:3] = selected_points  # Global XYZ, IGB/255, XYZ/max(room_XYZ)
         current_labels = labels[selected_point_idxs]
         if self.transform is not None:
             current_points, current_labels = self.transform(current_points, current_labels)
