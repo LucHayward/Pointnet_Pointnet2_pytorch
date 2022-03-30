@@ -184,6 +184,17 @@ def main(args):
             start_epoch = checkpoint['epoch']
             classifier.load_state_dict(checkpoint['model_state_dict'])
             log_string('Use pretrain model')
+            # if args.only_train_last_two_layers:
+            #     for param in classifier.parameters():
+            #         param.requires_grad = False
+            #     classifier.conv1.weight.requires_grad = True
+            #     classifier.conv2.weight.requires_grad = True
+            #     classifier.bn1.weight.requires_grad = True
+            #     classifier.conv1.bias.requires_grad = True
+            #     classifier.conv2.bias.requires_grad = True
+            #     classifier.bn1.bias.requires_grad = True
+
+
         except:
             log_string('No existing model, starting training from scratch...')
             start_epoch = 0
@@ -242,8 +253,8 @@ def main(args):
             #                      "Train", wandb_section="Visualise-Merged")
 
             wandb.log({'Train/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_train_target,
-                                                                                  preds=all_train_pred,
-                                                                                  class_names=["keep", "discard"])})
+                                                                             preds=all_train_pred,
+                                                                             class_names=["keep", "discard"])})
 
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
@@ -313,8 +324,8 @@ def main(args):
                                  "Validation", wandb_section="Visualise-Merged")
 
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
-                                                                       preds=all_eval_pred,
-                                                                       class_names=["keep", "discard"])})
+                                                                                  preds=all_eval_pred,
+                                                                                  class_names=["keep", "discard"])})
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
@@ -334,8 +345,6 @@ def main(args):
                    'Validation/eval_point_accuracy': eval_point_accuracy,
                    'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
                    'epoch': epoch}, commit=False)
-
-
 
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
@@ -529,11 +538,11 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation starting pretrained all layers',
-               notes="Using the hand selected validation dataset and starting with the pretrained S3DIS model "
-                     "we finetune the model across all layers.")
+               name='hand selected validation reversed starting pretrained all layers',
+               notes="Using the hand selected validation dataset (with the train and validation sets reversed) "
+                     "and starting with the pretrained S3DIS model we finetune the model across all layers.")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
