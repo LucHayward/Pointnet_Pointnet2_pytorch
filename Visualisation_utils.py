@@ -137,10 +137,16 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     true_neg, true_pos, false_neg, false_pos = confusion_matrix_data[0]
     accuracy = np.sum(pred == target_labels) / len(pred)
     # Precision = of all the positive predications how many are correct (high Precision = low FP)
-    precision = true_pos / (true_pos + false_pos)
+    precision_discard = true_pos / (true_pos + false_pos)
     # Of all the possible positives, how many do we predict (high recall = low fN)
-    recall = true_pos / (true_pos + false_neg)
-    f1 = 2 * (recall * precision) / (recall + precision)
+    recall_discard = true_pos / (true_pos + false_neg)
+    f1_discard = 2 * (recall_discard * precision_discard) / (recall_discard + precision_discard)
+    # todo double check this
+    precision_keep = true_neg / (true_neg + false_neg)
+    recall_keep = true_neg / (true_neg + false_pos)
+    f1_keep = 2 * (recall_keep * precision_keep) / (recall_keep + precision_keep)
+
+
 
     if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
         v = pptk.viewer(points)
@@ -180,9 +186,12 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
           (true_neg / (true_neg + false_pos)).__round__(3)]],
         headers=['', 'Actual 1', 'Actual 0']))
     print(f'Accuracy: {accuracy:.4f}\n'
-          f'Recall: {recall:.4f}\n'
-          f'Precision: {precision:.4f}\n'
-          f'f1: {f1:.4f}\n'
+          f'Recall (discard): {recall_discard:.4f}\n'
+          f'Precision (discard): {precision_discard:.4f}\n'
+          f'f1 (discard): {f1_discard:.4f}\n'
+          f'Recall (keep): {recall_keep:.4f}\n'
+          f'Precision (keep): {precision_keep:.4f}\n'
+          f'f1 (keep): {f1_keep:.4f}\n'
           f'Distribution predicted (0:1): '
           f'{(true_neg + false_neg) / len(target_labels):.2f}:{(true_pos + false_pos) / len(target_labels):.2f}\n'
           f'Distribution target (0:1): '
