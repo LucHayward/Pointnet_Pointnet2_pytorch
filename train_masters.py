@@ -18,6 +18,7 @@ import numpy as np
 import pptk
 
 import wandb
+from line_profiler_pycharm import profile
 
 classes = ["keep", "discard"]
 sys.path.append("models")
@@ -154,6 +155,7 @@ def main(args):
                                                         pin_memory=True,
                                                         drop_last=True)
         # Only use the dataloader for the normal sampling, otherwise we use custom logic
+        val_data_loader = None
         if not args.sample_all_validation:
             val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
                                                           shuffle=False, num_workers=0, pin_memory=True,
@@ -162,8 +164,7 @@ def main(args):
             TRAIN_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
             VAL_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
 
-        # weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
-        weights = torch.Tensor(TRAIN_DATASET.labelweights)
+        weights = torch.Tensor(TRAIN_DATASET.labelweights).cuda()
 
         all_train_points = np.vstack(TRAIN_DATASET.segment_points)
         all_train_labels = np.hstack(TRAIN_DATASET.segment_labels)
@@ -481,7 +482,7 @@ def main(args):
 
         # TODO Validation loop
         with torch.no_grad():
-            num_batches = len(val_data_loader)
+            num_batches = 0 if val_data_loader is None else len(val_data_loader)
             total_correct, total_seen, loss_sum = 0, 0, 0
 
             labelweights = np.zeros(2)  # only used for printing metrics
@@ -494,29 +495,44 @@ def main(args):
             if not args.sample_all_validation:
                 for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                        desc="Validation"):
-                    labelweights = validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred,
-                                                    all_eval_target, args, classifier, criterion, epoch, i,
-                                                    labelweights,
-                                                    loss_sum, points, target_labels, total_correct, total_correct_class,
-                                                    total_iou_denominator_class, total_seen, total_seen_class,
-                                                    train_data_loader, weights)
+                    labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
+                                                                                         NUM_POINTS, all_eval_points,
+                                                                                         all_eval_pred,
+                                                                                         all_eval_target, args,
+                                                                                         classifier, criterion, epoch,
+                                                                                         i,
+                                                                                         labelweights,
+                                                                                         loss_sum, points,
+                                                                                         target_labels, total_correct,
+                                                                                         total_correct_class,
+                                                                                         total_iou_denominator_class,
+                                                                                         total_seen, total_seen_class,
+                                                                                         train_data_loader, weights)
             else:
-                for i, grid_data in tqdm(enumerate(VAL_DATASET), total=len(VAL_DATASET)):
+                for i, grid_data in enumerate(VAL_DATASET):
                     # grid_data = data_segment, labels_segment, sample_weight_segment, point_idxs_segment
                     available_batches = grid_data[0].shape[0]
                     num_batches = int(np.ceil(available_batches / BATCH_SIZE))
-                    for batch in range(num_batches):
+                    for batch in tqdm(range(num_batches), desc="Validation"):
                         points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], \
                                                 grid_data[1][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
 
-                        labelweights = validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points,
-                                                        all_eval_pred,
-                                                        all_eval_target, args, classifier, criterion, epoch, i,
-                                                        labelweights,
-                                                        loss_sum, points, target_labels, total_correct,
-                                                        total_correct_class,
-                                                        total_iou_denominator_class, total_seen, total_seen_class,
-                                                        train_data_loader, weights)
+                        labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
+                                                                                             NUM_POINTS,
+                                                                                             all_eval_points,
+                                                                                             all_eval_pred,
+                                                                                             all_eval_target, args,
+                                                                                             classifier, criterion,
+                                                                                             epoch, i,
+                                                                                             labelweights,
+                                                                                             loss_sum, points,
+                                                                                             target_labels,
+                                                                                             total_correct,
+                                                                                             total_correct_class,
+                                                                                             total_iou_denominator_class,
+                                                                                             total_seen,
+                                                                                             total_seen_class,
+                                                                                             train_data_loader, weights)
 
             best_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights,
                                                        best_iou)
@@ -526,15 +542,18 @@ def main(args):
 
     log_string("Finished")
 
-
+@profile
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
                      total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
                      weights):
-    # points = points.data.numpy()
-    # points = torch.Tensor(points)
-    # points, target_labels = points.float().cuda(), target_labels.long().cuda()
-    points, target_labels = points.float(), target_labels.long()
+    if torch.is_tensor(points):
+        points = points.data.numpy()
+    points = torch.Tensor(points)
+    if torch.is_tensor(target_labels):
+        target_labels = target_labels.data.numpy()
+    target_labels = torch.Tensor(target_labels)
+    points, target_labels = points.float().cuda(), target_labels.long().cuda()
     points = points.transpose(2, 1)
     pred_labels, trans_feat = classifier(points)
     pred_labels = pred_labels.contiguous().view(-1, 2)
@@ -572,16 +591,17 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
                         np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch,
                         "Validation",
                         pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
-    return labelweights
+    return labelweights, total_correct, total_seen, loss_sum
 
 
 if __name__ == '__main__':
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation reversed starting pretrained all layers',
-               notes="Using the hand selected validation dataset (with the train and validation sets reversed) "
-                     "and starting with the pretrained S3DIS model we finetune the model across all layers.")
+               name='hand selected reversed extra 10% start 29% lower LR',
+               notes="After training using the hand selected validation dataset (with the train and validation sets "
+                     "reversed), we add an extra 10% (it's actually 5%) and train from the previous best model using "
+                     "this new data. Lower LR")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

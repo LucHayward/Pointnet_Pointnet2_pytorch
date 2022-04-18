@@ -336,7 +336,8 @@ class MastersDataset(Dataset):
 
     def _get_item_all(self, idx: int):
         """
-        Return the points in this segment[idx] as a 2darray of points,labels, [x,y](points, labels)
+        Return all the points in this segment
+        todo memoize this
         """
         points = self.segment_points[idx]
         labels = self.segment_labels[idx]
@@ -350,7 +351,7 @@ class MastersDataset(Dataset):
         data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
             np.array([]), np.array([]), np.array([]), np.array([])
         return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
-        for index_y in tqdm(range(0, grid_y)):
+        for index_y in tqdm(range(0, grid_y), desc="get_item_all (rows)"):
             for index_x in range(0, grid_x):
                 # For each cell in the grid get the start/end coords of the cell
                 s_x = coord_min[0] + index_x * self.stride
@@ -417,7 +418,14 @@ class MastersDataset(Dataset):
         sample_weight_segment = sample_weight_segment.reshape((-1, self.num_points_in_block))
         point_idxs_segment = point_idxs_segment.reshape((-1, self.num_points_in_block))
         return data_segment, labels_segment, sample_weight_segment, point_idxs_segment
-        return return_grid
+
+    def get_ouput_format(self):
+        """
+        Returns the points and labels as a single ndarray of form XYZIR where R is the label
+        """
+        segment_labels = np.concatenate(self.segment_labels)
+        segment_points = np.concatenate(self.segment_points)
+        return np.hstack((segment_points, segment_labels[:, None]))
 
     def __getitem__(self, idx: int):
         """
