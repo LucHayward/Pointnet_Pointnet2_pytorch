@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="train_semseg_church" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="train_semseg_church" type="PythonConfigurationType" factoryName="Python" folderName="SemSeg">
     <module name="Pointnet_Pointnet2_pytorch" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
