@@ -5,13 +5,15 @@ from models.pointnet2_utils import PointNetSetAbstraction, PointNetFeaturePropag
 
 
 class get_model(nn.Module):
-    def __init__(self, num_classes, points_vector_size=9, dropout_prob=0.5, psa1_groupall=False, psa2_groupall=False, psa3_groupall=False, psa4_groupall=False,
-                 psa1_radius=0.1, psa2_radius=0.2, psa3_radius=0.4, psa4_radius=0.8):
+    def __init__(self, num_classes, points_vector_size=9, dropout_prob=0.5, sa1_groupall=False, sa2_groupall=False,
+                 sa3_groupall=False, sa4_groupall=False, sa1_radius=0.1, sa2_radius=0.2, sa3_radius=0.4,
+                 sa4_radius=0.8, sa1_npoint=1024, sa2_npoint=256, sa3_npoint=64, sa4_npoint=16):
         super(get_model, self).__init__()
-        self.sa1 = PointNetSetAbstraction(1024, psa1_radius, 32, points_vector_size + 3, [32, 32, 64], psa1_groupall)  # TODO Change input vector size
-        self.sa2 = PointNetSetAbstraction(256, psa2_radius, 32, 64 + 3, [64, 64, 128], psa2_groupall)
-        self.sa3 = PointNetSetAbstraction(64, psa3_radius, 32, 128 + 3, [128, 128, 256], psa3_groupall)
-        self.sa4 = PointNetSetAbstraction(16, psa4_radius, 32, 256 + 3, [256, 256, 512], psa4_groupall)
+        self.sa1 = PointNetSetAbstraction(sa1_npoint, sa1_radius, 32, points_vector_size + 3, [32, 32, 64],
+                                          sa1_groupall)
+        self.sa2 = PointNetSetAbstraction(sa2_npoint, sa2_radius, 32, 64 + 3, [64, 64, 128], sa2_groupall)
+        self.sa3 = PointNetSetAbstraction(sa3_npoint, sa3_radius, 32, 128 + 3, [128, 128, 256], sa3_groupall)
+        self.sa4 = PointNetSetAbstraction(sa4_npoint, sa4_radius, 32, 256 + 3, [256, 256, 512], sa4_groupall)
         self.fp4 = PointNetFeaturePropagation(768, [256, 256])  # Not Random numbers, 256+512=sa4+sa3 output points
         self.fp3 = PointNetFeaturePropagation(384, [256, 256])
         self.fp2 = PointNetFeaturePropagation(320, [256, 128])

@@ -86,10 +86,10 @@ def parse_args():
                         help='Use Group_all in Pointnet Set Abstraction Layer 4')
 
     # Pointnet Set Abstraction: Sphere Radius
-    parser.add_argument('--psa1_radius', default=0.1, help='Sphere lookup radius in Pointnet Set Abstraction Layer 1')
-    parser.add_argument('--psa2_radius', default=0.2, help='Sphere lookup radius in Pointnet Set Abstraction Layer 2')
-    parser.add_argument('--psa3_radius', default=0.4, help='Sphere lookup radius in Pointnet Set Abstraction Layer 3')
-    parser.add_argument('--psa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
+    parser.add_argument('--sa1_radius', default=0.1, help='Sphere lookup radius in Pointnet Set Abstraction Layer 1')
+    parser.add_argument('--sa2_radius', default=0.2, help='Sphere lookup radius in Pointnet Set Abstraction Layer 2')
+    parser.add_argument('--sa3_radius', default=0.4, help='Sphere lookup radius in Pointnet Set Abstraction Layer 3')
+    parser.add_argument('--sa4_radius', default=0.8, help='Sphere lookup radius in Pointnet Set Abstraction Layer 4')
 
     return parser.parse_args()
 
