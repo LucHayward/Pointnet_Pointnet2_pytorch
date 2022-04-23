@@ -1,5 +1,5 @@
 import os
-# from line_profiler_pycharm import profile
+from line_profiler_pycharm import profile
 
 import numpy as np
 
@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from pathlib import Path
 
 import pptk  # For visualisation
+from torch import save, load
 
 turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149], [0.19956, 0.09498, 0.29024],
                        [0.20415, 0.10652, 0.31844], [0.20860, 0.11802, 0.34607], [0.21291, 0.12947, 0.37314],
@@ -136,6 +137,7 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
+    @profile
     def __init__(self, split: str, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
                  force_even=False):
         """
@@ -211,6 +213,15 @@ class MastersDataset(Dataset):
         else:
             # Sample every point in the segment in turn following a grid pattern.
             # Just need to return all the points in one go.
+
+            self.segments_idxs = np.arange(len(self.segment_points))
+            # First check if a cache exists
+            cache_path_list = list(data_path.glob(f"{split}_all_points.cache"))
+            if len(cache_path_list) > 0:
+                _num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment, \
+                    = load(cache_path_list[0])
+                if _num_points_in_block == self.num_points_in_block:
+                    return
             self.segments_idxs = np.arange(len(self.segment_points))
 
             points = self.segment_points[0]
@@ -235,6 +246,7 @@ class MastersDataset(Dataset):
                     e_y = min(s_y + self.block_size, coord_max[1])
                     s_y = e_y - self.block_size
 
+                    # TODO check that this is working correctly
                     # Get all the points within the cell (or continue if empty), padding ensures edge cases are well covered
                     point_idxs = np.where(
                         (points[:, 0] >= s_x - self.padding) & (points[:, 0] <= e_x + self.padding) & (
@@ -291,6 +303,9 @@ class MastersDataset(Dataset):
             self.labels_segment = labels_segment.reshape((-1, self.num_points_in_block))
             self.sample_weight_segment = sample_weight_segment.reshape((-1, self.num_points_in_block))
             self.point_idxs_segment = point_idxs_segment.reshape((-1, self.num_points_in_block))
+            save([self.num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment,
+                  self.point_idxs_segment], data_path / f"{split}_all_points.cache")
+
 
 
     def _test_coverage(self, idx: int, iterations):
@@ -454,8 +469,8 @@ if __name__ == '__main__':
             available_batches = grid_data[0].shape[0]
             num_batches = int(np.ceil(available_batches / BATCH_SIZE))
             for batch in range(num_batches):
-                points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], grid_data[1][
-                                                                                                          batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
+                points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], \
+                                        grid_data[1][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
 
                 # Run inference on data({len(points)} points)
                 predictions = np.round(np.random.random(target_labels.size))
@@ -475,21 +490,7 @@ if __name__ == '__main__':
 
 
     print("This shouldn't be run")
-    dataset = MastersDataset("validate", Path('../data/PatrickData/Church/MastersFormat/hand_selected/'),
-                             sample_all_points=True)
+
     # dataset._test_coverage(0, 400)
     _test_sample_all_points()
     print("Done🎉")
-
-    # r = []
-    # for y in range(5):
-    #     for x in range(6):
-    #         dd = np.random.random((np.random.randint(1000,2000000), 5))
-    #         dd[:,:2]= dd[:,:2]*10
-    #         dd[:,0]= dd[:,0]+x*10
-    #         dd[:,1]= dd[:,1]+y*10
-    #         dd[:, -1] = np.round(dd[:, -1])
-    #         r.append(dd)
-    #         np.save(f"/Users/luc/Development/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/dummy_big/{'validate' if x==y else 'train'}{6*y+x}.npy", dd)
-    # r=np.vstack(r)
-    # v = pptk.viewer(r[:,:3], r[:,-1])
