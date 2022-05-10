@@ -4,28 +4,35 @@ import pptk
 import open3d as o3d
 from pathlib import Path
 
+import yaml
+
 import Visualisation_utils
+import train_masters
 from data_utils.MastersDataset import MastersDataset
 
 TEMP_DIR = Path("temp/")
 
 
-def save_split_dataset(dataset, selected_points, iteration: int):
+def save_split_dataset(dataset, selected_points, iteration: int, dataset_merge=None):
     """
     Splits and saves the dataset out to the temp directory
     TODO change to the log dir
     :param dataset: dataset being selected from
     :param selected_points: selected train/labelling points
     :param iteration: which iteration of the Active Learning process
+    :param dataset_merge: If there is a dataset to merge the selected points into, otherwise None
     :return:
     """
     train_points = dataset.segment_points[0][selected_points]
     train_labels = dataset.segment_labels[0][selected_points]
-    np.save(TEMP_DIR / f"train{iteration}.npy", np.hstack((train_points, train_labels[:, None])))
+    if dataset_merge is not None:
+        train_points = np.vstack((dataset_merge.segment_points[0][selected_points], train_points))
+        train_labels = np.hstack((dataset_merge.segment_labels[0][selected_points], train_labels))
+    np.save(TEMP_DIR / f"train{iteration}.npy", np.column_stack((train_points, train_labels[:, None])))
 
     val_points = Visualisation_utils.numpy_inverse_index(dataset.segment_points[0], selected_points)
     val_labels = Visualisation_utils.numpy_inverse_index(dataset.segment_labels[0], selected_points)
-    np.save(TEMP_DIR / f"validate{iteration}.npy", np.hstack((train_points, train_labels[:, None])))
+    np.save(TEMP_DIR / f"validate{iteration}.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
 def select_new_points_to_label(dataset, viewer):
@@ -46,6 +53,7 @@ def select_new_points_to_label(dataset, viewer):
 
     return selected_labelled_idxs
 
+
 def main():
     TEMP_DIR.mkdir(exist_ok=True)
     # get full pcd
@@ -60,12 +68,14 @@ def main():
     save_split_dataset(initial_dataset, selected_labelled_idxs, 0)
     del initial_dataset
 
-
-
 #   Now train on the trained dataset for K epochs or until delta train_loss < L
 #   Can do this by calling train_masters.py with limited epochs or some special stop condition
 #   Or just repeating everything gross
-
+    args = None
+    with open(Path("configs/default.yaml"), 'r') as yaml_args:
+        args = yaml.safe_load(yaml_args)
+    train_masters.main(args)
+#     TODO can this run now? in theory yes. Write stopping condition
 
 if __name__ == '__main__':
     main()

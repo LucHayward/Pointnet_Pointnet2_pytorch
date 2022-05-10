@@ -1,0 +1,46 @@
+---
+
+# Not changed for hparam tuning
+model: pointnet2_sem_seg
+gpu: '0'
+data_path: data/PatrickData/Church/MastersFormat/random_split
+log_dir: random_validation
+
+# Tune these early and likely not change much
+epoch: 200
+optimizer: Adam
+decay_rate: 0.0001
+step_size: 10
+lr_decay: 0.7
+
+# Common hparams to be tuned
+batch_size: 16
+learning_rate: 0.001
+npoint: 4096
+block_size: 1.0
+augment_points: false
+
+# Logging/Visualisation parameters
+log_first_batch_cloud: false
+log_merged_validation: false
+log_merged_training_batches: false
+log_merged_training_set: true
+
+# Debugging parameters
+validate_only: false
+shuffle_training_data: false
+force_even: false
+sample_all_validation: false
+
+# Exposing model hparams
+# Pointnet Set Abstraction: Group All options
+psa1_group_all: false
+psa2_group_all: false
+psa3_group_all: false
+psa4_group_all: false
+
+# Pointnet Set Abstraction: Sphere Radius
+sa1_radius: 0.1
+sa2_radius: 0.2
+sa3_radius: 0.4
+sa4_radius: 0.8
