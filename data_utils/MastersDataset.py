@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pptk  # For visualisation
 from torch import save, load
+from time import time
 
 turbo_colormap_data = [[0.18995, 0.07176, 0.23217], [0.19483, 0.08339, 0.26149], [0.19956, 0.09498, 0.29024],
                        [0.20415, 0.10652, 0.31844], [0.20860, 0.11802, 0.34607], [0.21291, 0.12947, 0.37314],
@@ -138,7 +139,7 @@ class MastersDataset(Dataset):
     """
 
     @profile
-    def __init__(self, split: str, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
+    def __init__(self, split, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
                  force_even=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
@@ -214,18 +215,27 @@ class MastersDataset(Dataset):
             # Sample every point in the segment in turn following a grid pattern.
             # Just need to return all the points in one go.
 
-            self.segments_idxs = np.arange(len(self.segment_points))
-            # First check if a cache exists
-            cache_path_list = list(data_path.glob(f"{split}_all_points.cache"))
-            if len(cache_path_list) > 0:
-                _num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment, \
-                    = load(cache_path_list[0])
-                if _num_points_in_block == self.num_points_in_block:
-                    return
+            # self.segments_idxs = np.arange(len(self.segment_points))
+            # # First check if a cache exists
+            # cache_path_list = list(data_path.glob(f"{split}_all_points.cache"))
+            # if len(cache_path_list) > 0:
+            #     _num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment, \
+            #         = load(cache_path_list[0])
+            #     if _num_points_in_block == self.num_points_in_block:
+            #         returned
+
+            # Concatenate additional segments
+            if len(self.segment_points) > 1:
+                points = np.vstack(self.segment_points)
+                labels = np.hstack(self.segment_labels)
+                self.segment_points = [points]
+                self.segment_labels = [labels]
+            else:
+                points = self.segment_points[0]
+                labels = self.segment_labels[0]
+
             self.segments_idxs = np.arange(len(self.segment_points))
 
-            points = self.segment_points[0]
-            labels = self.segment_labels[0]
             num_points_in_segment = points.shape[0]
             coord_min, coord_max = self.segment_coord_min[0], self.segment_coord_max[0]
 
@@ -233,69 +243,59 @@ class MastersDataset(Dataset):
             grid_x = int(np.ceil(float(coord_max[0] - coord_min[0] - self.block_size) / self.stride) + 1)
             grid_y = int(np.ceil(float(coord_max[1] - coord_min[1] - self.block_size) / self.stride) + 1)
 
+            points, grid_mask = self._split_grid_shape(np.hstack((points, labels[:, None])), (grid_x, grid_y))
+            points, labels = points[:, :-1], points[:, -1]
+            self.segment_points, self.segment_labels = [points], [labels]
+            for idx, i in enumerate(np.unique(grid_mask)):
+                grid_mask[grid_mask == i] = idx
+
             data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
                 np.array([]), np.array([]), np.array([]), np.array([])
             return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
-            for index_y in tqdm(range(0, grid_y), desc="get_item_all (rows)"):
-                for index_x in range(0, grid_x):
-                    # For each cell in the grid get the start/end coords of the cell
-                    s_x = coord_min[0] + index_x * self.stride
-                    e_x = min(s_x + self.block_size, coord_max[0])
-                    s_x = e_x - self.block_size
-                    s_y = coord_min[1] + index_y * self.stride
-                    e_y = min(s_y + self.block_size, coord_max[1])
-                    s_y = e_y - self.block_size
+            grid_cell_to_segment = []
 
-                    # TODO check that this is working correctly
-                    # Get all the points within the cell (or continue if empty), padding ensures edge cases are well covered
-                    point_idxs = np.where(
-                        (points[:, 0] >= s_x - self.padding) & (points[:, 0] <= e_x + self.padding) & (
-                                points[:, 1] >= s_y - self.padding) & (
-                                points[:, 1] <= e_y + self.padding))[0]
-                    if point_idxs.size == 0:
-                        continue
+            for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"):
+                point_idxs = np.where(grid_mask == cell_idx)[0]
 
-                    # Get batches required
-                    num_batches = int(np.ceil(point_idxs.size / self.num_points_in_block))
+                # Get batches required
+                num_batches = int(np.ceil(point_idxs.size / self.num_points_in_block))
 
-                    # Check: May not be necessary to actually pad out the batch like this for inference.
-                    # If there are not enough points to fill the last batch, set it to replace points.
-                    point_size = int(num_batches * self.num_points_in_block)
-                    replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+                # Check: May not be necessary to actually pad out the batch like this for inference.
+                # If there are not enough points to fill the last batch, set it to replace points.
+                point_size = int(num_batches * self.num_points_in_block)
+                replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
 
-                    # add on some extra point_idxs and shuffle them.
-                    point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
-                    point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
-                    np.random.shuffle(point_idxs)
-                    data_batch = points[point_idxs, :]
+                # add on some extra point_idxs and shuffle them.
+                point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
+                point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
+                np.random.shuffle(point_idxs)
+                data_batch = points[point_idxs, :]
 
-                    # Get Normalized (-1,1) xyz values
-                    # normlized_xyz = np.zeros((point_size, 3))
-                    # normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
-                    # normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
-                    # normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
+                # Get Normalized (-1,1) xyz values
+                # normlized_xyz = np.zeros((point_size, 3))
+                # normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
+                # normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
+                # normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
 
-                    #        # Shift XY to start at (0,0)
-                    #         data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
-                    #         data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
-                    #         data_batch[:, 3:6] /= 255.0
+                #        # Shift XY to start at (0,0)
+                #         data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
+                #         data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
+                #         data_batch[:, 3:6] /= 255.0
 
-                    # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
-                    # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
-                    # batch? It's actually getting a weight to assign to each point though.
-                    label_batch = labels[point_idxs].astype(int)
-                    batch_weight = self.labelweights[label_batch]
+                # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
+                # batch? It's actually getting a weight to assign to each point though.
+                label_batch = labels[point_idxs].astype(int)
+                batch_weight = self.labelweights[label_batch]
 
-                    # One segments data can be returned in the form [x, y, points, labels]
-                    return_grid[index_x][index_y] = (data_batch, label_batch)
-
-                    # Stack all the points/labels from this cell with the previous cells
-                    data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
-                    labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
-                    sample_weight_segment = np.hstack(
-                        [sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
-                    point_idxs_segment = np.hstack(
-                        [point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
+                grid_cell_to_segment.append(len(label_batch))
+                # Stack all the points/labels from this cell with the previous cells
+                data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
+                labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
+                sample_weight_segment = np.hstack(
+                    [sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
+                point_idxs_segment = np.hstack(
+                    [point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
 
             # Given all the points/labels reshape them to be returned as self.block_points batches.
             # This DOES mean some of the "blocks" will stretch over the cells.
@@ -303,10 +303,11 @@ class MastersDataset(Dataset):
             self.labels_segment = labels_segment.reshape((-1, self.num_points_in_block))
             self.sample_weight_segment = sample_weight_segment.reshape((-1, self.num_points_in_block))
             self.point_idxs_segment = point_idxs_segment.reshape((-1, self.num_points_in_block))
-            save([self.num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment,
-                  self.point_idxs_segment], data_path / f"{split}_all_points.cache")
+            self.grid_cell_to_segment = grid_cell_to_segment
+            self.grid_mask = grid_mask
 
-
+            # save([self.num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment,
+            #       self.point_idxs_segment], data_path / f"{split}_all_points.cache")
 
     def _test_coverage(self, idx: int, iterations):
         """
@@ -426,6 +427,52 @@ class MastersDataset(Dataset):
         """
         return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
 
+    def _split_grid_shape(self, points, grid_shape):
+        """
+        Split the points into a grid pattern
+        :param points: (n,7) array of points (XYZIRGB)
+        :param grid_shape: (x,y,) tuple of grid grid_shape
+        :return: modified points array, grid_mask
+        """
+
+        def find_nearest_id(array, value):
+            import math
+            idx = np.searchsorted(array, value, side="left")
+            if idx > 0 and (idx == len(array) or math.fabs(value - array[idx - 1]) < math.fabs(value - array[idx])):
+                return idx - 1
+            else:
+                return idx
+
+        # Sort and split array along x-axis
+        print("Sorting by x axis...", end='')
+        stime = time()
+        points.view(('f8,' * points.shape[1])[:-1]).sort(order=['f0'], axis=0)
+        print(f"{time()-stime:.2f}s")
+
+        total_distances = points[:, :2].max(axis=0) - points[:, :2].min(axis=0)
+        intervals_x = np.asarray(
+            [points[:, 0].min(axis=0) + np.ceil(total_distances[0] / grid_shape[0]) * i for i in range(grid_shape[0])][
+            1:])
+        intervals_y = np.asarray(
+            [points[:, 1].min(axis=0) + np.ceil(total_distances[1] / grid_shape[1]) * i for i in range(grid_shape[1])][
+            1:])
+        interval_idxs_x = [find_nearest_id(points[:, 0], v) for v in intervals_x]
+
+        points = np.array_split(points, interval_idxs_x)
+
+        # Sort and split resulting columns along y-axis
+        for i in tqdm(range(len(points)), desc="split y-axis"):
+            col = points[i]
+            col.view(('f8,' * col.shape[1])[:-1]).sort(order=['f1'], axis=0)
+            interval_idxs_y = [0] + [find_nearest_id(col[:, 1], v) for v in intervals_y] + [col.shape[0]]
+            col_grid_mask = np.concatenate(
+                [np.repeat(i * grid_shape[1] + j, reps - interval_idxs_y[j - 1]) for j, reps in
+                 enumerate(interval_idxs_y[1:], start=1)])
+            points[i] = np.hstack((col, col_grid_mask[:, None]))
+
+        points = np.vstack(points)
+        return points[:, :-1], points[:, -1].astype(int)
+
     def get_ouput_format(self):
         """
         Returns the points and labels as a single ndarray of form XYZIR where R is the label
@@ -456,7 +503,7 @@ if __name__ == '__main__':
         """
         Loads in a dummy dataset as a sample all points set and tests that all points are sampled correctly.
         """
-        dataset = MastersDataset("validate", Path('../data/PatrickData/Church/MastersFormat/hand_selected/'),
+        dataset = MastersDataset(None, Path('../data/PatrickData/Church/MastersFormat/'),
                                  sample_all_points=True)
 
         BATCH_SIZE = 16
