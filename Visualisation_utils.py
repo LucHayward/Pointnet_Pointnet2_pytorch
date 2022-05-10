@@ -127,7 +127,7 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
     confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
     # TODO Vecotrizethis
-    confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask]) # TODO: vectorize
+    confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask])  # TODO: vectorize
     # pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
     # target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
     if confidences is not None:
@@ -145,8 +145,6 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     precision_keep = true_neg / (true_neg + false_neg)
     recall_keep = true_neg / (true_neg + false_pos)
     f1_keep = 2 * (recall_keep * precision_keep) / (recall_keep + precision_keep)
-
-
 
     if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
         v = pptk.viewer(points)
@@ -282,12 +280,33 @@ def generate_bounding_cube(origin, size):
     return generate_bounding_wireframe_points(np.array(origin), np.array(origin) + size, 10 * size)
 
 
-def pptk_full_dataset(dataset):
+def pptk_full_dataset(dataset, include_grid_mask: bool = False, include_intensity: bool = False):
     """
     Visualise a given dataset object
+    :param include_grid_mask: Also visualise the grid (assuming it is included)
+    :param include_intensity: Also visualise the intensity
     :param dataset: S3DISDataLoader Dataset dataset containing points and labels
     :return: pptk viewer instance
     """
-    v = pptk.viewer(np.vstack(dataset.segment_points)[:, :3], np.hstack(dataset.segment_labels))
+    v = pptk.viewer(np.vstack(dataset.segment_points)[:, :3])
+    attributes = [np.hstack(dataset.segment_labels)]
+    if include_grid_mask:
+        attributes.append(dataset.grid_mask)
+    if include_intensity:
+        attributes.append(np.vstack(dataset.segment_points)[:, 3])
+    v.attributes(*attributes)
     v.color_map(turbo_colormap_data)
     return v
+
+
+def numpy_inverse_index(array, index):
+    """
+    Given an index array into a numpy array, returns inverse of that indexing.
+    i.e. arr[~index]
+    :param index: the indexs to be inverted
+    :param array: the array being indexed on
+    :return:
+    """
+    mask = np.ones(len(array), dtype=bool)
+    mask[index] = False
+    return array[mask]
