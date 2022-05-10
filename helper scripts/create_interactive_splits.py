@@ -7,7 +7,7 @@ from pathlib import Path
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
 
-path = Path("data/PatrickData/Church/MastersFormat/hand_selected_50%")
+path = Path("data/PatrickData/Church/MastersFormat/hand_selected_reversed")
 
 dataset_t = MastersDataset("train", path)
 dataset_v = MastersDataset("validate", path)
