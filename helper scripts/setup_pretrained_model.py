@@ -15,6 +15,10 @@ classifier.load_state_dict(checkpoint['model_state_dict'])
 import torch.nn as nn
 
 classifier.conv2 = nn.Conv1d(128, 2, 1)
+state = {
+    'epoch': 0,
+    'model_state_dict': classifier.state_dict(),
+}
 
-torch.save(classifier, Path(
-    "log/masters/hand_selected_50%_start_pretrained_all_layers/checkpoints/best_model.pth"))
+torch.save(state, Path(
+    "log/masters/hand_selected_reversed_start_pretrained_all_layers_train_last/checkpoints/best_model.pth"))

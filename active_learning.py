@@ -5,6 +5,7 @@ import open3d as o3d
 from pathlib import Path
 
 import yaml
+from argparse import Namespace
 
 import Visualisation_utils
 import train_masters
@@ -72,10 +73,20 @@ def main():
 #   Can do this by calling train_masters.py with limited epochs or some special stop condition
 #   Or just repeating everything gross
     args = None
-    with open(Path("configs/default.yaml"), 'r') as yaml_args:
+    with open(Path("configs/train0.yaml"), 'r') as yaml_args:
         args = yaml.safe_load(yaml_args)
+        args = Namespace(**args)
+    args.log_dir
     train_masters.main(args)
-#     TODO can this run now? in theory yes. Write stopping condition
+
+
 
 if __name__ == '__main__':
+    import os
+    import wandb
+    os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", resume=False, name='AL: testing',
+               notes="Testing the active learning wrappers by running train_masters.main() directly.")
+    wandb.run.log_code(".")
+
     main()

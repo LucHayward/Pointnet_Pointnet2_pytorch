@@ -598,10 +598,10 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected reversed more points',
-               notes="hand selected reversed with double the points per column sample")
+               name='hand selected validation reversed starting pretrained all layers train last',
+               notes="Freeze all the layers of the model except the last classification layer and lower the LR")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
