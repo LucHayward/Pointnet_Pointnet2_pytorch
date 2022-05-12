@@ -12,11 +12,12 @@ import train_masters
 from data_utils.MastersDataset import MastersDataset
 
 TEMP_DIR = Path("temp/")
+LOG_DIR = Path("log/active_learning")
 
 
 def save_split_dataset(dataset, selected_points, iteration: int, dataset_merge=None):
     """
-    Splits and saves the dataset out to the temp directory
+    Splits and saves the dataset out to the log directory (log_dir/iteration/)
     TODO change to the log dir
     :param dataset: dataset being selected from
     :param selected_points: selected train/labelling points
@@ -29,11 +30,11 @@ def save_split_dataset(dataset, selected_points, iteration: int, dataset_merge=N
     if dataset_merge is not None:
         train_points = np.vstack((dataset_merge.segment_points[0][selected_points], train_points))
         train_labels = np.hstack((dataset_merge.segment_labels[0][selected_points], train_labels))
-    np.save(TEMP_DIR / f"train{iteration}.npy", np.column_stack((train_points, train_labels[:, None])))
+    np.save(LOG_DIR / str(iteration) / f"train.npy", np.column_stack((train_points, train_labels[:, None])))
 
     val_points = Visualisation_utils.numpy_inverse_index(dataset.segment_points[0], selected_points)
     val_labels = Visualisation_utils.numpy_inverse_index(dataset.segment_labels[0], selected_points)
-    np.save(TEMP_DIR / f"validate{iteration}.npy", np.column_stack((val_points, val_labels[:, None])))
+    np.save(LOG_DIR / str(iteration) / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
 def select_new_points_to_label(dataset, viewer):
@@ -65,27 +66,32 @@ def main():
     v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
     selected_labelled_idxs = select_new_points_to_label(initial_dataset, v_init)
-
-    save_split_dataset(initial_dataset, selected_labelled_idxs, 0)
+    AL_iteration = 0
+    save_split_dataset(initial_dataset, selected_labelled_idxs, AL_iteration)
     del initial_dataset
 
-#   Now train on the trained dataset for K epochs or until delta train_loss < L
-#   Can do this by calling train_masters.py with limited epochs or some special stop condition
-#   Or just repeating everything gross
-    args = None
+    #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
+    #   Can do this by calling train_masters.py with limited epochs or some special stop condition
+    #   Or just repeating everything gross
+    train_args = None
     with open(Path("configs/train0.yaml"), 'r') as yaml_args:
-        args = yaml.safe_load(yaml_args)
-        args = Namespace(**args)
-    args.log_dir
-    train_masters.main(args)
-
+        train_args = yaml.safe_load(yaml_args)
+        train_args = Namespace(**train_args)
+    train_args.log_dir = LOG_DIR / 'train'
+    train_args.data_path = LOG_DIR / str(AL_iteration)
+    train_args.epoch = 1  # We just want to train one epoch for testing
+    train_masters.main(train_args)
 
 
 if __name__ == '__main__':
     import os
     import wandb
+
     os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", resume=False, name='AL: testing',
+    run_name = 'AL: testing'
+    LOG_DIR = LOG_DIR / run_name
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    wandb.init(project="Masters", resume=False, name=run_name,
                notes="Testing the active learning wrappers by running train_masters.main() directly.")
     wandb.run.log_code(".")
 
