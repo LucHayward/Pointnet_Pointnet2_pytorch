@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import torch
 import pptk
@@ -57,9 +59,18 @@ def select_new_points_to_label(dataset, viewer):
 
 
 def main():
-    TEMP_DIR.mkdir(exist_ok=True)
+    # TEMP_DIR.mkdir(exist_ok=True)
     # get full pcd
-    initial_dataset = MastersDataset(None, Path("data/PatrickData/Church/MastersFormat"), sample_all_points=True)
+    cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
+    initial_dataset = None
+    if cache_initial_dataset.exists():
+        with open(cache_initial_dataset, "rb") as cache_file:
+            initial_dataset = pickle.load(cache_file)
+    else:
+        initial_dataset = MastersDataset(None, Path("data/PatrickData/Church/MastersFormat"), sample_all_points=True)
+        with open(cache_initial_dataset, "wb") as cache_file:
+            pickle.dump(initial_dataset, cache_file)
+
     v_init = Visualisation_utils.pptk_full_dataset(initial_dataset, include_grid_mask=True, include_intensity=True)
     v_init.color_map(
         Visualisation_utils.turbo_colormap_data[::16] * 16)  # Repeats colours distinguishing adjacent cells.
