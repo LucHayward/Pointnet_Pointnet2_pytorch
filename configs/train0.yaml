@@ -28,7 +28,7 @@ augment_points: false
 
 # Logging/Visualisation parameters
 log_first_batch_cloud: false
-log_merged_validation: false
+log_merged_validation: true
 log_merged_training_batches: false
 log_merged_training_set: true
 

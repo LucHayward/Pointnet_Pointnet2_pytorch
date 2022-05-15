@@ -62,7 +62,6 @@ def select_new_points_to_label(dataset, viewer):
 
 
 def main():
-    # TEMP_DIR.mkdir(exist_ok=True)
     # get full pcd
     cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
     initial_dataset = None
@@ -101,9 +100,14 @@ def main():
 
     train_masters.main(train_args)
 
+    #   Now we need the predictions from the last good trained model (which we saved in the training)
+    predict_points, predict_preds, predict_target = None, None, None
+    with np.load(LOG_DIR / 'train' / 'val_predictions.npz') as npz_file:
+        predict_points = npz_file['points']
+        predict_preds = npz_file['preds']
+        predict_target = npz_file['target']
+    print()
 
-#   Now we need the entire scene classified
-    predictions = torch.load(LOG_DIR/'train'/'predictions.pt')
 
 
 

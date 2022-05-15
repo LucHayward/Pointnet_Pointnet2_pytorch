@@ -243,6 +243,7 @@ def main(args):
         return lr, momentum
 
     def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target, best_train_iou):
+        unique_indices=None
         if args.log_merged_training_set:
             all_train_points = np.vstack(np.vstack(all_train_points))
             all_train_pred = np.hstack(np.vstack(all_train_pred))
@@ -288,8 +289,19 @@ def main(args):
         if mIoU > best_train_iou:
             best_train_iou = mIoU
             if args.save_best_train_model:
+                nonlocal SAVE_CURRENT_EPOCH_PREDS
                 SAVE_CURRENT_EPOCH_PREDS = True
-                logger.info('Save model...')
+
+                if args.log_merged_validation:
+                    # Save the best model training predictions thus far incase we want them later for AL visualisation
+                    logger.info('Save model training predictions...')
+                    savepath = str(experiment_dir) + '/train_predictions.npz'
+                    log_string('Saving at %s' % savepath)
+                    np.savez(savepath, points=all_train_points[unique_indices], preds=all_train_pred[
+                        unique_indices], target=all_train_target[unique_indices])
+                    log_string('Saving model training predictions....')
+
+                logger.info('Save best train model...')
                 savepath = str(checkpoints_dir) + '/best_train_model.pth'
                 log_string('Saving at %s' % savepath)
                 state = {
@@ -299,7 +311,7 @@ def main(args):
                     'optimizer_state_dict': optimizer.state_dict(),
                 }
                 torch.save(state, savepath)
-                log_string('Saving model....')
+                log_string('Saving best train model....')
                 wandb.save(savepath)
 
         if epoch % 5 == 0:
@@ -319,29 +331,23 @@ def main(args):
 
     def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou):
         if args.log_merged_validation:
-            all_eval_points = np.vstack(np.vstack(all_eval_points))
-            all_eval_pred = np.hstack(np.vstack(all_eval_pred))
-            all_eval_target = np.hstack(np.vstack(all_eval_target))
             unique_points, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
-            unique_preds = np.copy(all_eval_pred[unique_indices])
+            # unique_preds = np.copy(all_eval_pred[unique_indices])
             num_unique_points = len(unique_indices)
             total_eval_points = np.vstack(VAL_DATASET.segment_points).shape[0]
             print(f"Unique points: {num_unique_points}/{total_eval_points} "
                   f"({num_unique_points * 100 // total_eval_points}%)")
 
-            validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
+            # validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
 
+            # Save the model validation predictions (from the best training model so far) for AL later
             if SAVE_CURRENT_EPOCH_PREDS:
-                logger.info('Save model predictions...')
-                savepath = str(experiment_dir) + '/predictions.pt'
+                logger.info('Save model validation predictions...')
+                savepath = str(experiment_dir) + '/val_predictions.npz'
                 log_string('Saving at %s' % savepath)
-                state = {
-                    'points': all_eval_points[unique_indices],
-                    'preds': all_eval_pred[unique_indices],
-                    'target': all_eval_target[unique_indices]
-                }
-                torch.save(state, savepath)
-                log_string('Saving model predictions....')
+                np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[
+                    unique_indices], target=all_eval_target[unique_indices])
+                log_string('Saving model validation predictions....')
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
             # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
@@ -367,9 +373,9 @@ def main(args):
             #     voted_preds[val[:,2]] = (Counter(val[:,0]).most_common(1)[0][0])
             # print(f"Points with different results: {cnt} ({cnt * 100 / num_unique_points:.2f}%)")
 
-            visualise_prediction(all_eval_points[:, :3], all_eval_pred,
-                                 all_eval_target, epoch,
-                                 "Validation", wandb_section="Visualise-Merged")
+            # visualise_prediction(all_eval_points[:, :3], all_eval_pred,
+            #                      all_eval_target, epoch,
+            #                      "Validation", wandb_section="Visualise-Merged")
 
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
@@ -404,7 +410,7 @@ def main(args):
         log_string('Eval mean loss: %f' % eval_mean_loss)
         log_string('Eval accuracy: %f' % eval_point_accuracy)
 
-        if mIoU >= best_iou and not args.save_best_train_model:
+        if mIoU >= best_iou:
             best_iou = mIoU
             logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/best_model.pth'
@@ -520,6 +526,8 @@ def main(args):
             best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
                                                            best_train_iou)
 
+        del all_train_points, all_train_pred, all_train_target
+
         # TODO Validation loop
         with torch.no_grad():
             num_batches = 0 if val_data_loader is None else len(val_data_loader)
@@ -576,6 +584,10 @@ def main(args):
                                                                                          total_seen_class,
                                                                                          train_data_loader, weights)
 
+            if args.log_merged_validation:
+                all_eval_points = np.vstack(np.vstack(all_eval_points))
+                all_eval_pred = np.hstack(np.vstack(all_eval_pred))
+                all_eval_target = np.hstack(np.vstack(all_eval_target))
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
                                                            labelweights,
                                                            best_val_iou)
