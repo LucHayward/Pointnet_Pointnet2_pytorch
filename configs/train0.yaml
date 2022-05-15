@@ -8,14 +8,16 @@ log_dir: null # if null must be set in the loading script
 
 # Tune these early and likely not change much
 epoch: 10
-#train_loss_delta: 0.005
-#train_miou_delta: 0.01
 optimizer: Adam
 decay_rate: 0.0001
 step_size: 10
 lr_decay: 0.7
 
-
+# Active Learning
+active_learning: true
+#train_loss_delta: 0.005
+#train_miou_delta: 0.01
+save_best_train_model: true # Save the best model from the training based on mIoU
 
 # Common hparams to be tuned
 batch_size: 16
@@ -34,7 +36,7 @@ log_merged_training_set: true
 validate_only: false
 shuffle_training_data: false
 force_even: false
-sample_all_validation: false
+sample_all_validation: true
 
 # Exposing model hparams
 # Pointnet Set Abstraction: Group All options

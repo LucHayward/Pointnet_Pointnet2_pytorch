@@ -120,7 +120,10 @@ def main(args):
         if args.log_dir is None:
             experiment_dir = experiment_dir.joinpath(timestr)
         else:
-            experiment_dir = experiment_dir.joinpath(args.log_dir)
+            if "log/active_learning" in str(args.log_dir):
+                experiment_dir = args.log_dir
+            else:
+                experiment_dir = experiment_dir.joinpath(args.log_dir)
         experiment_dir.mkdir(exist_ok=True)
         checkpoints_dir = experiment_dir.joinpath('checkpoints/')
         checkpoints_dir.mkdir(exist_ok=True)
@@ -239,7 +242,7 @@ def main(args):
         wandb.log({'bn_momentum': momentum, 'epoch': epoch}, commit=False)
         return lr, momentum
 
-    def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target):
+    def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target, best_train_iou):
         if args.log_merged_training_set:
             all_train_points = np.vstack(np.vstack(all_train_points))
             all_train_pred = np.hstack(np.vstack(all_train_pred))
@@ -282,6 +285,23 @@ def main(args):
         wandb.log({'Train/mean_loss': mean_loss,
                    'Train/accuracy': accuracy,
                    'Train/mIoU': mIoU, 'epoch': epoch}, commit=False)
+        if mIoU > best_train_iou:
+            best_train_iou = mIoU
+            if args.save_best_train_model:
+                SAVE_CURRENT_EPOCH_PREDS = True
+                logger.info('Save model...')
+                savepath = str(checkpoints_dir) + '/best_train_model.pth'
+                log_string('Saving at %s' % savepath)
+                state = {
+                    'epoch': epoch,
+                    'class_avg_iou': mIoU,
+                    'model_state_dict': classifier.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                }
+                torch.save(state, savepath)
+                log_string('Saving model....')
+                wandb.save(savepath)
+
         if epoch % 5 == 0:
             logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/model.pth'  # Should use .pt
@@ -294,6 +314,8 @@ def main(args):
             torch.save(state, savepath)
             log_string('Saving model....')
             wandb.save(savepath)
+
+        return best_train_iou
 
     def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou):
         if args.log_merged_validation:
@@ -308,6 +330,19 @@ def main(args):
                   f"({num_unique_points * 100 // total_eval_points}%)")
 
             validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
+
+            if SAVE_CURRENT_EPOCH_PREDS:
+                logger.info('Save model predictions...')
+                savepath = str(experiment_dir) + '/predictions.pt'
+                log_string('Saving at %s' % savepath)
+                state = {
+                    'points': all_eval_points[unique_indices],
+                    'preds': all_eval_pred[unique_indices],
+                    'target': all_eval_target[unique_indices]
+                }
+                torch.save(state, savepath)
+                log_string('Saving model predictions....')
+
             # validation_dataset_points = validation_dataset_points.astype('float32')
             # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
             #     validation_dataset_points[:, 2], unique_points[:, 2])).nonzero()
@@ -369,7 +404,7 @@ def main(args):
         log_string('Eval mean loss: %f' % eval_mean_loss)
         log_string('Eval accuracy: %f' % eval_point_accuracy)
 
-        if mIoU >= best_iou:
+        if mIoU >= best_iou and not args.save_best_train_model:
             best_iou = mIoU
             logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/best_model.pth'
@@ -405,16 +440,20 @@ def main(args):
     MOMENTUM_DECCAY = 0.5
     MOMENTUM_DECCAY_STEP = args.step_size
 
+    SAVE_CURRENT_EPOCH_PREDS = False
+
     # Setup data_loaders and classifier
     TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights = setup_data_loaders()
     classifier, criterion, optimizer, start_epoch = setup_model()
 
     # Training loop
     global_epoch = 0
-    best_iou = 0
+    best_val_iou, best_train_iou = 0, 0
+    if args.active_learning and args.validate_only:
+        start_epoch = args.epoch - 1
     for epoch in range(start_epoch, args.epoch):
         log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
-        lr, momentum = update_lr_momentum()  # TODO how to get around passing in the variables?
+        lr, momentum = update_lr_momentum()
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
         num_batches = len(train_data_loader)
@@ -478,7 +517,8 @@ def main(args):
                                     np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1), i, epoch, 'Train',
                                     pred_labels.exp().cpu().data.numpy(), args.log_merged_training_batches)
 
-            post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target)
+            best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
+                                                           best_train_iou)
 
         # TODO Validation loop
         with torch.no_grad():
@@ -536,13 +576,15 @@ def main(args):
                                                                                          total_seen_class,
                                                                                          train_data_loader, weights)
 
-            best_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights,
-                                                       best_iou)
+            best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
+                                                           labelweights,
+                                                           best_val_iou)
 
         global_epoch += 1
         wandb.log({})
 
     log_string("Finished")
+
 
 @profile
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,

@@ -27,6 +27,8 @@ def save_split_dataset(dataset, selected_points, iteration: int, dataset_merge=N
     :param dataset_merge: If there is a dataset to merge the selected points into, otherwise None
     :return:
     """
+    save_dir = LOG_DIR / str(iteration)
+    save_dir.mkdir(exist_ok=True, parents=True)
     train_points = dataset.segment_points[0][selected_points]
     train_labels = dataset.segment_labels[0][selected_points]
     if dataset_merge is not None:
@@ -91,7 +93,17 @@ def main():
     train_args.log_dir = LOG_DIR / 'train'
     train_args.data_path = LOG_DIR / str(AL_iteration)
     train_args.epoch = 1  # We just want to train one epoch for testing
+    train_args.active_learning = True
+
+    # train_args.npoint *= 4
+    # train_args.batch_size = 8
+
     train_masters.main(train_args)
+
+
+#   Now we need the entire scene classified
+    predictions = torch.load(LOG_DIR/'train'/'predictions.pt')
+
 
 
 if __name__ == '__main__':
