@@ -31,14 +31,15 @@ def save_split_dataset(dataset, selected_points, iteration: int, dataset_merge=N
     save_dir.mkdir(exist_ok=True, parents=True)
     train_points = dataset.segment_points[0][selected_points]
     train_labels = dataset.segment_labels[0][selected_points]
+
     if dataset_merge is not None:
         train_points = np.vstack((dataset_merge.segment_points[0][selected_points], train_points))
         train_labels = np.hstack((dataset_merge.segment_labels[0][selected_points], train_labels))
-    np.save(LOG_DIR / str(iteration) / f"train.npy", np.column_stack((train_points, train_labels[:, None])))
+    np.save(save_dir / f"train.npy", np.column_stack((train_points, train_labels[:, None])))
 
     val_points = Visualisation_utils.numpy_inverse_index(dataset.segment_points[0], selected_points)
     val_labels = Visualisation_utils.numpy_inverse_index(dataset.segment_labels[0], selected_points)
-    np.save(LOG_DIR / str(iteration) / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
+    np.save(save_dir / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
 def select_new_points_to_label(dataset, viewer):
@@ -46,7 +47,7 @@ def select_new_points_to_label(dataset, viewer):
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs = None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * .05:.0f}/{num_grid_cells}][) for labelling")
+        print(f"Select 5% of the cells ({num_grid_cells * .05:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])

@@ -21,4 +21,4 @@ state = {
 }
 
 torch.save(state, Path(
-    "log/masters/hand_selected_reversed_start_pretrained_all_layers_train_last/checkpoints/best_model.pth"))
+    "log/active_learning/AL: testing/train/checkpoints/best_model.pth"))
