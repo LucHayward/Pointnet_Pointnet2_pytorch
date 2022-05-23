@@ -18,6 +18,7 @@ active_learning: true
 #train_loss_delta: 0.005
 #train_miou_delta: 0.01
 save_best_train_model: true # Save the best model from the training based on mIoU
+validation_repeats: 3
 
 # Common hparams to be tuned
 batch_size: 16
