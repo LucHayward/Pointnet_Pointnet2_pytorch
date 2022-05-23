@@ -246,7 +246,7 @@ class MastersDataset(Dataset):
             points, grid_mask = self._split_grid_shape(np.hstack((points, labels[:, None])), (grid_x, grid_y))
             points, labels = points[:, :-1], points[:, -1]
             self.segment_points, self.segment_labels = [points], [labels]
-            for idx, i in enumerate(np.unique(grid_mask)):
+            for idx, i in enumerate(np.unique(grid_mask)):  # CHECK a,b = np.unique(grid_mask, return_indices=True); b.sort(); a=[b]; for idx, i in enumerate(a):
                 grid_mask[grid_mask == i] = idx
 
             data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
@@ -254,7 +254,7 @@ class MastersDataset(Dataset):
             return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
             grid_cell_to_segment = []
 
-            for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"):
+            for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"): # CHECK this should be fine because grid_mask is sorted
                 point_idxs = np.where(grid_mask == cell_idx)[0]
 
                 # Get batches required

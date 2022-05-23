@@ -47,6 +47,13 @@ def parse_args():
     parser.add_argument('--step_size', type=int, default=10, help='Decay step for lr decay [default: every 10 epochs]')
     parser.add_argument('--lr_decay', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
 
+    # Active Learning
+    parser.add_argument('--active_learning', default=False)
+    parser.add_argument('--save_best_train_model', default=False,
+                        help='Save the best model from the training based on mIoU')
+    parser.add_argument('--validation_repeats', default=1,
+                        help='How many times to repeat the validation classification')
+
     # Common hparams to be tuned
     parser.add_argument('--batch_size', type=int, default=16, help='Batch Size during training [default: 16]')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='Initial learning rate [default: 0.001]')
@@ -243,13 +250,15 @@ def main(args):
         return lr, momentum
 
     def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target, best_train_iou):
-        unique_indices=None
+        unique_indices = None
         if args.log_merged_training_set:
             all_train_points = np.vstack(np.vstack(all_train_points))
             all_train_pred = np.hstack(np.vstack(all_train_pred))
             all_train_target = np.hstack(np.vstack(all_train_target))
             unique_points, unique_indices, unique_counts = np.unique(all_train_points[:, :3], axis=0, return_index=True,
                                                                      return_counts=True)
+            unique_indices.sort()
+            unique_points = all_train_points[unique_indices, :3]
             num_unique_points = len(unique_indices)
 
             train_dataset_points = np.vstack(TRAIN_DATASET.segment_points)
@@ -292,7 +301,7 @@ def main(args):
                 nonlocal SAVE_CURRENT_EPOCH_PREDS
                 SAVE_CURRENT_EPOCH_PREDS = True
 
-                if args.log_merged_validation:
+                if args.active_learning:
                     # Save the best model training predictions thus far incase we want them later for AL visualisation
                     logger.info('Save model training predictions...')
                     savepath = str(experiment_dir) + '/train_predictions.npz'
@@ -329,9 +338,12 @@ def main(args):
 
         return best_train_iou
 
-    def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou):
+    def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou,
+                                        all_eval_variance):
         if args.log_merged_validation:
             unique_points, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
+            unique_indices.sort()
+            unique_points = all_eval_points[unique_indices, :3]
             # unique_preds = np.copy(all_eval_pred[unique_indices])
             num_unique_points = len(unique_indices)
             total_eval_points = np.vstack(VAL_DATASET.segment_points).shape[0]
@@ -345,8 +357,25 @@ def main(args):
                 logger.info('Save model validation predictions...')
                 savepath = str(experiment_dir) + '/val_predictions.npz'
                 log_string('Saving at %s' % savepath)
-                np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[
-                    unique_indices], target=all_eval_target[unique_indices])
+
+                # Need to combine the variances down to len(VAL_DATASET.grid_cell_to_segment
+                # number of cell-batches to each cell in the grid.
+                temp = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
+                # Collect the variances together based on the GRID_CELLs they represent
+                variance = []
+                temp_enumerator = enumerate(temp)
+                for idx, val in temp_enumerator:
+                    if val == 1:
+                        variance.append(all_eval_variance[idx])
+                    else:
+                        variance.append(np.mean(all_eval_variance[idx:idx + val]))
+
+                variance = np.array(variance)
+
+                np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
+                         target=all_eval_target[unique_indices], variance=variance,
+                         point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[unique_indices],
+                         grid_mask=VAL_DATASET.grid_mask)
                 log_string('Saving model validation predictions....')
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
@@ -526,7 +555,7 @@ def main(args):
             best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
                                                            best_train_iou)
 
-        del all_train_points, all_train_pred, all_train_target
+            del all_train_points, all_train_pred, all_train_target
 
         # TODO Validation loop
         with torch.no_grad():
@@ -537,7 +566,11 @@ def main(args):
             total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 
             classifier = classifier.eval()
-            all_eval_points, all_eval_pred, all_eval_target = [], [], []
+            all_eval_points, all_eval_pred, all_eval_target, all_eval_variance = [], [], [], []
+
+            repeats = args.validation_repeats
+            if args.active_learning is True:
+                enable_dropout(classifier)
 
             log_string('---- EPOCH %03d VALIDATION ----' % (global_epoch + 1))
             if not args.sample_all_validation:
@@ -545,17 +578,16 @@ def main(args):
                                                        desc="Validation"):
                     labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
                                                                                          NUM_POINTS, all_eval_points,
-                                                                                         all_eval_pred,
-                                                                                         all_eval_target, args,
-                                                                                         classifier, criterion, epoch,
-                                                                                         i,
-                                                                                         labelweights,
+                                                                                         all_eval_pred, all_eval_target,
+                                                                                         args, classifier, criterion,
+                                                                                         epoch, i, labelweights,
                                                                                          loss_sum, points,
                                                                                          target_labels, total_correct,
                                                                                          total_correct_class,
                                                                                          total_iou_denominator_class,
                                                                                          total_seen, total_seen_class,
-                                                                                         train_data_loader, weights)
+                                                                                         train_data_loader, weights,
+                                                                                         repeats)
             else:
                 # for i, grid_data in enumerate(VAL_DATASET):
                 # grid_data = data_segment, labels_segment, sample_weight_segment, point_idxs_segment
@@ -563,34 +595,33 @@ def main(args):
                 grid_data = VAL_DATASET.__getitem__(i)
                 available_batches = grid_data[0].shape[0]
                 num_batches = int(np.ceil(available_batches / BATCH_SIZE))
+
                 for batch in tqdm(range(num_batches), desc="Validation"):
                     points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], \
                                             grid_data[1][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
 
                     labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
-                                                                                         NUM_POINTS,
-                                                                                         all_eval_points,
-                                                                                         all_eval_pred,
-                                                                                         all_eval_target, args,
-                                                                                         classifier, criterion,
-                                                                                         epoch, i,
-                                                                                         labelweights,
+                                                                                         NUM_POINTS, all_eval_points,
+                                                                                         all_eval_pred, all_eval_target,
+                                                                                         args, classifier, criterion,
+                                                                                         epoch, i, labelweights,
                                                                                          loss_sum, points,
-                                                                                         target_labels,
-                                                                                         total_correct,
+                                                                                         target_labels, total_correct,
                                                                                          total_correct_class,
                                                                                          total_iou_denominator_class,
-                                                                                         total_seen,
-                                                                                         total_seen_class,
-                                                                                         train_data_loader, weights)
+                                                                                         total_seen, total_seen_class,
+                                                                                         train_data_loader, weights,
+                                                                                         repeats, all_eval_variance)
 
             if args.log_merged_validation:
                 all_eval_points = np.vstack(np.vstack(all_eval_points))
                 all_eval_pred = np.hstack(np.vstack(all_eval_pred))
                 all_eval_target = np.hstack(np.vstack(all_eval_target))
+            if args.active_learning:
+                all_eval_variance = np.hstack(all_eval_variance)
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
                                                            labelweights,
-                                                           best_val_iou)
+                                                           best_val_iou, all_eval_variance)
 
         global_epoch += 1
         wandb.log({})
@@ -598,11 +629,59 @@ def main(args):
     log_string("Finished")
 
 
+def enable_dropout(model):
+    """ Function to enable the dropout layers during test-time """
+    for m in model.modules():
+        if m.__class__.__name__.startswith('Dropout'):
+            m.train()
+
+
+def np_mode_row(ar):
+    """
+    Return the row-wise most commmon element
+    :param ar: a numpy array
+    :return: an array of the most common element in each row
+    """
+    _min = np.min(ar)
+    adjusted = False
+    if _min < 0:
+        ar = ar - _min
+        adjusted = True
+    ans = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr=ar)
+    if adjusted:
+        ans = ans + _min
+    return ans
+
+
+def predictive_entropy(predictions):
+    """
+    Models how "surprised" the model is
+    https://towardsdatascience.com/2-easy-ways-to-measure-your-image-classification-models-uncertainty-1c489fefaec8
+    They are expecting it as a 10-class prediction stcked 5 times: (5,10)
+    We have a 2 class prediction stacked 5 times (but with N batches); (5, N, 2)
+    :param predictions:
+    :return:
+    """
+    EPSILON = 1e-10
+    pred_entropy = -np.sum(np.mean(predictions, axis=0) * np.log(np.mean(predictions, axis=0) + EPSILON), axis=-1)
+    return predictive_entropy
+
+
+def variation_ratio(arr):
+    """
+    A measure of how "spread" the distribution is around the mode. In the binary case (ours) it is bounded by [0,0.5]
+    Similar to simply taking the variance.
+    :param arr:
+    :return:
+    """
+    raise NotImplementedError
+
+
 @profile
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
                      total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
-                     weights):
+                     weights, repeats=1, all_eval_variance=None):
     if torch.is_tensor(points):
         points = points.data.numpy()
     points = torch.Tensor(points)
@@ -611,13 +690,36 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     target_labels = torch.Tensor(target_labels)
     points, target_labels = points.float().cuda(), target_labels.long().cuda()
     points = points.transpose(2, 1)
-    pred_labels, trans_feat = classifier(points)
-    pred_labels = pred_labels.contiguous().view(-1, 2)
+    pred_labels, trans_feat, pred_choice = [], None, None
+
+    # Run MC Dropout to get T sets of predictions.
+    for repeat in range(repeats):
+        pred_labels_temp, trans_feat = classifier(points)
+        pred_labels_temp = pred_labels_temp.contiguous().view(-1, 2)
+        pred_labels.append(pred_labels_temp)
+    if repeats != 1:
+        from scipy.stats import mode
+        pred_labels = torch.stack(pred_labels)
+        pred_choice = pred_labels.cpu().data.max(2)[1].numpy()  # (5,N) labels
+        pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
+        pred_variances = pred_variances.reshape(target_labels.shape)
+        # Get the sum(variance) over each batch-cell (grid cells may be split into many batch-cells)
+        pred_variances = pred_variances.sum(axis=1)
+        all_eval_variance.append(pred_variances)
+
+        pred_choice = mode(pred_choice)
+        pred_choice = pred_choice[0].ravel()  # N average labels
+
+        pred_labels = pred_labels[0]  # Just take one of them we only need it to calculate the loss
+
+    else:
+        pred_labels = pred_labels[0]  # if there is only one repeat
+        pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
+
     # CHECK whats happening here?
     batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
     target_labels = target_labels.view(-1, 1)[:, 0]
     loss = criterion(pred_labels, target_labels, trans_feat, weights)
-    pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
     correct = np.sum(pred_choice == batch_labels)
     total_correct += correct
     total_seen += (BATCH_SIZE * NUM_POINTS)
