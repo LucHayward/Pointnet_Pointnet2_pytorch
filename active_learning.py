@@ -81,14 +81,20 @@ def get_high_variance_cells(cell_variance, point_variances, num_cells, grid_mask
     # return high_var_cells
 
 
-def get_diverse_cells(cells, point_idxs, points, grid_mask):
+def get_diverse_cells(cells, point_idxs, points, grid_mask, features):
     """
     Given a set of cells (expected high variance set) calculates a diverse subset
     Diversity is computed as the distance measure of the cell from the average of the cells
     TODO could be based on the distance measure of the cell from the average cell computed in feature space
+    :param features:
     :return: The cells with high diversity
     """
     from scipy.spatial import distance
+
+    distances = distance.pdist(features, 'sqeuclidean')
+
+
+
     average_cell_position = np.mean(points, axis=0)
 
     distances = []
@@ -149,18 +155,20 @@ def main():
         predict_points = npz_file['points']
         predict_preds = npz_file['preds']
         predict_target = npz_file['target']
-        predict_variance = npz_file['variance']
+        predict_variance = npz_file['variance']  # Variances are normalised to [-1,1]
         predict_point_variance = npz_file['point_variance']
-        predict_grid_mask = npz_file['predict_grid_mask']  # 388 cells temp
+        predict_grid_mask = npz_file['grid_mask']
+        predict_features = npz_file['features']
+        predict_samples_per_cell = npz_file['samples_per_cell']
 
-    # Show merged pointcloud in pptk
+        # Show merged pointcloud in pptk
     # val_old_ds = MastersDataset('validate', LOG_DIR / str(AL_iteration), sample_all_points=True)
     v = pptk.viewer(predict_points[:, :3], predict_points[:, -1], predict_preds, predict_target, predict_point_variance)
     v.color_map('summer')
     selected_cells = [i for i in range(10)]
     high_var_cells, high_var_point_idxs = get_high_variance_cells(predict_variance, predict_point_variance,
                                                                   len(selected_cells) * 3, predict_grid_mask)
-    chosen_cells = get_diverse_cells(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask)
+    diverse_cells = get_diverse_cells(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
 
 if __name__ == '__main__':

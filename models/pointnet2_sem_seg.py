@@ -23,7 +23,7 @@ class get_model(nn.Module):
         self.drop1 = nn.Dropout(dropout_prob)
         self.conv2 = nn.Conv1d(128, num_classes, 1)
 
-    def forward(self, xyz):
+    def forward(self, xyz, get_features=False):
         l0_points = xyz
         l0_xyz = xyz[:, :3, :]  # Just the XYZ values (TODO lets make these global?)
 
@@ -41,6 +41,8 @@ class get_model(nn.Module):
         x = self.conv2(x)
         x = F.log_softmax(x, dim=1)
         x = x.permute(0, 2, 1)
+        if get_features:
+            return x, l0_points  # CHECK could be x1 but that would include the dropout
         return x, l4_points
 
 

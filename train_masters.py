@@ -339,7 +339,7 @@ def main(args):
         return best_train_iou
 
     def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou,
-                                        all_eval_variance):
+                                        all_eval_variance, all_eval_features):
         if args.log_merged_validation:
             unique_points, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
             unique_indices.sort()
@@ -350,7 +350,8 @@ def main(args):
             print(f"Unique points: {num_unique_points}/{total_eval_points} "
                   f"({num_unique_points * 100 // total_eval_points}%)")
 
-            # validation_dataset_points = np.vstack(VAL_DATASET.segment_points)
+            # validation_dataset_points = np.vstack(VAL_DATASET.segment_
+            #    points)
 
             # Save the model validation predictions (from the best training model so far) for AL later
             if SAVE_CURRENT_EPOCH_PREDS:
@@ -358,24 +359,30 @@ def main(args):
                 savepath = str(experiment_dir) + '/val_predictions.npz'
                 log_string('Saving at %s' % savepath)
 
-                # Need to combine the variances down to len(VAL_DATASET.grid_cell_to_segment
+                # Need to combine the variances down to len(VAL_DATASET.grid_cell_to_segment)
                 # number of cell-batches to each cell in the grid.
-                temp = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
+                samples_per_cell = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
                 # Collect the variances together based on the GRID_CELLs they represent
-                variance = []
-                temp_enumerator = enumerate(temp)
+                variance, features = [], []
+                temp_enumerator = enumerate(samples_per_cell)
                 for idx, val in temp_enumerator:
                     if val == 1:
                         variance.append(all_eval_variance[idx])
+                        features.append(all_eval_features[idx])
                     else:
                         variance.append(np.mean(all_eval_variance[idx:idx + val]))
+                        features.append(np.mean(all_eval_features[idx:idx + val], axis=0))
+
 
                 variance = np.array(variance)
+                features = np.array(features)
+                variance = variance/variance.sum()  # Normalise to [-1,1]
+                features = features/features.sum()  # Normalise to [-1,1]
 
                 np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
                          target=all_eval_target[unique_indices], variance=variance,
                          point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[unique_indices],
-                         grid_mask=VAL_DATASET.grid_mask)
+                         grid_mask=VAL_DATASET.grid_mask, features=features, samples_per_cell=samples_per_cell)
                 log_string('Saving model validation predictions....')
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
@@ -566,7 +573,7 @@ def main(args):
             total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 
             classifier = classifier.eval()
-            all_eval_points, all_eval_pred, all_eval_target, all_eval_variance = [], [], [], []
+            all_eval_points, all_eval_pred, all_eval_target, all_eval_variance, all_eval_features = [], [], [], [], []
 
             repeats = args.validation_repeats
             if args.active_learning is True:
@@ -611,7 +618,8 @@ def main(args):
                                                                                          total_iou_denominator_class,
                                                                                          total_seen, total_seen_class,
                                                                                          train_data_loader, weights,
-                                                                                         repeats, all_eval_variance)
+                                                                                         repeats, all_eval_variance,
+                                                                                         all_eval_features)
 
             if args.log_merged_validation:
                 all_eval_points = np.vstack(np.vstack(all_eval_points))
@@ -619,9 +627,10 @@ def main(args):
                 all_eval_target = np.hstack(np.vstack(all_eval_target))
             if args.active_learning:
                 all_eval_variance = np.hstack(all_eval_variance)
+                all_eval_features = np.vstack(np.vstack(all_eval_features))
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
                                                            labelweights,
-                                                           best_val_iou, all_eval_variance)
+                                                           best_val_iou, all_eval_variance, all_eval_features)
 
         global_epoch += 1
         wandb.log({})
@@ -681,7 +690,7 @@ def variation_ratio(arr):
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
                      total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
-                     weights, repeats=1, all_eval_variance=None):
+                     weights, repeats=1, all_eval_variance=None, all_eval_features=None):
     if torch.is_tensor(points):
         points = points.data.numpy()
     points = torch.Tensor(points)
@@ -694,24 +703,24 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
     # Run MC Dropout to get T sets of predictions.
     for repeat in range(repeats):
-        pred_labels_temp, trans_feat = classifier(points)
+        pred_labels_temp, trans_feat = classifier(points, repeats != 1)  # trans_feat = high dimensional feature space
         pred_labels_temp = pred_labels_temp.contiguous().view(-1, 2)
         pred_labels.append(pred_labels_temp)
     if repeats != 1:
         from scipy.stats import mode
         pred_labels = torch.stack(pred_labels)
-        pred_choice = pred_labels.cpu().data.max(2)[1].numpy()  # (5,N) labels
+        pred_choice = pred_labels.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
         # Get the sum(variance) over each batch-cell (grid cells may be split into many batch-cells)
-        pred_variances = pred_variances.sum(axis=1)
+        pred_variances = pred_variances.sum(axis=1).astype('float32')
         all_eval_variance.append(pred_variances)
 
         pred_choice = mode(pred_choice)
         pred_choice = pred_choice[0].ravel()  # N average labels
 
         pred_labels = pred_labels[0]  # Just take one of them we only need it to calculate the loss
-
+        all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
     else:
         pred_labels = pred_labels[0]  # if there is only one repeat
         pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
@@ -742,7 +751,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     if args.log_merged_validation:
         all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
-        all_eval_target.append(np.array(target_labels.cpu()).reshape(points.shape[0], -1))
+        all_eval_target.append(np.array(target_labels.cpu()).astype('int8').reshape(points.shape[0], -1))
     if args.log_first_batch_cloud and i == 0:
         visualise_batch(np.array(points.transpose(1, 2).cpu()),
                         pred_choice.reshape(points.shape[0], -1),
