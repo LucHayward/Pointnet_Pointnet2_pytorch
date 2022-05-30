@@ -86,6 +86,7 @@ def farthest_point_sample(xyz, npoint):
 
 def query_ball_point(radius, nsample, xyz, new_xyz):
     """
+    Samples the local region of the points
     Input:
         radius: local region radius
         nsample: max sample number in local region
@@ -110,7 +111,7 @@ def query_ball_point(radius, nsample, xyz, new_xyz):
 def sample_and_group(npoint, radius, nsample, xyz, points, returnfps=False):
     """
     Input:
-        npoint:
+        npoint: The number of points to sample in FPS_sample
         radius:
         nsample:
         xyz: input points position data, [Batch, N, 3]
@@ -161,7 +162,7 @@ def sample_and_group_all(xyz, points):
 class PointNetSetAbstraction(nn.Module):
     def __init__(self, npoint, radius, nsample, in_channel, mlp, group_all):
         super(PointNetSetAbstraction, self).__init__()
-        self.npoint = npoint
+        self.npoint = npoint  # The number of points to step down to from this layer.
         self.radius = radius
         self.nsample = nsample
         self.mlp_convs = nn.ModuleList()
@@ -177,7 +178,7 @@ class PointNetSetAbstraction(nn.Module):
         """
         Input:
             xyz: input points position data, [B, C, N] = [batch, coordinates, numPoint]
-            points: input points data, [B, D, N] = [batch, dimensions, numPoint]
+            points: input points data (xyz and any other features), [B, D, N] = [batch, dimensions, numPoint]
         Return:
             new_xyz: sampled points position data, [B, C, S]
             new_points_concat: sample points feature data, [B, D', S]

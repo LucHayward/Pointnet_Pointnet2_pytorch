@@ -1,9 +1,7 @@
 import pickle
 
 import numpy as np
-import torch
 import pptk
-import open3d as o3d
 from pathlib import Path
 
 import yaml
