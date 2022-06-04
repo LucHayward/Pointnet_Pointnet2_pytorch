@@ -17,6 +17,7 @@ lr_decay: 0.7
 active_learning: true
 #train_loss_delta: 0.005
 #train_miou_delta: 0.01
+#validtation_epochs: 5
 save_best_train_model: true # Save the best model from the training based on mIoU
 validation_repeats: 3
 
