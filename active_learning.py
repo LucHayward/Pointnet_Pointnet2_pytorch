@@ -14,7 +14,7 @@ from data_utils.MastersDataset import MastersDataset
 AL_ITERATION = 0
 
 LOG_DIR = Path("log/active_learning")
-FINISHED=False
+FINISHED = False
 
 
 def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points=None, labels=None):
@@ -109,6 +109,7 @@ def get_diverse_cells_by_distance(cells, point_idxs, points, grid_mask, features
 
     return None
 
+
 def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9):
     """
     Score each sample with its uncertainty U
@@ -117,6 +118,7 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     For each region, penalise the scores of the remaining regions in that cluster by some factor P
     The result is a ranking of regions based on uncertainty and diversity
     (such that the most uncertain regions are ranked first, but repeat regions from the same cluster are unlikely).
+    :param penalty_factor: How much to reduce the weighting of subsequent cells in a cluster (1 = no change, 0 = remove)
     """
     from sklearn import cluster
     variance_ordering_idxs = variance.argsort()[::-1]
@@ -134,13 +136,16 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
             if kmeans.labels_[x] == current_cluster:  # Scale the variances in the same cluster
                 adjusted_variance[x] *= penalty_factor
 
-    print(f"Old variance_ordering_idxs:\n{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
+    print(
+        f"Old variance_ordering_idxs:\n{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
     adjusted_variance_ordering_idxs = adjusted_variance.argsort()[::-1]
-    print(f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
+    print(
+        f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
     for idx in adjusted_variance_ordering_idxs[:20]:
         print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.4f}")
 
     return adjusted_variance_ordering_idxs, kmeans.labels_
+
 
 def generate_initial_data_split():
     # get full pcd
@@ -164,6 +169,7 @@ def generate_initial_data_split():
     save_split_dataset(initial_dataset, selected_labelled_idxs)
     del initial_dataset
 
+
 def main():
     global AL_ITERATION
     # generate_initial_data_split()
@@ -174,16 +180,29 @@ def main():
         with open(Path(f"configs/train0.yaml"), 'r') as yaml_args:
             train_args = yaml.safe_load(yaml_args)
             train_args = Namespace(**train_args)
-        train_args.log_dir = LOG_DIR / 'train'
+        train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
         train_args.data_path = LOG_DIR / str(AL_ITERATION)
+        train_args.data_path.mkdir(exist_ok=True, parents=True)
+        train_args.log_dir.mkdir(exist_ok=True, parents=True)
+
+        # Move the best_train_model from the previous iteration to this iterations log_dir
+        if AL_ITERATION > 0:
+            import shutil
+            checkpoint_dir = (train_args.log_dir / 'checkpoints')
+            checkpoint_dir.mkdir(exist_ok=True, parents=True)
+            old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
+            shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
+
         # train_args.epoch = 2 # Testing
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
-        train_masters.main(train_args)
+        # if i > 0:  # after the first run use
+
+        # train_masters.main(train_args)
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
-        with np.load(LOG_DIR / 'train' / 'val_predictions.npz') as npz_file:
+        with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:
             predict_points = npz_file['points']
             predict_preds = npz_file['preds']
             predict_target = npz_file['target']
@@ -202,7 +221,8 @@ def main():
         #                                                               len(selected_cells) * 3, predict_grid_mask)
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
-        adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance, num_cells)
+        adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
+                                                                                num_cells)
         new_point_idxs = np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:num_cells]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
