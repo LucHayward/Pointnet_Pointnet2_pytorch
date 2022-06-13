@@ -150,7 +150,7 @@ class S3DISDataset(Dataset):
         self.room_idxs = np.array(room_idxs)
         print("Totally {} samples in {} set.".format(len(self.room_idxs), split))
 
-    @profile
+    # @profile
     def __getitem__(self, idx):
         """
         Given a room ID returns self.num_point points, labels

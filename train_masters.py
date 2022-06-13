@@ -373,11 +373,10 @@ def main(args):
                         variance.append(np.mean(all_eval_variance[idx:idx + val]))
                         features.append(np.mean(all_eval_features[idx:idx + val], axis=0))
 
-
                 variance = np.array(variance)
                 features = np.array(features)
-                variance = variance/variance.sum()  # Normalise to [-1,1]
-                features = features/features.sum()  # Normalise to [-1,1]
+                variance = variance / variance.sum()  # Normalise to [-1,1]
+                features = features / features.sum()  # Normalise to [-1,1]
 
                 np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
                          target=all_eval_target[unique_indices], variance=variance,
@@ -415,7 +414,7 @@ def main(args):
 
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
-                                                                                  class_names=["keep", "discard"])})
+                                                                                  class_names=["keep", "discard"])}, commit=False)
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
@@ -686,7 +685,28 @@ def variation_ratio(arr):
     raise NotImplementedError
 
 
-@profile
+def binary_row_mode(arr, out=None):
+    """
+    Computes the row-wise mode of arr binary array
+    :param arr: a 2d binary array
+    :param out: the output array whihc has been passed in to the function
+    :return: if no array was passed in then a new one is returned instead.
+    """
+    do_return = False
+    if out is None:
+        out = np.empty(arr.shape[1], dtype=np.bool_)
+        do_return = True
+    for i in range(len(out)):
+        # out[i] = mode1d(arr[:,i])
+        size = arr[:, i].size
+        count = np.sum(arr[:, i])
+        count = np.left_shift(count, 1)
+        out[i] = count // size >= 1
+    if do_return:
+        return out
+
+
+# @profile
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
                      total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
@@ -707,7 +727,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         pred_labels_temp = pred_labels_temp.contiguous().view(-1, 2)
         pred_labels.append(pred_labels_temp)
     if repeats != 1:
-        from scipy.stats import mode
+        # from scipy.stats import mode
         pred_labels = torch.stack(pred_labels)
         pred_choice = pred_labels.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
@@ -716,8 +736,9 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         pred_variances = pred_variances.sum(axis=1).astype('float32')
         all_eval_variance.append(pred_variances)
 
-        pred_choice = mode(pred_choice)
-        pred_choice = pred_choice[0].ravel()  # N average labels
+        # pred_choice = mode(pred_choice)
+        # pred_choice = pred_choice[0].ravel()  # N average labels
+        pred_choice = binary_row_mode(pred_choice)
 
         pred_labels = pred_labels[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))

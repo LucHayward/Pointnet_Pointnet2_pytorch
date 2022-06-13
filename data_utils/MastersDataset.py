@@ -138,7 +138,7 @@ class MastersDataset(Dataset):
     separation during cross validation.
     """
 
-    @profile
+    # @profile
     def __init__(self, split, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
                  force_even=False):
         """
@@ -446,7 +446,7 @@ class MastersDataset(Dataset):
         # Sort and split array along x-axis
         print("Sorting by x axis...", end='')
         stime = time()
-        points.view(('f8,' * points.shape[1])[:-1]).sort(order=['f0'], axis=0)
+        points.view((f'{points.dtype.name},' * points.shape[1])[:-1]).sort(order=['f0'], axis=0)
         print(f"{time()-stime:.2f}s")
 
         total_distances = points[:, :2].max(axis=0) - points[:, :2].min(axis=0)
@@ -463,7 +463,7 @@ class MastersDataset(Dataset):
         # Sort and split resulting columns along y-axis
         for i in tqdm(range(len(points)), desc="split y-axis"):
             col = points[i]
-            col.view(('f8,' * col.shape[1])[:-1]).sort(order=['f1'], axis=0)
+            col.view((f'{points.dtype.name},' * col.shape[1])[:-1]).sort(order=['f1'], axis=0)
             interval_idxs_y = [0] + [find_nearest_id(col[:, 1], v) for v in intervals_y] + [col.shape[0]]
             col_grid_mask = np.concatenate(
                 [np.repeat(i * grid_shape[1] + j, reps - interval_idxs_y[j - 1]) for j, reps in

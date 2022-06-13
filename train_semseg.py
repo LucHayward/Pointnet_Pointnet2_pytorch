@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument('--force_bn', action='store_true', help='Force the BatchNorm layers to be on during evaluation')
     parser.add_argument('--test_sample_rate', default=1.0, type=float, help='How much to oversample the test set by')
     parser.add_argument('--shuffle_training_data', action='store_true', help='Shuffle the training data loader')
-    parser.add_argument('--best_iou', default=0, help='Use this to start with a given mIoU for validation/best model saving')
+    parser.add_argument('--best_iou', default=0, help='Use this to start with arr given mIoU for validation/best model saving')
 
     # Exposing new HParams
     # Pointnet Set Abstraction: Group All options

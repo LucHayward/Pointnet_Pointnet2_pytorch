@@ -134,9 +134,9 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
             if kmeans.labels_[x] == current_cluster:  # Scale the variances in the same cluster
                 adjusted_variance[x] *= penalty_factor
 
-    print(f"Old variance_ordering_idxs:\n{list(zip(variance_ordering_idxs[:10], kmeans.labels_[:10]))}")
+    print(f"Old variance_ordering_idxs:\n{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
     adjusted_variance_ordering_idxs = adjusted_variance.argsort()[::-1]
-    print(f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
+    print(f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
     for idx in adjusted_variance_ordering_idxs[:20]:
         print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.4f}")
 
@@ -176,11 +176,10 @@ def main():
             train_args = Namespace(**train_args)
         train_args.log_dir = LOG_DIR / 'train'
         train_args.data_path = LOG_DIR / str(AL_ITERATION)
-        # train_args.epoch = 1  # We just want to train one epoch for testing
+        # train_args.epoch = 2 # Testing
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
-
         train_masters.main(train_args)
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
