@@ -463,7 +463,7 @@ class MastersDataset(Dataset):
         # Sort and split resulting columns along y-axis
         for i in tqdm(range(len(points)), desc="split y-axis"):
             col = points[i]
-            col.view((f'{points.dtype.name},' * col.shape[1])[:-1]).sort(order=['f1'], axis=0)
+            col.view((f'{col.dtype.name},' * col.shape[1])[:-1]).sort(order=['f1'], axis=0)
             interval_idxs_y = [0] + [find_nearest_id(col[:, 1], v) for v in intervals_y] + [col.shape[0]]
             col_grid_mask = np.concatenate(
                 [np.repeat(i * grid_shape[1] + j, reps - interval_idxs_y[j - 1]) for j, reps in
