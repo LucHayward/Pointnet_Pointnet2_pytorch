@@ -115,8 +115,7 @@ def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, c
                                  wandb_section='Visualise-Batch')
 
 
-def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
-                         wandb_section=None):
+def create_confusion_mask(points, pred, target_labels):
     confusion_mask = np.zeros(len(points), dtype=int)  # pptk/wandb
     # confusion_mask[(pred == target_labels) & (pred == 1)] = 3  # tp (red)
     # confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
@@ -126,7 +125,17 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     confusion_mask[(pred != target_labels) & (pred == 0)] = 2  # fn (yellow)
     confusion_mask[(pred == target_labels) & (pred == 1)] = 1  # tp (green)
     confusion_mask[(pred == target_labels) & (pred == 0)] = 0  # tn (purple)
-    # TODO Vecotrizethis
+    return confusion_mask
+
+
+def get_confusion_matrix(confusion_mask):
+    raise NotImplementedError
+
+
+
+def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
+                         wandb_section=None):
+    confusion_mask = create_confusion_mask(points, pred, target_labels)
     confusion_mask_rgb255 = np.array([convert_class_to_turborgb255(i, 3) for i in confusion_mask])  # TODO: vectorize
     # pred_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in pred])
     # target_labels_rgb255 = np.array([convert_class_to_turborgb255(i, args.num_classes) for i in target_labels])
@@ -211,20 +220,26 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     wandb.log({
         f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
             "epoch": epoch,
-            "confusion-matrix": {
-                "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
-                "true-positive": true_pos,
-                "false-positive": false_pos,
-                "true-negative": true_neg,
-                "false-negative": false_neg
-            },
-            'accuracy': accuracy,
-            "pointcloud": {
-                "comparison": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
-                # "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
-                # "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
-            }
+            "confusion-matrix": wandb.Histogram(np_histogram=confusion_matrix_data),
+            'accuracy': accuracy
         }})
+    # wandb.log({
+    #     f"{(wandb_section + '/') if wandb_section is not None else ''}{data_split}/pointcloud-ground-truth-and-prediction": {
+    #         "epoch": epoch,
+    #         "confusion-matrix": {
+    #             "histogram": wandb.Histogram(np_histogram=confusion_matrix_data),
+    #             "true-positive": true_pos,
+    #             "false-positive": false_pos,
+    #             "true-negative": true_neg,
+    #             "false-negative": false_neg
+    #         },
+    #         'accuracy': accuracy,
+    #         "pointcloud": {
+    #             "comparison": wandb.Object3D(np.hstack((points, confusion_mask_rgb255))),
+    #             # "ground-truth": wandb.Object3D(np.hstack((points, target_labels_rgb255))),
+    #             # "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
+    #         }
+    #     }})
 
 
 def generate_points_on_sphere(r, n, offset=None):

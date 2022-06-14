@@ -2,7 +2,7 @@ import argparse
 import importlib
 import os
 
-from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data
+from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data, create_confusion_mask
 from data_utils.MastersDataset import MastersDataset
 import provider
 
@@ -412,9 +412,18 @@ def main(args):
             #                      all_eval_target, epoch,
             #                      "Validation", wandb_section="Visualise-Merged")
 
+            tn, tp, fn, fp = \
+                np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[0]
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fp)
+            f1 = 2 * (recall * precision) / (recall + precision)
+
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
-                                                                                  class_names=["keep", "discard"])}, commit=False)
+                                                                                  class_names=["keep", "discard"]),
+                       'Validation/Precision': precision,
+                       'Validation/Recall': recall,
+                       'Validation/F1': f1}, commit=False)
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
