@@ -197,9 +197,8 @@ def main():
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
-        # if i > 0:  # after the first run use
 
-        # train_masters.main(train_args)
+        train_masters.main(train_args)
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
         with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:

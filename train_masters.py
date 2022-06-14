@@ -100,7 +100,7 @@ def parse_args():
 
 def main(args):
     def log_string(str):
-        log_string(str)
+        logger.info(str)
         print(str)
 
     def bn_momentum_adjust(m, momentum):
