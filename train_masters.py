@@ -2,6 +2,7 @@ import argparse
 import importlib
 import os
 
+import active_learning
 from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data
 from data_utils.MastersDataset import MastersDataset
 import provider
@@ -188,7 +189,7 @@ def main(args):
                    f"{len(VAL_DATASET)} samples and a {np.round(sum_all_val_labels / len(all_val_labels), 2)}:{np.round((len(all_val_labels) - sum_all_val_labels) / len(all_val_labels), 2)} label distribution.")
         # _debug_loaders()
         wandb.config.update({'num_training_data': len(TRAIN_DATASET),
-                             'num_test_data': len(VAL_DATASET)})
+                             'num_test_data': len(VAL_DATASET)}, allow_val_change=True)
         return TRAIN_DATASET, VAL_DATASET, train_data_loader, val_data_loader, weights
 
     def setup_model():
@@ -306,8 +307,10 @@ def main(args):
                     log_string('Save model training predictions...')
                     savepath = str(experiment_dir) + '/train_predictions.npz'
                     log_string('Saving at %s' % savepath)
-                    np.savez(savepath, points=all_train_points[unique_indices], preds=all_train_pred[
+                    np.savez_compressed(savepath, points=all_train_points[unique_indices], preds=all_train_pred[
                         unique_indices], target=all_train_target[unique_indices])
+                    import shutil
+                    shutil.copy(savepath, savepath[:-3] + f'_epoch{epoch}.npz')
                     log_string('Saved model training predictions.')
 
                 log_string('Save best train model...')
@@ -364,25 +367,29 @@ def main(args):
                 samples_per_cell = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
                 # Collect the variances together based on the GRID_CELLs they represent
                 variance, features = [], []
-                temp_enumerator = enumerate(samples_per_cell)
-                for idx, val in temp_enumerator:
-                    if val == 1:
+                samples_per_cell_enumerator = enumerate(samples_per_cell)
+                for idx, num_samples in samples_per_cell_enumerator:
+                    if num_samples == 1:
                         variance.append(all_eval_variance[idx])
                         features.append(all_eval_features[idx])
                     else:
-                        variance.append(np.mean(all_eval_variance[idx:idx + val]))
-                        features.append(np.mean(all_eval_features[idx:idx + val], axis=0))
+                        variance.append(np.mean(all_eval_variance[idx:idx + num_samples]))
+                        features.append(np.mean(all_eval_features[idx:idx + num_samples], axis=0))
 
                 variance = np.array(variance)
                 features = np.array(features)
                 variance = variance / variance.sum()  # Normalise to [-1,1]
                 features = features / features.sum()  # Normalise to [-1,1]
 
-                np.savez(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
+                np.savez_compressed(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
                          target=all_eval_target[unique_indices], variance=variance,
                          point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[unique_indices],
                          grid_mask=VAL_DATASET.grid_mask, features=features, samples_per_cell=samples_per_cell)
+                import shutil
+                shutil.copy(savepath, savepath[:-3]+f'_epoch{epoch}.npz')
                 log_string('Saved model validation predictions.')
+                np.sort(variance)
+                wandb.log({'Validation/top10variance_avg': np.mean(variance[:10])}, commit=False)
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
             # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
@@ -576,6 +583,7 @@ def main(args):
 
             repeats = args.validation_repeats
             if args.active_learning is True:
+                log_string("Enabling dropout")
                 enable_dropout(classifier)
 
             log_string('---- EPOCH %03d VALIDATION ----' % (global_epoch + 1))
@@ -627,6 +635,7 @@ def main(args):
             if args.active_learning:
                 all_eval_variance = np.hstack(all_eval_variance)
                 all_eval_features = np.vstack(np.vstack(all_eval_features))
+                log_string()
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
                                                            labelweights,
                                                            best_val_iou, all_eval_variance, all_eval_features)

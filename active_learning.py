@@ -119,6 +119,7 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     The result is a ranking of regions based on uncertainty and diversity
     (such that the most uncertain regions are ranked first, but repeat regions from the same cluster are unlikely).
     :param penalty_factor: How much to reduce the weighting of subsequent cells in a cluster (1 = no change, 0 = remove)
+    :return: adjusted variance ordering idxs,
     """
     from sklearn import cluster
     variance_ordering_idxs = variance.argsort()[::-1]
@@ -126,7 +127,7 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
 
     print(F"Debug: Initial ordering:")
     for idx in variance_ordering_idxs[:20]:
-        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]:.4f} ")
+        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]} ")
 
     adjusted_variance = np.copy(variance)
     for i, idx in enumerate(variance_ordering_idxs):  # iterate over the clusters in order of variance
@@ -142,7 +143,7 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     print(
         f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
     for idx in adjusted_variance_ordering_idxs[:20]:
-        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.4f}")
+        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]}")
 
     return adjusted_variance_ordering_idxs, kmeans.labels_
 
@@ -193,12 +194,12 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        # train_args.epoch = 2 # Testing
+        train_args.epoch = 2 # Testing
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
 
-        train_masters.main(train_args)
+        # train_masters.main(train_args)
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
         with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:
