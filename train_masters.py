@@ -3,7 +3,7 @@ import importlib
 import os
 
 import active_learning
-from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data
+from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data, create_confusion_mask
 from data_utils.MastersDataset import MastersDataset
 import provider
 
@@ -419,9 +419,18 @@ def main(args):
             #                      all_eval_target, epoch,
             #                      "Validation", wandb_section="Visualise-Merged")
 
+            tn, tp, fn, fp = \
+                np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[0]
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fp)
+            f1 = 2 * (recall * precision) / (recall + precision)
+
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
-                                                                                  class_names=["keep", "discard"])}, commit=False)
+                                                                                  class_names=["keep", "discard"]),
+                       'Validation/Precision': precision,
+                       'Validation/Recall': recall,
+                       'Validation/F1': f1}, commit=False)
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
@@ -635,7 +644,6 @@ def main(args):
             if args.active_learning:
                 all_eval_variance = np.hstack(all_eval_variance)
                 all_eval_features = np.vstack(np.vstack(all_eval_features))
-                log_string()
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
                                                            labelweights,
                                                            best_val_iou, all_eval_variance, all_eval_features)
