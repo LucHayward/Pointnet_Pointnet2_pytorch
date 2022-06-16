@@ -132,7 +132,6 @@ def get_confusion_matrix(confusion_mask):
     raise NotImplementedError
 
 
-
 def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_num=None, confidences=None,
                          wandb_section=None):
     confusion_mask = create_confusion_mask(points, pred, target_labels)
@@ -176,22 +175,7 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
         # pcd.colors = o3d.utility.Vector3dVector(confusion_mask_rgb255 / 255)
         # o3d.visualization.draw_geometries([pcd])
 
-    print('\nConfusion Matrix (numPoints)')
-    print(tabulate([['Pred 1', true_pos, false_pos],
-                    ['Pred 0', false_neg, true_neg]],
-                   headers=['', 'Actual 1', 'Actual 0']))
-    print('\nConfusion Matrix (% total points)')
-    print(tabulate(
-        [['Pred 1', (true_pos / len(target_labels)).__round__(3), (false_pos / len(target_labels)).__round__(3)],
-         ['Pred 0', (false_neg / len(target_labels)).__round__(3), (true_neg / len(target_labels)).__round__(3)]],
-        headers=['', 'Actual 1', 'Actual 0']))
-    print('\nConfusion Matrix (% target per category)')
-    print(tabulate(
-        [['Pred 1', (true_pos / (true_pos + false_neg)).__round__(3),
-          (false_pos / (true_neg + false_pos)).__round__(3)],
-         ['Pred 0', (false_neg / (true_pos + false_neg)).__round__(3),
-          (true_neg / (true_neg + false_pos)).__round__(3)]],
-        headers=['', 'Actual 1', 'Actual 0']))
+    print(get_confusion_matrix_strings(true_pos, true_neg, false_pos, false_neg, len(target_labels)), sep="\n")
     print(f'Accuracy: {accuracy:.4f}\n'
           f'Recall (discard): {recall_discard:.4f}\n'
           f'Precision (discard): {precision_discard:.4f}\n'
@@ -240,6 +224,44 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     #             # "prediction": wandb.Object3D(np.hstack((points, pred_rgb255)))
     #         }
     #     }})
+
+
+def get_confusion_matrix_strings(true_pos, true_neg, false_pos, false_neg, len_labels):
+    """
+    Given the TP/TN/FP/FN and the number of labels required, creates three Confusion Matrices.
+    Only defined for binary CMs.
+    A standard CM based on number of points:
+    CHECK: could probably infer len_labels
+
+    A CM based on % of total points (ie normalised)
+
+    A CM showing the % target per category (ie, what percentage of the actual labels were predicted as 0 or 1
+    :param true_pos:
+    :param true_neg:
+    :param false_pos:
+    :param false_neg:
+    :param len_labels:
+    :return:
+    """
+    npoint_table = tabulate([['Pred 1', true_pos, false_pos], ['Pred 0', false_neg, true_neg]],
+                            headers=['', 'Actual 1', 'Actual 0'])
+    c_npoints = f"Confusion Matrix (numPoints)\n{npoint_table}\n"
+
+    percent_points_table = tabulate(
+        [['Pred 1', (true_pos / len_labels).__round__(3), (false_pos / len_labels).__round__(3)],
+         ['Pred 0', (false_neg / len_labels).__round__(3), (true_neg / len_labels).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0'])
+    c_percent_points = f"Confusion Matrix (% total points)\n{percent_points_table}"
+
+    percent_per_category_table = tabulate(
+        [['Pred 1', (true_pos / (true_pos + false_neg)).__round__(3),
+          (false_pos / (true_neg + false_pos)).__round__(3)],
+         ['Pred 0', (false_neg / (true_pos + false_neg)).__round__(3),
+          (true_neg / (true_neg + false_pos)).__round__(3)]],
+        headers=['', 'Actual 1', 'Actual 0'])
+    c_percent_target = f"Confusion Matrix (% target per category)\n{percent_per_category_table}"
+
+    return c_npoints, c_percent_points, c_percent_target
 
 
 def generate_points_on_sphere(r, n, offset=None):
