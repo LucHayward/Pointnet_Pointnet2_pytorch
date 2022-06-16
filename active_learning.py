@@ -208,7 +208,7 @@ def generate_initial_data_split(initial_labelling_percentage):
 def main():
     global AL_ITERATION
     # generate_initial_data_split(5)
-    for i in range(1, 3):
+    for i in range(2):
         AL_ITERATION = i
         #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
         #   Can do this by calling train_masters.py with limited epochs or some special stop condition
