@@ -2,10 +2,12 @@ import argparse
 import importlib
 import os
 
+import Visualisation_utils
 import active_learning
 from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data, create_confusion_mask
 from data_utils.MastersDataset import MastersDataset
 import provider
+from sklearn.metrics import confusion_matrix
 
 import torch
 import datetime
@@ -202,9 +204,10 @@ def main(args):
         criterion = MODEL.get_loss().cuda()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
+        checkpoint_path = str(experiment_dir) + '/checkpoints/best_model.pth'
         # Check for models that have already been trained.
         try:
-            checkpoint = torch.load(str(experiment_dir) + '/checkpoints/best_model.pth')
+            checkpoint = torch.load(checkpoint_path)
             start_epoch = checkpoint['epoch']
             classifier.load_state_dict(checkpoint['model_state_dict'])
             log_string('Use pretrain model')
@@ -220,7 +223,7 @@ def main(args):
 
 
         except:
-            log_string('No existing model, starting training from scratch...')
+            log_string(f'No existing model, starting training from scratch...({checkpoint_path})')
             start_epoch = 0
             classifier = classifier.apply(weights_init)
         # Setup otpimizer
@@ -309,8 +312,7 @@ def main(args):
                     log_string('Saving at %s' % savepath)
                     np.savez_compressed(savepath, points=all_train_points[unique_indices], preds=all_train_pred[
                         unique_indices], target=all_train_target[unique_indices])
-                    import shutil
-                    shutil.copy(savepath, savepath[:-3] + f'_epoch{epoch}.npz')
+                    shutil.copy(savepath, savepath[:-4] + f'_epoch{epoch}.npz')
                     log_string('Saved model training predictions.')
 
                 log_string('Save best train model...')
@@ -381,12 +383,15 @@ def main(args):
                 variance = variance / variance.sum()  # Normalise to [-1,1]
                 features = features / features.sum()  # Normalise to [-1,1]
 
-                np.savez_compressed(savepath, points=all_eval_points[unique_indices], preds=all_eval_pred[unique_indices],
-                         target=all_eval_target[unique_indices], variance=variance,
-                         point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[unique_indices],
-                         grid_mask=VAL_DATASET.grid_mask, features=features, samples_per_cell=samples_per_cell)
+                np.savez_compressed(savepath, points=all_eval_points[unique_indices],
+                                    preds=all_eval_pred[unique_indices],
+                                    target=all_eval_target[unique_indices], variance=variance,
+                                    point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[
+                                        unique_indices],
+                                    grid_mask=VAL_DATASET.grid_mask, features=features,
+                                    samples_per_cell=samples_per_cell)
                 import shutil
-                shutil.copy(savepath, savepath[:-3]+f'_epoch{epoch}.npz')
+                shutil.copy(savepath, savepath[:-4] + f'_epoch{epoch}.npz')
                 log_string('Saved model validation predictions.')
                 np.sort(variance)
                 wandb.log({'Validation/top10variance_avg': np.mean(variance[:10])}, commit=False)
@@ -419,12 +424,14 @@ def main(args):
             #                      all_eval_target, epoch,
             #                      "Validation", wandb_section="Visualise-Merged")
 
+            # CHECK why doesn''t the below work nicely
+            # confusion_matrix = confusion_matrix(all_eval_target, all_eval_pred)
             tn, tp, fn, fp = \
                 np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[0]
             precision = tp / (tp + fp)
             recall = tp / (tp + fp)
             f1 = 2 * (recall * precision) / (recall + precision)
-
+            Visualisation_utils.get_confusion_matrix_strings(tp, tn, fp, fn, len(all_eval_target))
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
                                                                                   class_names=["keep", "discard"]),
@@ -463,7 +470,7 @@ def main(args):
 
         if mIoU >= best_iou:
             best_iou = mIoU
-            log_string('Save model...')
+            log_string('Save best val_mIoU model...')
             savepath = str(checkpoints_dir) + '/best_model.pth'
             log_string('Saving at %s' % savepath)
             state = {
@@ -473,7 +480,7 @@ def main(args):
                 'optimizer_state_dict': optimizer.state_dict(),
             }
             torch.save(state, savepath)
-            log_string('Saved model.')
+            log_string('Saved best val_mIoU model.')
             wandb.save(savepath)
         log_string('Best mIoU: %f' % best_iou)
         return best_iou
@@ -504,12 +511,18 @@ def main(args):
     classifier, criterion, optimizer, start_epoch = setup_model()
 
     # Training loop
-    global_epoch = 0
+    run_epoch = 0
     best_val_iou, best_train_iou = 0, 0
-    if args.active_learning and args.validate_only:
-        start_epoch = args.epoch - 1
+    if args.active_learning:
+        # For AL we pass in the number of epochs to run AL for as args.epoch.
+        # Adding start epoch (from the pretrained model) offsets correctly
+        if args.validate_only:
+            start_epoch = args.epoch - 1
+        else:
+            args.epoch += start_epoch
+
     for epoch in range(start_epoch, args.epoch):
-        log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
+        log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{args.epoch}) ****')
         lr, momentum = update_lr_momentum()
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
@@ -595,7 +608,7 @@ def main(args):
                 log_string("Enabling dropout")
                 enable_dropout(classifier)
 
-            log_string('---- EPOCH %03d VALIDATION ----' % (global_epoch + 1))
+            log_string(f'---- EPOCH {run_epoch+1:03d} VALIDATION ----')
             if not args.sample_all_validation:
                 for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                        desc="Validation"):
@@ -648,7 +661,7 @@ def main(args):
                                                            labelweights,
                                                            best_val_iou, all_eval_variance, all_eval_features)
 
-        global_epoch += 1
+        run_epoch += 1
         wandb.log({})
 
     log_string("Finished")
