@@ -44,12 +44,12 @@ def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points
     np.save(save_dir / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
-def select_new_points_to_label(dataset, viewer):
+def select_new_points_to_label(dataset, viewer, percentage_cells=5):
     completed_selection = False
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * .05:.0f}/{num_grid_cells}) for labelling")
+        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells/100:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -110,6 +110,31 @@ def get_diverse_cells_by_distance(cells, point_idxs, points, grid_mask, features
     return None
 
 
+def round_to_N_ignoring_leading_zeros(number, ending_values_to_keep=4):
+    """
+    rounds the number off to N trailing decimals, ignoring leading values (including 0)
+    1.000016 -> 1.00001600
+    0.000016 -> 0.00001600
+    11.0000123456789 -> 11.00001235
+
+    :param ending_values_to_keep:
+    :param number:
+    :return:
+    """
+    # TODO this doesn't handle when tere are only zeros
+    import re
+    altered = False
+    if number < 1:
+        altered = True
+        number += 1
+    regex = r"0[1-9]"
+    float_part = str(number).split(".")[1]
+    float_limiter = re.search(regex, float_part).start() if float_part.startswith("0") else -1
+    if altered:
+        number -= 1
+    return eval(f'{number:2.{float_limiter + 1 + ending_values_to_keep}f}')
+
+
 def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9):
     """
     Score each sample with its uncertainty U
@@ -125,9 +150,14 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     variance_ordering_idxs = variance.argsort()[::-1]
     kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(features)
 
-    print(F"Debug: Initial ordering:")
+    cluster_ids, cluster_sizes = np.unique(kmeans.labels_, return_counts=True)
+    for c, n in zip(cluster_ids, cluster_sizes):
+        print(f"Clusters {c}: {n} cells")
+
+    print(F"Debug: Initial ordering ({len(variance_ordering_idxs)} cells):")
     for idx in variance_ordering_idxs[:20]:
-        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]} ")
+        print(
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]:.5g} ")
 
     adjusted_variance = np.copy(variance)
     for i, idx in enumerate(variance_ordering_idxs):  # iterate over the clusters in order of variance
@@ -138,17 +168,20 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
                 adjusted_variance[x] *= penalty_factor
 
     print(
-        f"Old variance_ordering_idxs:\n{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
+        f"Old variance_ordering_idxs:\n"
+        f"{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
     adjusted_variance_ordering_idxs = adjusted_variance.argsort()[::-1]
     print(
-        f"New variance_ordering_idxs:\n{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
+        f"New variance_ordering_idxs:\n"
+        f"{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
     for idx in adjusted_variance_ordering_idxs[:20]:
-        print(f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]}")
+        print(
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.5g}")
 
     return adjusted_variance_ordering_idxs, kmeans.labels_
 
 
-def generate_initial_data_split():
+def generate_initial_data_split(initial_labelling_percentage):
     # get full pcd
     cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
     initial_dataset = None
@@ -166,15 +199,17 @@ def generate_initial_data_split():
         Visualisation_utils.turbo_colormap_data[::16] * 16)  # Repeats colours distinguishing adjacent cells.
     v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
-    selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init)
+    selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init, initial_labelling_percentage)
     save_split_dataset(initial_dataset, selected_labelled_idxs)
     del initial_dataset
 
 
+
 def main():
     global AL_ITERATION
-    # generate_initial_data_split()
-    for i in range(5):
+    # generate_initial_data_split(5)
+    for i in range(1, 3):
+        AL_ITERATION = i
         #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
         #   Can do this by calling train_masters.py with limited epochs or some special stop condition
         #   Or just repeating everything gross
@@ -194,12 +229,13 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        train_args.epoch = 2 # Testing
+        train_args.epoch = 2  # Testing
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
-
-        # train_masters.main(train_args)
+        print(f"--- running training loop {i} ---")
+        train_masters.main(train_args)
+        print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
         with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:
@@ -237,11 +273,11 @@ if __name__ == '__main__':
     import os
     import wandb
 
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     run_name = 'AL: testing'
     LOG_DIR = LOG_DIR / run_name
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    wandb.init(project="Masters", resume=False, name=run_name,
+    wandb.init(project="Masters", resume=True, name=run_name,
                notes="Testing the active learning wrappers by running train_masters.main() directly.")
     wandb.run.log_code(".")
 
