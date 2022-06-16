@@ -304,11 +304,11 @@ def main(args):
             log_string("Saving intermediary training model")
             savepath = str(checkpoints_dir) + f'model_epoch{epoch}.pth'
             state = {
-                    'epoch': epoch,
-                    'class_avg_iou': mIoU,
-                    'model_state_dict': classifier.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                }
+                'epoch': epoch,
+                'class_avg_iou': mIoU,
+                'model_state_dict': classifier.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }
             torch.save(state, savepath)
             log_string("Saved intermediary training model")
 
@@ -532,7 +532,7 @@ def main(args):
         if args.validate_only:
             start_epoch = args.epoch - 1
         else:
-            args.epoch += start_epoch
+            args.epoch = start_epoch + args.epoch  # from start epoch train another K epochs (as given by args.epoch)
 
     for epoch in range(start_epoch, args.epoch):
         log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{args.epoch}) ****')
@@ -621,7 +621,7 @@ def main(args):
                 log_string("Enabling dropout")
                 enable_dropout(classifier)
 
-            log_string(f'---- EPOCH {run_epoch+1:03d} VALIDATION ----')
+            log_string(f'---- EPOCH {run_epoch + 1:03d} VALIDATION ----')
             if not args.sample_all_validation:
                 for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                        desc="Validation"):

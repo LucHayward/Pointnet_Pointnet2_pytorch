@@ -236,7 +236,7 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        train_args.epoch = (i + 1) * 2  # Testing, this sets it so that the epochs are always increasing.
+        train_args.epoch = 5
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
