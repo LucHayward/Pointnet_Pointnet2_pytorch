@@ -207,13 +207,12 @@ def generate_initial_data_split(initial_labelling_percentage):
 
 def main():
     global AL_ITERATION
-    # generate_initial_data_split(5)
-    for i in range(2):
-        AL_ITERATION = i
+    generate_initial_data_split()
+    for i in range(5):
         #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
         #   Can do this by calling train_masters.py with limited epochs or some special stop condition
         #   Or just repeating everything gross
-        with open(Path(f"configs/train0.yaml"), 'r') as yaml_args:
+        with open(Path(f"configs/pointnet++/train0.yaml"), 'r') as yaml_args:
             train_args = yaml.safe_load(yaml_args)
             train_args = Namespace(**train_args)
         train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'

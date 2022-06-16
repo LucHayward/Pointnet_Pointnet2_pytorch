@@ -299,6 +299,19 @@ def main(args):
         wandb.log({'Train/mean_loss': mean_loss,
                    'Train/accuracy': accuracy,
                    'Train/mIoU': mIoU, 'epoch': epoch}, commit=False)
+
+        if args.active_learning:
+            log_string("Saving intermediary training model")
+            savepath = str(checkpoints_dir) + f'model_epoch{epoch}.pth'
+            state = {
+                    'epoch': epoch,
+                    'class_avg_iou': mIoU,
+                    'model_state_dict': classifier.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                }
+            torch.save(state, savepath)
+            log_string("Saved intermediary training model")
+
         if mIoU > best_train_iou:
             best_train_iou = mIoU
             if args.save_best_train_model:
