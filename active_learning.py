@@ -12,6 +12,7 @@ import train_masters
 from data_utils.MastersDataset import MastersDataset
 
 AL_ITERATION = 0
+GROUP_NAME = None
 
 LOG_DIR = Path("log/active_learning")
 FINISHED = False
@@ -49,7 +50,7 @@ def select_new_points_to_label(dataset, viewer, percentage_cells=5):
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells/100:.0f}/{num_grid_cells}) for labelling")
+        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells / 100:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -199,19 +200,26 @@ def generate_initial_data_split(initial_labelling_percentage):
         Visualisation_utils.turbo_colormap_data[::16] * 16)  # Repeats colours distinguishing adjacent cells.
     v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
-    selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init, initial_labelling_percentage)
+    selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init,
+                                                                        initial_labelling_percentage)
     save_split_dataset(initial_dataset, selected_labelled_idxs)
     del initial_dataset
 
 
-
 def main():
     global AL_ITERATION
-    generate_initial_data_split()
+    # generate_initial_data_split(initial_labelling_percentage=5)
     for i in range(5):
         #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
         #   Can do this by calling train_masters.py with limited epochs or some special stop condition
         #   Or just repeating everything gross
+
+        # Setup the wandb logging using group names inside the loop so that you can track the runs
+        # as several lines on the same plot
+        wandb.init(project="Masters", name=f'{GROUP_NAME}_{i}', group=GROUP_NAME,
+                   notes="Initial test run before meeting with Patrick, also testing grouping")
+        if i == 0: wandb.run.log_code(".")
+
         with open(Path(f"configs/pointnet++/train0.yaml"), 'r') as yaml_args:
             train_args = yaml.safe_load(yaml_args)
             train_args = Namespace(**train_args)
@@ -228,7 +236,7 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        train_args.epoch = 2  # Testing
+        train_args.epoch = (i + 1) * 2  # Testing, this sets it so that the epochs are always increasing.
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
@@ -266,18 +274,16 @@ def main():
 
         AL_ITERATION += 1
         save_split_dataset(None, new_point_idxs, train_dataset, predict_points, predict_target)
-
+        wandb.finish()
 
 if __name__ == '__main__':
     import os
     import wandb
 
     # os.environ["WANDB_MODE"] = "dryrun"
-    run_name = 'AL: testing'
-    LOG_DIR = LOG_DIR / run_name
+    global GROUP_NAME
+    GROUP_NAME = 'AL: testing'
+    LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    wandb.init(project="Masters", resume=True, name=run_name,
-               notes="Testing the active learning wrappers by running train_masters.main() directly.")
-    wandb.run.log_code(".")
 
     main()
