@@ -210,6 +210,7 @@ def main():
     global AL_ITERATION
     # generate_initial_data_split(initial_labelling_percentage=5)
     for i in range(5):
+        AL_ITERATION = i
         #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
         #   Can do this by calling train_masters.py with limited epochs or some special stop condition
         #   Or just repeating everything gross
@@ -217,7 +218,8 @@ def main():
         # Setup the wandb logging using group names inside the loop so that you can track the runs
         # as several lines on the same plot
         wandb.init(project="Masters", name=f'{GROUP_NAME}_{i}', group=GROUP_NAME,
-                   notes="Initial test run before meeting with Patrick, also testing grouping")
+                   notes="starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the "
+                         "50% start non-active learning otherwise something has gone wrong")
         if i == 0: wandb.run.log_code(".")
 
         with open(Path(f"configs/pointnet++/train0.yaml"), 'r') as yaml_args:
@@ -236,11 +238,12 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        train_args.epoch = 5
+        train_args.epoch = 20
         # train_args.npoint *= 4
         # train_args.batch_size = 8
         # train_args.validate_only = True
         print(f"--- running training loop {i} ---")
+        wandb.config.update(train_args)
         train_masters.main(train_args)
         print(f"--- finished training loop {i} ---")
 
@@ -259,14 +262,15 @@ def main():
         # val_old_ds = MastersDataset('validate', LOG_DIR / str(AL_ITERATION), sample_all_points=True)
         # v = pptk.viewer(predict_points[:, :3], predict_points[:, -1], predict_preds, predict_target, predict_point_variance, predict_grid_mask)
         # v.color_map('summer')
-        num_cells = 10  # Not sure how many we need, maybe more?
+        num_clusters = 10  # Not sure how many we need, maybe more?
+        num_cells_to_add = 20
         # high_var_cells, high_var_point_idxs = get_high_variance_cells(predict_variance, predict_point_variance,
         #                                                               len(selected_cells) * 3, predict_grid_mask)
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
         adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
-                                                                                num_cells)
-        new_point_idxs = np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:num_cells]))[0]
+                                                                                num_clusters)
+        new_point_idxs = np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:num_cells_to_add]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
@@ -276,13 +280,14 @@ def main():
         save_split_dataset(None, new_point_idxs, train_dataset, predict_points, predict_target)
         wandb.finish()
 
+
 if __name__ == '__main__':
     import os
     import wandb
 
-    # os.environ["WANDB_MODE"] = "dryrun"
-    global GROUP_NAME
-    GROUP_NAME = 'AL: testing'
+    os.environ["WANDB_MODE"] = "dryrun"
+
+    GROUP_NAME = 'AL: 50%start_20epoch_5%increase'
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
