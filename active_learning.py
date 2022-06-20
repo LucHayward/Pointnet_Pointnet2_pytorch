@@ -241,7 +241,7 @@ def main():
         # train_args.batch_size = 8
         # train_args.validate_only = True
         print(f"--- running training loop {i} ---")
-        train_masters.main(train_args)
+        # train_masters.main(train_args)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -281,7 +281,6 @@ if __name__ == '__main__':
     import wandb
 
     # os.environ["WANDB_MODE"] = "dryrun"
-    global GROUP_NAME
     GROUP_NAME = 'AL: testing'
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)

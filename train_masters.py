@@ -587,6 +587,7 @@ def main(args):
                            'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
                            'Train/inner_epoch_loss': loss,
                            'Train/inner_epoch_accuracy': correct / len(batch_labels),
+                           'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0]/len(batch_labels),
                            'epoch': epoch,
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
                 if args.log_merged_training_set:
@@ -766,9 +767,8 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
     # Run MC Dropout to get T sets of predictions.
     for repeat in range(repeats):
-        pred_labels_temp, trans_feat = classifier(points, repeats != 1)  # trans_feat = high dimensional feature space
-        pred_labels_temp = pred_labels_temp.contiguous().view(-1, 2)
-        pred_labels.append(pred_labels_temp)
+        pred_labels, trans_feat = classifier(points, repeats != 1)  # trans_feat = high dimensional feature space
+        pred_labels = pred_labels.contiguous().view(-1, 2)
     if repeats != 1:
         # from scipy.stats import mode
         pred_labels = torch.stack(pred_labels)
