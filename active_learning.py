@@ -241,7 +241,7 @@ def main():
         train_args.epoch = 20
         # train_args.npoint *= 4
         # train_args.batch_size = 8
-        # train_args.validate_only = True
+        train_args.validate_only = True
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
         train_masters.main(train_args)
