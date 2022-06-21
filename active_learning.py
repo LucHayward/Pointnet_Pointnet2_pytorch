@@ -14,9 +14,14 @@ from data_utils.MastersDataset import MastersDataset
 AL_ITERATION = 0
 GROUP_NAME = None
 
+NUM_CLUSTERS = 25
+NUM_CELLS_LABELING_BUDGET = 20
+
 LOG_DIR = Path("log/active_learning")
 FINISHED = False
 
+MERGED_ACCURACY = []
+MERGED_IOU = []
 
 def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points=None, labels=None):
     """
@@ -206,6 +211,38 @@ def generate_initial_data_split(initial_labelling_percentage):
     del initial_dataset
 
 
+def log_merged_metrics(train_labels, predict_preds, predict_target):
+    """
+    Given a training dataset and the prediction/target labels for the remaining data calculate the accuracy and mIoU
+    Append this to the global lists
+    :param train_labels:
+    :param predict_preds:
+    :param predict_target:
+    :return:
+    """
+    merged_preds = np.hstack((train_labels, predict_preds))
+    merged_target = np.hstack((train_labels, predict_target))
+
+    accuracy = sum(merged_preds == merged_target) / len(merged_target)
+
+    total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
+    for l in range(2):
+        target_l = (merged_target == l)
+        pred_l = (merged_preds == l)
+
+        total_seen_class[l] += np.sum(target_l)  # How many times the label was available
+        # How often the predicted label was correct in the batch
+        total_correct_class[l] += np.sum(pred_l & target_l)
+        # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
+        total_iou_denominator_class[l] += np.sum((pred_l | target_l))
+
+    mIoU = np.mean(
+        np.array(total_correct_class) / (np.array(total_iou_denominator_class,
+                                                  dtype=np.float) + 1e-6))  # correct prediction/class occurrences + false prediction
+
+    MERGED_ACCURACY.append(accuracy)
+    MERGED_IOU.append(mIoU)
+
 def main():
     global AL_ITERATION
     # generate_initial_data_split(initial_labelling_percentage=5)
@@ -222,7 +259,7 @@ def main():
                          "50% start non-active learning otherwise something has gone wrong")
         if i == 0: wandb.run.log_code(".")
 
-        with open(Path(f"configs/pointnet++/train0.yaml"), 'r') as yaml_args:
+        with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
             train_args = yaml.safe_load(yaml_args)
             train_args = Namespace(**train_args)
         train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
@@ -238,13 +275,13 @@ def main():
             old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
             shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        train_args.epoch = 20
+        # train_args.epoch = 20  # set in config yaml
         # train_args.npoint *= 4
         # train_args.batch_size = 8
-        train_args.validate_only = True
+        # train_args.validate_only = True
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        train_masters.main(train_args)
+        # train_masters.main(train_args)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -262,23 +299,31 @@ def main():
         # val_old_ds = MastersDataset('validate', LOG_DIR / str(AL_ITERATION), sample_all_points=True)
         # v = pptk.viewer(predict_points[:, :3], predict_points[:, -1], predict_preds, predict_target, predict_point_variance, predict_grid_mask)
         # v.color_map('summer')
-        num_clusters = 10  # Not sure how many we need, maybe more?
-        num_cells_to_add = 20
         # high_var_cells, high_var_point_idxs = get_high_variance_cells(predict_variance, predict_point_variance,
         #                                                               len(selected_cells) * 3, predict_grid_mask)
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
         adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
-                                                                                num_clusters)
-        new_point_idxs = np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:num_cells_to_add]))[0]
+                                                                                NUM_CLUSTERS)
+        new_point_idxs = \
+        np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
         train_dataset = MastersDataset("train", LOG_DIR / str(AL_ITERATION))
 
+        log_merged_metrics(train_dataset.segment_labels[0], predict_preds, predict_target)
+
         AL_ITERATION += 1
         save_split_dataset(None, new_point_idxs, train_dataset, predict_points, predict_target)
         wandb.finish()
+
+    wandb.init(project="Masters", name=f'{GROUP_NAME}_summary', group=GROUP_NAME,
+               notes="starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the "
+                     "50% start non-active learning otherwise something has gone wrong")
+    for acc, iou in zip(MERGED_ACCURACY, MERGED_IOU):
+        wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou})
+
 
 if __name__ == '__main__':
     import os
