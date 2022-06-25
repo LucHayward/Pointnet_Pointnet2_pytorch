@@ -766,12 +766,11 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     pred_labels, trans_feat, pred_choice = [], None, None
 
     # Run MC Dropout to get T sets of predictions.
-    for repeat in range(repeats):
-        pred_labels, trans_feat = classifier(points, repeats != 1)  # trans_feat = high dimensional feature space
-        pred_labels = pred_labels.contiguous().view(-1, 2)
+    pred_labels, trans_feat = classifier(points, repeats != 1, repeats)  # trans_feat = high dimensional feature space
     if repeats != 1:
         # from scipy.stats import mode
         pred_labels = torch.stack(pred_labels)
+        pred_labels = pred_labels.contiguous().view(-1, 2)
         pred_choice = pred_labels.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
@@ -786,7 +785,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         pred_labels = pred_labels[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
     else:
-        pred_labels = pred_labels[0]  # if there is only one repeat
+        pred_labels = pred_labels.contiguous().view(-1, 2)
         pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
 
     # CHECK whats happening here?
