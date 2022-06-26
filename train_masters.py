@@ -474,7 +474,7 @@ def main(args):
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
             iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
-                str(l) + ' ' * (14 - 1), labelweights[l - 1],
+                str(l) + ' ' * (14 - 1), labelweights[l - 1], # CHECK: pretty sure this reverse the weights
                 total_correct_class[l] / float(total_iou_denominator_class[l]))  # refactor
 
         log_string(iou_per_class_str)
