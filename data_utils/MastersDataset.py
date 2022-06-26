@@ -221,6 +221,12 @@ class MastersDataset(Dataset):
             self.grid_cell_to_segment = grid_cell_to_segment
             self.grid_mask = grid_mask
 
+            # No need to shuffle, done in the dataloader rather
+            # self.random_permutation_idx = np.arange(len(self))
+            # np.random.shuffle(self.random_permutation_idx)
+
+            self.grid_mask_segment = np.arange(len(self)).repeat(self.num_points_in_block)
+
             # save([self.num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment,
             #       self.point_idxs_segment], data_path / f"{split}_all_points.cache")
 
@@ -338,9 +344,11 @@ class MastersDataset(Dataset):
 
     def _get_item_all(self, idx: int):
         """
-        Return all the points in this segment
+        Return the batch sample for a given idx
         """
-        return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
+        return (self.data_segment[idx], self.labels_segment[idx])
+                # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
+        # return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
 
     def _split_grid_shape(self, points, grid_shape):
         """
@@ -406,7 +414,10 @@ class MastersDataset(Dataset):
             return self._get_item_all(idx)
 
     def __len__(self):
-        return len(self.segments_idxs)
+        if not self.sample_all_points:
+            return len(self.segments_idxs)
+        else:
+            return self.labels_segment.shape[0]
 
 
 if __name__ == '__main__':

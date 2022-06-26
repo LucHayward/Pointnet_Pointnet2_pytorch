@@ -167,12 +167,10 @@ def main(args):
                                                         shuffle=args.shuffle_training_data, num_workers=0,
                                                         pin_memory=True,
                                                         drop_last=True)
-        # Only use the dataloader for the normal sampling, otherwise we use custom logic
-        val_data_loader = None
-        if not args.sample_all_validation:
-            val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
-                                                          shuffle=False, num_workers=0, pin_memory=True,
-                                                          drop_last=(True if len(VAL_DATASET) // BATCH_SIZE else False))
+
+        val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
+                                                      shuffle=False, num_workers=0, pin_memory=True,
+                                                      drop_last=(len(VAL_DATASET) % BATCH_SIZE) != 0)
         if args.force_even:
             TRAIN_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
             VAL_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
@@ -474,7 +472,7 @@ def main(args):
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
             iou_per_class_str += 'class %s weight: %.3f, IoU: %.3f \n' % (
-                str(l) + ' ' * (14 - 1), labelweights[l - 1], # CHECK: pretty sure this reverse the weights
+                str(l) + ' ' * (14 - 1), labelweights[l - 1],  # CHECK: pretty sure this reverse the weights
                 total_correct_class[l] / float(total_iou_denominator_class[l]))  # refactor
 
         log_string(iou_per_class_str)
@@ -587,7 +585,7 @@ def main(args):
                            'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
                            'Train/inner_epoch_loss': loss,
                            'Train/inner_epoch_accuracy': correct / len(batch_labels),
-                           'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0]/len(batch_labels),
+                           'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
                            'epoch': epoch,
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
                 if args.log_merged_training_set:
@@ -606,9 +604,8 @@ def main(args):
 
             del all_train_points, all_train_pred, all_train_target
 
-        # TODO Validation loop
         with torch.no_grad():
-            num_batches = 0 if val_data_loader is None else len(val_data_loader)
+            num_batches = len(val_data_loader)
             total_correct, total_seen, loss_sum = 0, 0, 0
 
             labelweights = np.zeros(2)  # only used for printing metrics
@@ -626,30 +623,6 @@ def main(args):
             if not args.sample_all_validation:
                 for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                        desc="Validation"):
-                    labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
-                                                                                         NUM_POINTS, all_eval_points,
-                                                                                         all_eval_pred, all_eval_target,
-                                                                                         args, classifier, criterion,
-                                                                                         epoch, i, labelweights,
-                                                                                         loss_sum, points,
-                                                                                         target_labels, total_correct,
-                                                                                         total_correct_class,
-                                                                                         total_iou_denominator_class,
-                                                                                         total_seen, total_seen_class,
-                                                                                         train_data_loader, weights,
-                                                                                         repeats)
-            else:
-                # for i, grid_data in enumerate(VAL_DATASET):
-                # grid_data = data_segment, labels_segment, sample_weight_segment, point_idxs_segment
-                i = 0
-                grid_data = VAL_DATASET.__getitem__(i)
-                available_batches = grid_data[0].shape[0]
-                num_batches = int(np.ceil(available_batches / BATCH_SIZE))
-
-                for batch in tqdm(range(num_batches), desc="Validation"):
-                    points, target_labels = grid_data[0][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE], \
-                                            grid_data[1][batch * BATCH_SIZE:batch * BATCH_SIZE + BATCH_SIZE]
-
                     labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
                                                                                          NUM_POINTS, all_eval_points,
                                                                                          all_eval_pred, all_eval_target,
@@ -763,15 +736,15 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     target_labels = torch.Tensor(target_labels)
     points, target_labels = points.float().cuda(), target_labels.long().cuda()
     points = points.transpose(2, 1)
-    pred_labels, trans_feat, pred_choice = [], None, None
+    pred_logits, trans_feat, pred_choice = [], None, None
 
     # Run MC Dropout to get T sets of predictions.
-    pred_labels, trans_feat = classifier(points, repeats != 1, repeats)  # trans_feat = high dimensional feature space
+    pred_logits, trans_feat = classifier(points, repeats != 1, repeats)  # trans_feat = high dimensional feature space
     if repeats != 1:
         # from scipy.stats import mode
-        pred_labels = torch.stack(pred_labels)
-        pred_labels = pred_labels.contiguous().view(-1, 2)
-        pred_choice = pred_labels.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
+        pred_logits = torch.stack(pred_logits)
+        pred_logits = pred_logits.contiguous().view(-1, 2)
+        pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
         # Get the sum(variance) over each batch-cell (grid cells may be split into many batch-cells)
@@ -782,16 +755,16 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         # pred_choice = pred_choice[0].ravel()  # N average labels
         pred_choice = binary_row_mode(pred_choice)
 
-        pred_labels = pred_labels[0]  # Just take one of them we only need it to calculate the loss
+        pred_logits = pred_logits[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
     else:
-        pred_labels = pred_labels.contiguous().view(-1, 2)
-        pred_choice = pred_labels.cpu().data.max(1)[1].numpy()
+        pred_logits = pred_logits.contiguous().view(-1, 2)
+        pred_choice = pred_logits.cpu().data.max(1)[1].numpy()
 
     # CHECK whats happening here?
     batch_labels = target_labels.view(-1, 1)[:, 0].cpu().data.numpy()
     target_labels = target_labels.view(-1, 1)[:, 0]
-    loss = criterion(pred_labels, target_labels, trans_feat, weights)
+    loss = criterion(pred_logits, target_labels, trans_feat, weights)
     correct = np.sum(pred_choice == batch_labels)
     total_correct += correct
     total_seen += (BATCH_SIZE * NUM_POINTS)
@@ -820,7 +793,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
                         pred_choice.reshape(points.shape[0], -1),
                         np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch,
                         "Validation",
-                        pred_labels.exp().cpu().numpy(), merged=args.log_merged_validation)
+                        pred_logits.exp().cpu().numpy(), merged=args.log_merged_validation)
     return labelweights, total_correct, total_seen, loss_sum
 
 

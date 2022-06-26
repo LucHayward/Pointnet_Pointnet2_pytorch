@@ -12,3 +12,4 @@ path = Path("data/PatrickData/Church/MastersFormat/hand_selected_50%")
 dataset = MastersDataset(None, path, sample_all_points=True)
 
 v = Visualisation_utils.pptk_full_dataset(dataset, include_grid_mask=True)
+
