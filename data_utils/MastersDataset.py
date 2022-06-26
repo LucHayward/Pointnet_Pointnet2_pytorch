@@ -278,7 +278,7 @@ class MastersDataset(Dataset):
         print("Returned:\n", np.unique(point_returned_cnt, return_counts=True))
 
         v = pptk.viewer(self.segment_points[0][point_sample_cnt > 0, :3],
-                        self.seselfgment_labels[0][point_sample_cnt > 0])
+                        self.segment_labels[0][point_sample_cnt > 0])
         v_all = pptk.viewer(self.segment_points[0][:, :3], self.segment_labels[0])
         v_returned = pptk.viewer(self.segment_points[0][point_returned_cnt > 0, :3],
                                  self.segment_labels[0][point_returned_cnt > 0])
