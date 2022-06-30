@@ -159,10 +159,11 @@ def main(args):
             vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
 
         log_string("Loading the train dataset")
-        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even)
+        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
+                                       sample_all_points=True)
         log_string("Loading the validation dataset")
         VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
-                                     sample_all_points=args.sample_all_validation)
+                                     sample_all_points=True)
         train_data_loader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
                                                         shuffle=args.shuffle_training_data, num_workers=0,
                                                         pin_memory=True,
@@ -170,7 +171,7 @@ def main(args):
 
         val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
                                                       shuffle=False, num_workers=0, pin_memory=True,
-                                                      drop_last=(len(VAL_DATASET) % BATCH_SIZE) != 0)
+                                                      drop_last=False)
         if args.force_even:
             TRAIN_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
             VAL_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
@@ -345,6 +346,7 @@ def main(args):
             log_string('Saving at %s' % savepath)
             state = {
                 'epoch': epoch,
+                'class_avg_iou': mIoU,
                 'model_state_dict': classifier.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
             }
@@ -799,10 +801,10 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation reversed starting pretrained all layers NOT train last',
-               notes="Santiy check of the last run but here we DON'T Freeze all the layers of the model except the last classification layer and lower the LR")
+               name='hand selected validation starting pretrained all layers sample all points',
+               notes="Starting from the S3DIS pretrained model, using the reversed validation (30%) dataset sampling all points in training and in validation")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

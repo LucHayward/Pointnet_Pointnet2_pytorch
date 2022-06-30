@@ -6,6 +6,7 @@ from pathlib import Path
 
 import models.pointnet2_sem_seg as MODEL
 
+# Load the pretrained model (13 classes)
 checkpoint = torch.load(
     "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/best_model_pretrainedS3DIS.pth")
 
@@ -14,6 +15,7 @@ classifier.load_state_dict(checkpoint['model_state_dict'])
 
 import torch.nn as nn
 
+# Create a new output layer with our class labels
 classifier.conv2 = nn.Conv1d(128, 2, 1)
 state = {
     'epoch': 0,
@@ -21,4 +23,4 @@ state = {
 }
 
 torch.save(state, Path(
-    "log/active_learning/AL: testing/train/checkpoints/best_model.pth"))
+    "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers_sample_all_points/checkpoints/best_model.pth"))

@@ -225,10 +225,23 @@ def log_merged_metrics(train_labels, predict_preds, predict_target):
 
     accuracy = sum(merged_preds == merged_target) / len(merged_target)
 
+    IoU, mIoU = calculate_iou(merged_preds, merged_target)
+
+    MERGED_ACCURACY.append(accuracy)
+    MERGED_IOU.append(mIoU)
+
+
+def calculate_iou(preds, target):
+    """
+    Calculates the iou and mIoU for a binary classifier give the predictions and the target labels
+    :param preds: the predicted class labels
+    :param target:  the target class labels
+    :return: the IoU of each class and the meanIoU
+    """
     total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
     for l in range(2):
-        target_l = (merged_target == l)
-        pred_l = (merged_preds == l)
+        target_l = (target == l)
+        pred_l = (preds == l)
 
         total_seen_class[l] += np.sum(target_l)  # How many times the label was available
         # How often the predicted label was correct in the batch
@@ -236,12 +249,11 @@ def log_merged_metrics(train_labels, predict_preds, predict_target):
         # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
         total_iou_denominator_class[l] += np.sum((pred_l | target_l))
 
-    mIoU = np.mean(
-        np.array(total_correct_class) / (np.array(total_iou_denominator_class,
-                                                  dtype=np.float) + 1e-6))  # correct prediction/class occurrences + false prediction
+    IoU = np.array(total_correct_class) / (np.array(total_iou_denominator_class,
+                                                    dtype=np.float64) + 1e-6)  # correct prediction/class occurrences + false prediction
+    mIoU = np.mean(IoU)
+    return IoU, mIoU
 
-    MERGED_ACCURACY.append(accuracy)
-    MERGED_IOU.append(mIoU)
 
 def main():
     global AL_ITERATION
