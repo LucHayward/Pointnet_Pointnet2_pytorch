@@ -6,11 +6,12 @@ import pptk
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
 import models.pointnet2_sem_seg as Model
+import models.pointnet2_sem_seg_msg as Model
 
 from tqdm import tqdm
 
 log_path = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_sample_all_points_msg')
 data_path = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
 
@@ -25,7 +26,7 @@ classifier = Model.get_model(2, points_vector_size=4)
 classifier.load_state_dict(model_checkpoint['model_state_dict'])
 classifier.cuda()
 
-dataset = MastersDataset("train", data_path, sample_all_points=True)
+dataset = MastersDataset("validate", data_path, sample_all_points=True)
 
 grid_data = dataset.__getitem__(0)
 BATCH_SIZE = 16
@@ -34,7 +35,7 @@ num_batches = int(np.ceil(available_batches / BATCH_SIZE))
 
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = [], [], [], []
 
-val_data_loader = torch.utils.data.DataLoader(dataset, batch_size=24,
+val_data_loader = torch.utils.data.DataLoader(dataset, batch_size=16,
                                               shuffle=True, num_workers=0, pin_memory=True,
                                               drop_last=False)
 classifier.eval()

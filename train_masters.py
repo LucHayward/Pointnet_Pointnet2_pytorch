@@ -803,8 +803,8 @@ if __name__ == '__main__':
     args = parse_args()
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation starting pretrained all layers sample all points',
-               notes="Starting from the S3DIS pretrained model, using the reversed validation (30%) dataset sampling all points in training and in validation")
+               name='hand selected validation sample all points MSG',
+               notes="Starting from scratch, using the reversed validation (30%) dataset sampling all points in training and in validation, using the msg model")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

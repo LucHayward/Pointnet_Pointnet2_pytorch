@@ -47,7 +47,7 @@ class get_model(nn.Module):
         if repeats == 1:
             x = x[0]
         if get_features:
-            return x, feat  # CHECK could be x1 but that would include the dropout
+            return x, feat
         return x, l4_points
 
 
