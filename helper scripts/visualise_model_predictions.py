@@ -6,12 +6,12 @@ import pptk
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
 import models.pointnet2_sem_seg as Model
-import models.pointnet2_sem_seg_msg as Model
+# import models.pointnet2_sem_seg_msg as Model
 
 from tqdm import tqdm
 
 log_path = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_sample_all_points_msg')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers')
 data_path = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
 

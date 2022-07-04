@@ -22,7 +22,7 @@ def visualise_predicitons(merged=False):
     vv = pptk.viewer(val_points[:, :3], val_attr[0], val_attr[1], val_attr[2])
     if merged:
         vm = pptk.viewer(np.vstack((train_points[:, :3], val_points[:, :3])), np.vstack((train_attr[0], val_attr[0])),
-                     np.vstack((train_attr[1], val_attr[1])), np.vstack((train_attr[2], val_attr[2])))
+                         np.vstack((train_attr[1], val_attr[1])), np.vstack((train_attr[2], val_attr[2])))
         return vt, vv, vm
     else:
         return vt, vv
@@ -30,7 +30,12 @@ def visualise_predicitons(merged=False):
 
 # Get the path to the training run
 log_path = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/active_learning/AL: initial_test")
-for iteration in tqdm(range(11), desc="Al: iteration"):
+start = input("Jumpy to epoch? (enter for 0)")
+if start:
+    start = int(start)
+else:
+    start = 0
+for iteration in tqdm(range(start, 11), desc="Al: iteration"):
     file_paths = list(Path(log_path / str(iteration) / 'train').glob('train*.npz'))
     file_paths.sort()
     if input("Visualise epoch checkpoints? (y/n)") == "y":

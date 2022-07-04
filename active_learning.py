@@ -13,6 +13,7 @@ from data_utils.MastersDataset import MastersDataset
 
 AL_ITERATION = 0
 GROUP_NAME = None
+NOTES = None
 
 NUM_CLUSTERS = 25
 NUM_CELLS_LABELING_BUDGET = 20
@@ -22,6 +23,7 @@ FINISHED = False
 
 MERGED_ACCURACY = []
 MERGED_IOU = []
+
 
 def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points=None, labels=None):
     """
@@ -154,6 +156,16 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     """
     from sklearn import cluster
     variance_ordering_idxs = variance.argsort()[::-1]
+
+    # Find idxs for zero variance cells and shuffle those
+    b = None
+    for i, x in enumerate(variance_ordering_idxs):
+        if variance[x] == 0:
+            b = i
+            break
+    if b is not None:
+        np.random.shuffle(variance_ordering_idxs[b:])
+
     kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(features)
 
     cluster_ids, cluster_sizes = np.unique(kmeans.labels_, return_counts=True)
@@ -267,8 +279,7 @@ def main():
         # Setup the wandb logging using group names inside the loop so that you can track the runs
         # as several lines on the same plot
         wandb.init(project="Masters", name=f'{GROUP_NAME}_{i}', group=GROUP_NAME,
-                   notes="starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the "
-                         "50% start non-active learning otherwise something has gone wrong")
+                   notes=NOTES)
         if i == 0: wandb.run.log_code(".")
 
         with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
@@ -331,8 +342,7 @@ def main():
         wandb.finish()
 
     wandb.init(project="Masters", name=f'{GROUP_NAME}_summary', group=GROUP_NAME,
-               notes="starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the "
-                     "50% start non-active learning otherwise something has gone wrong")
+               notes=NOTES)
     for acc, iou in zip(MERGED_ACCURACY, MERGED_IOU):
         wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou})
 
@@ -344,6 +354,8 @@ if __name__ == '__main__':
     os.environ["WANDB_MODE"] = "dryrun"
 
     GROUP_NAME = 'AL: 50%start_20epoch_5%increase'
+    NOTES = "starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the " \
+            "50% start non-active learning otherwise something has gone wrong"
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
