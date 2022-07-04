@@ -622,22 +622,21 @@ def main(args):
                 enable_dropout(classifier)
 
             log_string(f'---- EPOCH {run_epoch + 1:03d} VALIDATION ----')
-            if not args.sample_all_validation:
-                for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
-                                                       desc="Validation"):
-                    labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
-                                                                                         NUM_POINTS, all_eval_points,
-                                                                                         all_eval_pred, all_eval_target,
-                                                                                         args, classifier, criterion,
-                                                                                         epoch, i, labelweights,
-                                                                                         loss_sum, points,
-                                                                                         target_labels, total_correct,
-                                                                                         total_correct_class,
-                                                                                         total_iou_denominator_class,
-                                                                                         total_seen, total_seen_class,
-                                                                                         train_data_loader, weights,
-                                                                                         repeats, all_eval_variance,
-                                                                                         all_eval_features)
+            for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
+                                                   desc="Validation"):
+                labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
+                                                                                     NUM_POINTS, all_eval_points,
+                                                                                     all_eval_pred, all_eval_target,
+                                                                                     args, classifier, criterion,
+                                                                                     epoch, i, labelweights,
+                                                                                     loss_sum, points,
+                                                                                     target_labels, total_correct,
+                                                                                     total_correct_class,
+                                                                                     total_iou_denominator_class,
+                                                                                     total_seen, total_seen_class,
+                                                                                     train_data_loader, weights,
+                                                                                     repeats, all_eval_variance,
+                                                                                     all_eval_features)
 
             if args.log_merged_validation:
                 all_eval_points = np.vstack(np.vstack(all_eval_points))
@@ -704,9 +703,9 @@ def variation_ratio(arr):
     raise NotImplementedError
 
 
-def binary_row_mode(arr, out=None):
+def binary_column_mode(arr, out=None):
     """
-    Computes the row-wise mode of arr binary array
+    Computes the column-wise mode of arr binary array
     :param arr: a 2d binary array
     :param out: the output array whihc has been passed in to the function
     :return: if no array was passed in then a new one is returned instead.
@@ -745,7 +744,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     if repeats != 1:
         # from scipy.stats import mode
         pred_logits = torch.stack(pred_logits)
-        pred_logits = pred_logits.contiguous().view(-1, 2)
+        pred_logits = pred_logits.contiguous().view(repeats, -1, 2)
         pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
@@ -755,7 +754,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
         # pred_choice = mode(pred_choice)
         # pred_choice = pred_choice[0].ravel()  # N average labels
-        pred_choice = binary_row_mode(pred_choice)
+        pred_choice = binary_column_mode(pred_choice)
 
         pred_logits = pred_logits[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
@@ -801,7 +800,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
                name='hand selected validation sample all points MSG',
                notes="Starting from scratch, using the reversed validation (30%) dataset sampling all points in training and in validation, using the msg model")
