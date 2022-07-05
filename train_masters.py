@@ -703,25 +703,21 @@ def variation_ratio(arr):
     raise NotImplementedError
 
 
-def binary_column_mode(arr, out=None):
+def binary_row_mode(arr):
     """
     Computes the column-wise mode of arr binary array
     :param arr: a 2d binary array
     :param out: the output array whihc has been passed in to the function
     :return: if no array was passed in then a new one is returned instead.
     """
-    do_return = False
-    if out is None:
-        out = np.empty(arr.shape[1], dtype=np.bool_)
-        do_return = True
+    out = np.empty(arr.shape[0], dtype=np.bool_)
     for i in range(len(out)):
         # out[i] = mode1d(arr[:,i])
-        size = arr[:, i].size
-        count = np.sum(arr[:, i])
+        size = arr[i].size
+        count = np.sum(arr[i])
         count = np.left_shift(count, 1)
         out[i] = count // size >= 1
-    if do_return:
-        return out
+    return out
 
 
 # @profile
@@ -745,7 +741,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         # from scipy.stats import mode
         pred_logits = torch.stack(pred_logits)
         pred_logits = pred_logits.contiguous().view(repeats, -1, 2)
-        pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
+        pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (repeats,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
         # Get the sum(variance) over each batch-cell (grid cells may be split into many batch-cells)
@@ -754,7 +750,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
         # pred_choice = mode(pred_choice)
         # pred_choice = pred_choice[0].ravel()  # N average labels
-        pred_choice = binary_column_mode(pred_choice)
+        pred_choice = binary_row_mode(pred_choice)
 
         pred_logits = pred_logits[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
@@ -802,8 +798,9 @@ if __name__ == '__main__':
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation sample all points MSG',
-               notes="Starting from scratch, using the reversed validation (30%) dataset sampling all points in training and in validation, using the msg model")
+               name='30% sample all pre-s3dis local-relative points',
+               notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
+                     "in training and in validation, including relative/local points in the samples.")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

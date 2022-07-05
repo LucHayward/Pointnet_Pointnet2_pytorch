@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="train_masters hand_selected_reversed start_pretrained_all_layers  train_last" type="PythonConfigurationType" factoryName="Python" folderName="Masters">
+  <configuration default="false" name="train_masters hand_selected_reversed start_pretrained_all_layers  train_last" type="PythonConfigurationType" factoryName="Python" folderName="Masters/train_masters">
     <module name="Pointnet_Pointnet2_pytorch" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
