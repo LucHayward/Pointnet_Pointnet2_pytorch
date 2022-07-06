@@ -193,11 +193,11 @@ class MastersDataset(Dataset):
                     # Center the points around (0,0) in the XY-plane
                     min_xy_data_batch = np.min(data_batch[:, :2], axis=0)
                     max_xy_data_batch = np.max(data_batch[:, :2], axis=0)
-                    centerXY = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
-                    relative_xyz = data_batch[:, :3] - np.hstack((centerXY, 0))
+                    center_xy = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
+                    relative_xyz = data_batch[:, :3] - np.hstack((center_xy, 0))
 
                     # relative_XYZ, III, normalized_XYZ
-                    data_batch = np.column_stack((relative_xyz, data_batch[:,[3,3,3]], normalized_xyz))
+                    data_batch = np.column_stack((relative_xyz, data_batch[:, [3, 3, 3]], normalized_xyz))
 
                 # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
                 # batch? It's actually getting a weight to assign to each point though.
@@ -347,7 +347,7 @@ class MastersDataset(Dataset):
         """
         Return the batch sample for a given idx
         """
-        return (self.data_segment[idx], self.labels_segment[idx])
+        return self.data_segment[idx], self.labels_segment[idx]
         # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
         # return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
 

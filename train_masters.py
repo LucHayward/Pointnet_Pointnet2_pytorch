@@ -282,10 +282,25 @@ def main(args):
 
             # visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
             #                      "Train", wandb_section="Visualise-Merged")
+            tn, tp, fn, fp = \
+                np.histogram(create_confusion_mask(all_train_points, all_train_pred, all_train_target),
+                             [0, 1, 2, 3, 4])[0]
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fp)
+            f1 = 2 * (recall * precision) / (recall + precision)
+            percentage_category_confusion = [round(tp / (tp + fn), 3), round(fp / (tn + fp), 3),
+                                             round(fn / (tp + fn), 3), round(tn / (tn + fp), 3)]
 
             wandb.log({'Train/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_train_target,
                                                                              preds=all_train_pred,
-                                                                             class_names=["keep", "discard"])})
+                                                                             class_names=["keep", "discard"]),
+                       'Train/TP': tp, 'Train/FP': fp,
+                       'Train/FN': fn, 'Train/TN': tn,
+                       'Train/category-TP': percentage_category_confusion[0],
+                       'Train/category-FP': percentage_category_confusion[1],
+                       'Train/category-FN': percentage_category_confusion[2],
+                       'Train/category-TN': percentage_category_confusion[3],
+                       'Train/Precision': precision, 'Train/Recall': recall, 'Train/F1': f1, }, commit=False)
 
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
@@ -446,13 +461,19 @@ def main(args):
             precision = tp / (tp + fp)
             recall = tp / (tp + fp)
             f1 = 2 * (recall * precision) / (recall + precision)
-            Visualisation_utils.get_confusion_matrix_strings(tp, tn, fp, fn, len(all_eval_target))
+            percentage_category_confusion = [round(tp / (tp + fn), 3), round(fp / (tn + fp), 3),
+                                             round(fn / (tp + fn), 3), round(tn / (tn + fp), 3)]
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
                                                                                   class_names=["keep", "discard"]),
-                       'Validation/Precision': precision,
-                       'Validation/Recall': recall,
-                       'Validation/F1': f1}, commit=False)
+                       'Validation/TP': tp, 'Validation/FP': fp,
+                       'Validation/FN': fn, 'Validation/TN': tn,
+                       'Validation/category-TP': percentage_category_confusion[0],
+                       'Validation/category-FP': percentage_category_confusion[1],
+                       'Validation/category-FN': percentage_category_confusion[2],
+                       'Validation/category-TN': percentage_category_confusion[3],
+                       'Validation/Precision': precision, 'Validation/Recall': recall, 'Validation/F1': f1},
+                      commit=False)
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
@@ -591,9 +612,12 @@ def main(args):
                            'Train/inner_epoch_accuracy': correct / len(batch_labels),
                            'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
                            'epoch': epoch,
-                           'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
+                           'Train/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
                 if args.log_merged_training_set:
-                    all_train_points.append(np.array(points.transpose(1, 2).cpu())[:,:4])
+                    if args.relative_point_coords:
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:, [6, 7, 8, 3]])
+                    else:
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
                     all_train_target.append(np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1))
                 # Visualise the first batch in every sample
@@ -775,7 +799,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
                'Validation/inner_epoch_loss': loss,
                'Validation/inner_epoch_accuracy': correct / len(batch_labels),
                'epoch': epoch,
-               'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
+               'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
     # Logging and visualisation and IoU
     for l in range(NUM_CLASSES):
         total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
@@ -784,7 +808,10 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
         total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
     if args.log_merged_validation:
-        all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:,:4])
+        if args.relative_point_coords:
+            all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:, [6, 7, 8, 3]])  # Get the normalized xyzI
+        else:
+            all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
         all_eval_target.append(np.array(target_labels.cpu()).astype('int8').reshape(points.shape[0], -1))
     if args.log_first_batch_cloud and i == 0:
@@ -798,10 +825,8 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    # os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=
-
-    args, resume=False, group="local_point_test",
+    os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
                name='30% sample all pre-s3dis local-relative points',
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
                      "in training and in validation, including relative/local points in the samples "
@@ -809,9 +834,10 @@ if __name__ == '__main__':
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
-#     Want to test with local points (this),
+#     Tested with local points => bad results
 #     as normal with higher WD,
 #     as normal with adamW,
 #     with local points and adamW with higher WD
 
 #  Also want to test augmenting the points by rotating around the axis
+#  Can also try forcing even classes

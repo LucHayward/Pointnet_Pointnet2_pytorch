@@ -264,6 +264,14 @@ def get_confusion_matrix_strings(true_pos, true_neg, false_pos, false_neg, len_l
     return c_npoints, c_percent_points, c_percent_target
 
 
+def get_xyz_range(xyz, debug=False):
+    max, min = np.max(xyz, axis=0), np.min(xyz, axis=0)
+    if debug:
+        print(f'Max: {max}')
+        print(f'Min: {min}')
+    return max - min
+
+
 def generate_points_on_sphere(r, n, offset=None):
     if offset is None:
         offset = [0, 0, 0]
