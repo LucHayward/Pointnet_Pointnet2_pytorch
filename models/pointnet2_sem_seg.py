@@ -25,7 +25,7 @@ class get_model(nn.Module):
 
     def forward(self, xyz, get_features=False, repeats=1):
         l0_points = xyz
-        l0_xyz = xyz[:, :3, :]  # Just the XYZ values (TODO lets make these global?)
+        l0_xyz = xyz[:, :3, :]  # Just the XYZ values
 
         l1_xyz, l1_points = self.sa1(l0_xyz, l0_points)
         l2_xyz, l2_points = self.sa2(l1_xyz, l1_points)

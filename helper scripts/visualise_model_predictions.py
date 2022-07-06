@@ -11,7 +11,7 @@ import models.pointnet2_sem_seg as Model
 from tqdm import tqdm
 
 log_path = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/relative_coords')
 data_path = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
 

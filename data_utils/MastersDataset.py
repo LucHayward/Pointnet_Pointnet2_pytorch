@@ -12,6 +12,7 @@ from torch import save, load
 from time import time
 
 from Visualisation_utils import turbo_colormap_data
+
 rng = np.random.default_rng()
 
 
@@ -55,7 +56,7 @@ class MastersDataset(Dataset):
 
     # @profile
     def __init__(self, split, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
-                 force_even=False):
+                 force_even=False, relative_coords=False):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
@@ -128,7 +129,6 @@ class MastersDataset(Dataset):
             self.segments_idxs = np.array(segment_idxs)
         else:
             # Sample every point in the segment in turn following a grid pattern.
-            # Just need to return all the points in one go.
 
             # self.segments_idxs = np.arange(len(self.segment_points))
             # # First check if a cache exists
@@ -186,18 +186,19 @@ class MastersDataset(Dataset):
                 np.random.shuffle(point_idxs)
                 data_batch = points[point_idxs, :]
 
-                # Get Normalized (-1,1) xyz values
-                # normlized_xyz = np.zeros((point_size, 3))
-                # normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
-                # normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
-                # normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
+                if relative_coords:
+                    # Get Normalized (-1,1) xyz values
+                    normalized_xyz = data_batch[:, :3] / coord_max
 
-                #        # Shift XY to start at (0,0)
-                #         data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
-                #         data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
-                #         data_batch[:, 3:6] /= 255.0
+                    # Center the points around (0,0) in the XY-plane
+                    min_xy_data_batch = np.min(data_batch[:, :2], axis=0)
+                    max_xy_data_batch = np.max(data_batch[:, :2], axis=0)
+                    centerXY = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
+                    relative_xyz = data_batch[:, :3] - np.hstack((centerXY, 0))
 
-                # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                    # relative_XYZ, III, normalized_XYZ
+                    data_batch = np.column_stack((relative_xyz, data_batch[:,[3,3,3]], normalized_xyz))
+
                 # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
                 # batch? It's actually getting a weight to assign to each point though.
                 label_batch = labels[point_idxs].astype(int)
@@ -347,7 +348,7 @@ class MastersDataset(Dataset):
         Return the batch sample for a given idx
         """
         return (self.data_segment[idx], self.labels_segment[idx])
-                # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
+        # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
         # return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
 
     def _split_grid_shape(self, points, grid_shape):
@@ -370,7 +371,7 @@ class MastersDataset(Dataset):
         print("Sorting by x axis...", end='')
         stime = time()
         points.view((f'{points.dtype.name},' * points.shape[1])[:-1]).sort(order=['f0'], axis=0)
-        print(f"{time()-stime:.2f}s")
+        print(f"{time() - stime:.2f}s")
 
         total_distances = points[:, :2].max(axis=0) - points[:, :2].min(axis=0)
         intervals_x = np.asarray(

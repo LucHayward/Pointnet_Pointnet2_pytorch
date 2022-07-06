@@ -8,9 +8,10 @@ import models.pointnet2_sem_seg as MODEL
 
 # Load the pretrained model (13 classes)
 checkpoint = torch.load(
-    "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/best_model_pretrainedS3DIS.pth")
+    "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/sem_seg/pretrained_pointnet2_sem_seg/checkpoints/best_model.pth")
 
-classifier = MODEL.get_model(13, points_vector_size=4)
+# classifier = MODEL.get_model(13, points_vector_size=4)
+classifier = MODEL.get_model(13)
 classifier.load_state_dict(checkpoint['model_state_dict'])
 
 import torch.nn as nn
@@ -21,6 +22,6 @@ state = {
     'epoch': 0,
     'model_state_dict': classifier.state_dict(),
 }
-
-torch.save(state, Path(
-    "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers_sample_all_points/checkpoints/best_model.pth"))
+savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/relative_coords_higher_wdecay/checkpoints/")
+savepath.mkdir(parents=True, exist_ok=True)
+torch.save(state, savepath/"best_model.pth")

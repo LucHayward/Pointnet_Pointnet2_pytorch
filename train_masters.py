@@ -80,6 +80,8 @@ def parse_args():
                         help='Force the label distribution per batch to be approximately even')
     parser.add_argument('--sample_all_validation', action='store_true',
                         help='Samples all the points in a grid for the validation')
+    parser.add_argument('--relative_point_coords', action='store_true',
+                        help='Use the old S3DIS point features (relativeXYZ,IGB,XYZ/max(xyz)')
 
     # Exposing model hparams
     # Pointnet Set Abstraction: Group All options
@@ -160,10 +162,10 @@ def main(args):
 
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
-                                       sample_all_points=True)
+                                       sample_all_points=True, relative_coords=args.relative_point_coords)
         log_string("Loading the validation dataset")
         VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
-                                     sample_all_points=True)
+                                     sample_all_points=True, relative_coords=args.relative_point_coords)
         train_data_loader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
                                                         shuffle=args.shuffle_training_data, num_workers=0,
                                                         pin_memory=True,
@@ -199,7 +201,7 @@ def main(args):
         MODEL = importlib.import_module(args.model)
         shutil.copy('models/%s.py' % args.model, str(experiment_dir))
         shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
-        classifier = MODEL.get_model(2, points_vector_size=4).cuda()
+        classifier = MODEL.get_model(2, points_vector_size=(9 if args.relative_point_coords else 4)).cuda()
         criterion = MODEL.get_loss().cuda()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
@@ -591,7 +593,7 @@ def main(args):
                            'epoch': epoch,
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
                 if args.log_merged_training_set:
-                    all_train_points.append(np.array(points.transpose(1, 2).cpu()))
+                    all_train_points.append(np.array(points.transpose(1, 2).cpu())[:,:4])
                     all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
                     all_train_target.append(np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1))
                 # Visualise the first batch in every sample
@@ -782,7 +784,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
         total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
     if args.log_merged_validation:
-        all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
+        all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:,:4])
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
         all_eval_target.append(np.array(target_labels.cpu()).astype('int8').reshape(points.shape[0], -1))
     if args.log_first_batch_cloud and i == 0:
@@ -796,11 +798,20 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False,
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=
+
+    args, resume=False, group="local_point_test",
                name='30% sample all pre-s3dis local-relative points',
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
-                     "in training and in validation, including relative/local points in the samples.")
+                     "in training and in validation, including relative/local points in the samples "
+                     "(point_feature = relativeXYZ,III,normalized_xyz, concatenated with global XYZ still though).")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
+#     Want to test with local points (this),
+#     as normal with higher WD,
+#     as normal with adamW,
+#     with local points and adamW with higher WD
+
+#  Also want to test augmenting the points by rotating around the axis
