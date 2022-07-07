@@ -104,6 +104,54 @@ def parse_args():
 
 
 def main(args):
+    def setup_wandb_metrics():
+        # Inner epoch steps
+        wandb.define_metric('Train/inner_epoch_step')
+        wandb.define_metric('Train/inner_epoch/*', step_metric="Train/inner_epoch_step")
+
+        wandb.define_metric('Validation/inner_epoch_step')
+        wandb.define_metric('Validation/inner_epoch/*', step_metric="Validation/inner_epoch_step")
+
+        # Train classification metrics
+        wandb.define_metric('Train/TP', summary='max')
+        wandb.define_metric('Train/FP', summary='min')
+        wandb.define_metric('Train/TN', summary='max')
+        wandb.define_metric('Train/FN', summary='min')
+
+        wandb.define_metric('Train/category-TP', summary='max')
+        wandb.define_metric('Train/category-FP', summary='min')
+        wandb.define_metric('Train/category-TN', summary='max')
+        wandb.define_metric('Train/category-FN', summary='min')
+
+        wandb.define_metric('Train/Precision', summary='max')
+        wandb.define_metric('Train/Recall', summary='max')
+        wandb.define_metric('Train/F1', summary='max')
+        wandb.define_metric('Train/mIoU', summary='max')
+        wandb.define_metric('Train/accuracy', summary='max')
+        wandb.define_metric('Train/mean_loss', summary='min')
+
+        # Validation Classification metrics
+        wandb.define_metric('validation/TP', summary='max')
+        wandb.define_metric('validation/FP', summary='min')
+        wandb.define_metric('validation/TN', summary='max')
+        wandb.define_metric('validation/FN', summary='min')
+
+        wandb.define_metric('validation/category-TP', summary='max')
+        wandb.define_metric('validation/category-FP', summary='min')
+        wandb.define_metric('validation/category-TN', summary='max')
+        wandb.define_metric('validation/category-FN', summary='min')
+
+        wandb.define_metric('Validation/Precision', summary='max')
+        wandb.define_metric('Validation/Recall', summary='max')
+        wandb.define_metric('Validation/F1', summary='max')
+        wandb.define_metric('Validation/eval_point_mIoU', summary='max')
+        wandb.define_metric('Validation/eval_point_accuracy', summary='max')
+        wandb.define_metric('Validation/eval_point_avg_class_accuracy', summary='max')
+        wandb.define_metric('Validation/eval_mean_loss', summary='min')
+
+        # Debugging metrics
+        wandb.define_metric('Validation/top10variance_avg', summary='mean')
+
     def log_string(str):
         logger.info(str)
         print(str)
@@ -244,14 +292,14 @@ def main(args):
     def update_lr_momentum():
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
-        wandb.log({'lr': lr, 'epoch': epoch}, commit=False)
+        wandb.log({'lr': lr}, commit=False)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
-        wandb.log({'bn_momentum': momentum, 'epoch': epoch}, commit=False)
+        wandb.log({'bn_momentum': momentum}, commit=False)
         return lr, momentum
 
     def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target, best_train_iou):
@@ -314,7 +362,7 @@ def main(args):
         log_string('Training mIoU: %f' % mIoU)
         wandb.log({'Train/mean_loss': mean_loss,
                    'Train/accuracy': accuracy,
-                   'Train/mIoU': mIoU, 'epoch': epoch}, commit=False)
+                   'Train/mIoU': mIoU}, commit=False)
 
         if args.active_learning:
             log_string("Saving intermediary training model")
@@ -491,8 +539,7 @@ def main(args):
         wandb.log({'Validation/eval_mean_loss': eval_mean_loss,
                    'Validation/eval_point_mIoU': mIoU,
                    'Validation/eval_point_accuracy': eval_point_accuracy,
-                   'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
-                   'epoch': epoch}, commit=False)
+                   'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy}, commit=False)
 
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
@@ -526,6 +573,7 @@ def main(args):
     experiment_dir, log_dir, checkpoints_dir = setup_logging_dir()
     logger = logging.getLogger("Model")
     setup_logger()
+    setup_wandb_metrics()
 
     # Define constants
     DATA_PATH = Path(args.data_path)
@@ -559,6 +607,7 @@ def main(args):
 
     for epoch in range(start_epoch, args.epoch):
         log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{args.epoch}) ****')
+        wandb.log({'epoch': epoch}, commit=False)
         lr, momentum = update_lr_momentum()
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
@@ -606,12 +655,11 @@ def main(args):
                     # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
                     total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
 
-                wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
-                           'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
-                           'Train/inner_epoch_loss': loss,
-                           'Train/inner_epoch_accuracy': correct / len(batch_labels),
-                           'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
-                           'epoch': epoch,
+                wandb.log({'Train/inner_epoch/loss_sum': loss_sum,
+                           'Train/inner_epoch/accuracy_sum': total_correct / total_seen,
+                           'Train/inner_epoch/loss': loss,
+                           'Train/inner_epoch/accuracy': correct / len(batch_labels),
+                           'Train/inner_epoch/class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
                 if args.log_merged_training_set:
                     if args.relative_point_coords:
@@ -660,7 +708,7 @@ def main(args):
                                                                                      total_correct_class,
                                                                                      total_iou_denominator_class,
                                                                                      total_seen, total_seen_class,
-                                                                                     train_data_loader, weights,
+                                                                                     val_data_loader, weights,
                                                                                      repeats, all_eval_variance,
                                                                                      all_eval_features)
 
@@ -749,7 +797,7 @@ def binary_row_mode(arr):
 # @profile
 def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
-                     total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
+                     total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, val_data_loader,
                      weights, repeats=1, all_eval_variance=None, all_eval_features=None):
     if torch.is_tensor(points):
         points = points.data.numpy()
@@ -794,12 +842,11 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     loss_sum += loss
     tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
     labelweights += tmp
-    wandb.log({'Validation/inner_epoch_loss_sum': loss_sum,
-               'Validation/inner_epoch_accuracy_sum': total_correct / total_seen,
-               'Validation/inner_epoch_loss': loss,
-               'Validation/inner_epoch_accuracy': correct / len(batch_labels),
-               'epoch': epoch,
-               'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
+    wandb.log({'Validation/inner_epoch/loss_sum': loss_sum,
+               'Validation/inner_epoch/accuracy_sum': total_correct / total_seen,
+               'Validation/inner_epoch/loss': loss,
+               'Validation/inner_epoch/accuracy': correct / len(batch_labels),
+               'Validation/inner_epoch_step': (i + epoch * len(val_data_loader))}, commit=False)
     # Logging and visualisation and IoU
     for l in range(NUM_CLASSES):
         total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
@@ -825,12 +872,11 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
-               name='30% sample all pre-s3dis local-relative points',
+               name='30% sample all pre-s3dis higherWD',
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
-                     "in training and in validation, including relative/local points in the samples "
-                     "(point_feature = relativeXYZ,III,normalized_xyz, concatenated with global XYZ still though).")
+                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()

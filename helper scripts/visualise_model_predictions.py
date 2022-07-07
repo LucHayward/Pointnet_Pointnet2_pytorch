@@ -11,10 +11,10 @@ import models.pointnet2_sem_seg as Model
 from tqdm import tqdm
 
 LOG_PATH = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/relative_coords')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/30%_pretrained_higherWD')
 DATA_PATH = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
-RELATIVE_COORDS=True
+RELATIVE_COORDS = True
 MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/best_model.pth'
 
 model_checkpoint = torch.load(MODEL_CHECKPOINT_PATH)
@@ -98,7 +98,9 @@ print(f"IoU keep: {IoU[0]}\n"
       f"mIoU: {mIoU}")
 
 from Visualisation_utils import create_confusion_mask, get_confusion_matrix_strings
-tn, tp, fn, fp = np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[0]
+
+tn, tp, fn, fp = np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[
+    0]
 precision = tp / (tp + fp)
 recall = tp / (tp + fp)
 f1 = 2 * (recall * precision) / (recall + precision)
