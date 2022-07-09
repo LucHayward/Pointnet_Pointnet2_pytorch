@@ -14,8 +14,8 @@ LOG_PATH = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/30%_pretrained_higherWD')
 DATA_PATH = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
-RELATIVE_COORDS = True
-MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/best_model.pth'
+RELATIVE_COORDS = False
+MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/model.pth'
 
 model_checkpoint = torch.load(MODEL_CHECKPOINT_PATH)
 print(f"Reached best validation_IoU at epoch {model_checkpoint['epoch']}\n"
@@ -73,11 +73,11 @@ for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val
 
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = np.vstack(np.vstack(all_eval_points)), np.hstack(
     np.vstack(all_eval_pred)), np.hstack(np.vstack(all_eval_target)), np.hstack(np.vstack(all_eval_probs))
-print("Showing intensity, predictions, target, difference, probability")
-# v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
-#                 all_eval_pred != all_eval_target)
-v = pptk.viewer(all_eval_points[:, 6:], all_eval_pred, all_eval_target,
+print("Showing intensity, predictions, target, difference")
+v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
                 all_eval_pred != all_eval_target)
+# v = pptk.viewer(all_eval_points[:, 6:], all_eval_pred, all_eval_target,
+#                 all_eval_pred != all_eval_target)
 
 total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 for l in range(2):

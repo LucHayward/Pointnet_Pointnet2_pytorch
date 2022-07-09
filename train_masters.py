@@ -82,6 +82,7 @@ def parse_args():
                         help='Samples all the points in a grid for the validation')
     parser.add_argument('--relative_point_coords', action='store_true',
                         help='Use the old S3DIS point features (relativeXYZ,IGB,XYZ/max(xyz)')
+    parser.add_argument('--save_intermediate_models', default=True, help='Save models at each epoch instead of only the "best"')
 
     # Exposing model hparams
     # Pointnet Set Abstraction: Group All options
@@ -254,6 +255,7 @@ def main(args):
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
         checkpoint_path = str(experiment_dir) + '/checkpoints/best_model.pth'
+        loaded_pretrained=True
         # Check for models that have already been trained.
         try:
             checkpoint = torch.load(checkpoint_path)
@@ -273,8 +275,10 @@ def main(args):
 
         except:
             log_string(f'No existing model, starting training from scratch...({checkpoint_path})')
+            loaded_pretrained = False
             start_epoch = 0
             classifier = classifier.apply(weights_init)
+
         # Setup otpimizer
         if args.optimizer == 'Adam':
             optimizer = torch.optim.Adam(
@@ -284,6 +288,12 @@ def main(args):
                 eps=1e-08,
                 weight_decay=args.decay_rate
             )
+            if loaded_pretrained:
+                log_string("Loading optimizer state dict")
+                try:
+                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                except KeyError:
+                    log_string("No optimizer state dict found, initializing as normal")
         else:
             optimizer = torch.optim.SGD(classifier.parameters(), lr=args.learning_rate, momentum=0.9)
 
@@ -364,7 +374,7 @@ def main(args):
                    'Train/accuracy': accuracy,
                    'Train/mIoU': mIoU}, commit=False)
 
-        if args.active_learning:
+        if args.active_learning or args.save_intermediate_models:
             log_string("Saving intermediary training model")
             savepath = str(checkpoints_dir) + f'model_epoch{epoch}.pth'
             state = {
@@ -659,11 +669,11 @@ def main(args):
                            'Train/inner_epoch/accuracy_sum': total_correct / total_seen,
                            'Train/inner_epoch/loss': loss,
                            'Train/inner_epoch/accuracy': correct / len(batch_labels),
-                           'Train/inner_epoch/class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
+                           'Train/inner_epoch/class_ratio(percent_keeps)': total_seen_class[1] / sum(total_seen_class),
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
                 if args.log_merged_training_set:
                     if args.relative_point_coords:
-                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:, [6, 7, 8, 3]])
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:,:, [6, 7, 8, 3]])
                     else:
                         all_train_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
@@ -674,6 +684,7 @@ def main(args):
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(BATCH_SIZE, -1),
                                     np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1), i, epoch, 'Train',
                                     pred_labels.exp().cpu().data.numpy(), args.log_merged_training_batches)
+
 
             best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
                                                            best_train_iou)
@@ -695,7 +706,7 @@ def main(args):
                 log_string("Enabling dropout")
                 enable_dropout(classifier)
 
-            log_string(f'---- EPOCH {run_epoch + 1:03d} VALIDATION ----')
+            log_string(f'---- EPOCH {run_epoch + 1:03d} ({epoch + 1}/{args.epoch}) VALIDATION ----')
             for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                    desc="Validation"):
                 labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
@@ -856,7 +867,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
     if args.log_merged_validation:
         if args.relative_point_coords:
-            all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:, [6, 7, 8, 3]])  # Get the normalized xyzI
+            all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:,:, [6, 7, 8, 3]])  # Get the normalized xyzI
         else:
             all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
@@ -874,14 +885,16 @@ if __name__ == '__main__':
     args = parse_args()
     # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
-               name='30% sample all pre-s3dis higherWD',
+               name='30% sample all pre-s3dis higherWD local_coords',
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
-                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4")
+                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4 and local coords")
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
 #     Tested with local points => bad results
-#     as normal with higher WD,
+#     Tested as normal with higher WD 1e-2, => good results but can't resolve the fences and does less well on training set
+#     Tested as normal with medium WD 1e-3
+#     Tested with local points and higher WD 1e-2
 #     as normal with adamW,
 #     with local points and adamW with higher WD
 
