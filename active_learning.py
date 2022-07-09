@@ -304,7 +304,7 @@ def main():
         # train_args.validate_only = True
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        # train_masters.main(train_args)
+        train_masters.main(train_args)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
