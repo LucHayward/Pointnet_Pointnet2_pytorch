@@ -56,7 +56,7 @@ class MastersDataset(Dataset):
 
     # @profile
     def __init__(self, split, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
-                 force_even=False, relative_coords=False):
+                 force_even=False, relative_coords=False, npy_array=None):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
@@ -65,7 +65,7 @@ class MastersDataset(Dataset):
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
-        assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test"'
+        assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test", or "None"'
         self.split = split
         self.num_points_in_block = num_points_in_block
         self.block_size = block_size
@@ -78,35 +78,49 @@ class MastersDataset(Dataset):
         #     self.batch_label_counts = None
         #     self.
 
-        # Given the data_path
-        # Load all the segments that are for this split
-        segment_paths = sorted(data_path.glob('*.npy'))
-        if split is not None:  # if split is None then just load all the .npy files
-            segment_paths = [path for path in segment_paths if split in str(path)]
-        assert len(segment_paths) > 0, "No segments in path"
         self.segment_points, self.segment_labels = [], []
         self.segment_coord_min, self.segment_coord_max = [], []
 
         num_points_per_segment = []
         labelweights = np.zeros(2)
-
-        # For each segment load all the points and split the labels out, recording their relative weights
-        for path in tqdm(segment_paths):
-            xyzir = np.load(path)
-            points, labels = xyzir[:, :-1], xyzir[:, -1]
+        if npy_array is not None:
+            points, labels = npy_array[:, :-1], npy_array[:, -1]
             self.segment_points.append(points)
             self.segment_labels.append(labels)
 
             coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
             self.segment_coord_min.append(coord_min)
             self.segment_coord_max.append(coord_max)
-            # assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
-            #     "segments smaller than block_size"
 
             weights, _ = np.histogram(labels, [0, 1, 2])
 
             labelweights += weights
             num_points_per_segment.append(len(labels))
+        else:
+            # Given the data_path
+            # Load all the segments that are for this split
+            segment_paths = sorted(data_path.glob('*.npy'))
+            if split is not None:  # if split is None then just load all the .npy files
+                segment_paths = [path for path in segment_paths if split in str(path)]
+            assert len(segment_paths) > 0, "No segments in path"
+
+            # For each segment load all the points and split the labels out, recording their relative weights
+            for path in tqdm(segment_paths):
+                xyzir = np.load(path)
+                points, labels = xyzir[:, :-1], xyzir[:, -1]
+                self.segment_points.append(points)
+                self.segment_labels.append(labels)
+
+                coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+                self.segment_coord_min.append(coord_min)
+                self.segment_coord_max.append(coord_max)
+                # assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
+                #     "segments smaller than block_size"
+
+                weights, _ = np.histogram(labels, [0, 1, 2])
+
+                labelweights += weights
+                num_points_per_segment.append(len(labels))
 
         # Weights as inverse ratio (ie if labels=[10,20] labelweights = [2,1])
         labelweights = labelweights / np.sum(labelweights)
