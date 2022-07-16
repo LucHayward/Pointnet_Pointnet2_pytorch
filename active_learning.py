@@ -1,3 +1,4 @@
+import argparse
 import pickle
 
 import numpy as np
@@ -267,14 +268,11 @@ def calculate_iou(preds, target):
     return IoU, mIoU
 
 
-def main():
+def main(args):
     global AL_ITERATION
     # generate_initial_data_split(initial_labelling_percentage=5)
     for i in range(5):
         AL_ITERATION = i
-        #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
-        #   Can do this by calling train_masters.py with limited epochs or some special stop condition
-        #   Or just repeating everything gross
 
         # Setup the wandb logging using group names inside the loop so that you can track the runs
         # as several lines on the same plot
@@ -282,30 +280,32 @@ def main():
                    notes=NOTES)
         if i == 0: wandb.run.log_code(".")
 
-        with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
-            train_args = yaml.safe_load(yaml_args)
-            train_args = Namespace(**train_args)
-        train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
-        train_args.data_path = LOG_DIR / str(AL_ITERATION)
-        train_args.data_path.mkdir(exist_ok=True, parents=True)
-        train_args.log_dir.mkdir(exist_ok=True, parents=True)
+        if args.model == 'pointnet++':
+            with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
+                train_args = yaml.safe_load(yaml_args)
+                train_args = Namespace(**train_args)
+            train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
+            train_args.data_path = LOG_DIR / str(AL_ITERATION)
+            train_args.data_path.mkdir(exist_ok=True, parents=True)
+            train_args.log_dir.mkdir(exist_ok=True, parents=True)
 
-        # Move the best_train_model from the previous iteration to this iterations log_dir
-        if AL_ITERATION > 0:
-            import shutil
-            checkpoint_dir = (train_args.log_dir / 'checkpoints')
-            checkpoint_dir.mkdir(exist_ok=True, parents=True)
-            old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
-            shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
+            # Move the best_train_model from the previous iteration to this iterations log_dir
+            if AL_ITERATION > 0:
+                import shutil
+                checkpoint_dir = (train_args.log_dir / 'checkpoints')
+                checkpoint_dir.mkdir(exist_ok=True, parents=True)
+                old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
+                shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        # train_args.epoch = 20  # set in config yaml
-        # train_args.npoint *= 4
-        # train_args.batch_size = 8
-        # train_args.validate_only = True
-        print(f"--- running training loop {i} ---")
-        wandb.config.update(train_args)
-        train_masters.main(wandb.config)
-        print(f"--- finished training loop {i} ---")
+            # train_args.epoch = 20  # set in config yaml
+            # train_args.npoint *= 4
+            # train_args.batch_size = 8
+            # train_args.validate_only = True
+
+            print(f"--- running training loop {i} ---")
+            wandb.config.update(train_args)
+            train_masters.main(wandb.config)
+            print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
         with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:
@@ -313,10 +313,10 @@ def main():
             predict_preds = npz_file['preds']
             predict_target = npz_file['target']
             predict_variance = npz_file['variance']  # Variances are normalised to [-1,1]
-            predict_point_variance = npz_file['point_variance']  # is used
+            predict_point_variance = npz_file['point_variance']  # was used
             predict_grid_mask = npz_file['grid_mask'].astype('int16')
             predict_features = npz_file['features']
-            predict_samples_per_cell = npz_file['samples_per_cell']
+            # predict_samples_per_cell = npz_file['samples_per_cell']
 
         # Show merged pointcloud in pptk
         # val_old_ds = MastersDataset('validate', LOG_DIR / str(AL_ITERATION), sample_all_points=True)
@@ -347,9 +347,18 @@ def main():
         wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou})
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--model', default='pointnet++', help="Which model (pointnet++, RF, KPConv)")
+
+    return parser.parse_args()
+
 if __name__ == '__main__':
     import os
     import wandb
+
+    args = parse_args()
 
     os.environ["WANDB_MODE"] = "dryrun"
 
@@ -359,4 +368,4 @@ if __name__ == '__main__':
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    main()
+    main(args)
