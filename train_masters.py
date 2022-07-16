@@ -82,7 +82,8 @@ def parse_args():
                         help='Samples all the points in a grid for the validation')
     parser.add_argument('--relative_point_coords', action='store_true',
                         help='Use the old S3DIS point features (relativeXYZ,IGB,XYZ/max(xyz)')
-    parser.add_argument('--save_intermediate_models', default=True, help='Save models at each epoch instead of only the "best"')
+    parser.add_argument('--save_intermediate_models', default=True,
+                        help='Save models at each epoch instead of only the "best"')
 
     # Exposing model hparams
     # Pointnet Set Abstraction: Group All options
@@ -104,6 +105,81 @@ def parse_args():
     return parser.parse_args()
 
 
+def setup_logging_dir(config, exp_dir='masters'):
+    # Create logging directory
+    timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
+    experiment_dir = Path('./log/')
+    experiment_dir.mkdir(exist_ok=True)
+    experiment_dir = experiment_dir.joinpath(experiment_dir)
+    experiment_dir.mkdir(exist_ok=True)
+    if config["log_dir"] is None:
+        experiment_dir = experiment_dir.joinpath(timestr)
+    else:
+        if "log/active_learning" in str(config["log_dir"]):
+            experiment_dir = config["log_dir"]
+        else:
+            experiment_dir = experiment_dir.joinpath(config["log_dir"])
+    experiment_dir.mkdir(exist_ok=True)
+    checkpoints_dir = experiment_dir.joinpath('checkpoints/')
+    checkpoints_dir.mkdir(exist_ok=True)
+    log_dir = experiment_dir.joinpath('logs/')
+    log_dir.mkdir(exist_ok=True)
+    return experiment_dir, log_dir, checkpoints_dir
+
+
+def setup_logger(logger, log_dir, config):
+    # Setup logger (might ditch this)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler('%s/%s.txt' % (log_dir, config["model"]))
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+
+def setup_wandb_classification_metrics():
+    # Train classification metrics
+    wandb.define_metric('Train/TP', summary='max')
+    wandb.define_metric('Train/FP', summary='min')
+    wandb.define_metric('Train/TN', summary='max')
+    wandb.define_metric('Train/FN', summary='min')
+
+    wandb.define_metric('Train/category-TP', summary='max')
+    wandb.define_metric('Train/category-FP', summary='min')
+    wandb.define_metric('Train/category-TN', summary='max')
+    wandb.define_metric('Train/category-FN', summary='min')
+
+    wandb.define_metric('Train/Precision', summary='max')
+    wandb.define_metric('Train/Recall', summary='max')
+    wandb.define_metric('Train/F1', summary='max')
+    wandb.define_metric('Train/mIoU', summary='max')
+    wandb.define_metric('Train/accuracy', summary='max')
+    wandb.define_metric('Train/mean_loss', summary='min')
+
+    # Validation Classification metrics
+    wandb.define_metric('validation/TP', summary='max')
+    wandb.define_metric('validation/FP', summary='min')
+    wandb.define_metric('validation/TN', summary='max')
+    wandb.define_metric('validation/FN', summary='min')
+
+    wandb.define_metric('validation/category-TP', summary='max')
+    wandb.define_metric('validation/category-FP', summary='min')
+    wandb.define_metric('validation/category-TN', summary='max')
+    wandb.define_metric('validation/category-FN', summary='min')
+
+    wandb.define_metric('Validation/Precision', summary='max')
+    wandb.define_metric('Validation/Recall', summary='max')
+    wandb.define_metric('Validation/F1', summary='max')
+    wandb.define_metric('Validation/eval_point_mIoU', summary='max')
+    wandb.define_metric('Validation/eval_point_accuracy', summary='max')
+    wandb.define_metric('Validation/eval_point_avg_class_accuracy', summary='max')
+    wandb.define_metric('Validation/eval_mean_loss', summary='min')
+
+
+def _log_string(str, logger):
+    logger.info(str)
+    print(str)
+
 def main(config):
     def setup_wandb_metrics():
         # Inner epoch steps
@@ -113,49 +189,13 @@ def main(config):
         wandb.define_metric('Validation/inner_epoch_step')
         wandb.define_metric('Validation/inner_epoch/*', step_metric="Validation/inner_epoch_step")
 
-        # Train classification metrics
-        wandb.define_metric('Train/TP', summary='max')
-        wandb.define_metric('Train/FP', summary='min')
-        wandb.define_metric('Train/TN', summary='max')
-        wandb.define_metric('Train/FN', summary='min')
-
-        wandb.define_metric('Train/category-TP', summary='max')
-        wandb.define_metric('Train/category-FP', summary='min')
-        wandb.define_metric('Train/category-TN', summary='max')
-        wandb.define_metric('Train/category-FN', summary='min')
-
-        wandb.define_metric('Train/Precision', summary='max')
-        wandb.define_metric('Train/Recall', summary='max')
-        wandb.define_metric('Train/F1', summary='max')
-        wandb.define_metric('Train/mIoU', summary='max')
-        wandb.define_metric('Train/accuracy', summary='max')
-        wandb.define_metric('Train/mean_loss', summary='min')
-
-        # Validation Classification metrics
-        wandb.define_metric('validation/TP', summary='max')
-        wandb.define_metric('validation/FP', summary='min')
-        wandb.define_metric('validation/TN', summary='max')
-        wandb.define_metric('validation/FN', summary='min')
-
-        wandb.define_metric('validation/category-TP', summary='max')
-        wandb.define_metric('validation/category-FP', summary='min')
-        wandb.define_metric('validation/category-TN', summary='max')
-        wandb.define_metric('validation/category-FN', summary='min')
-
-        wandb.define_metric('Validation/Precision', summary='max')
-        wandb.define_metric('Validation/Recall', summary='max')
-        wandb.define_metric('Validation/F1', summary='max')
-        wandb.define_metric('Validation/eval_point_mIoU', summary='max')
-        wandb.define_metric('Validation/eval_point_accuracy', summary='max')
-        wandb.define_metric('Validation/eval_point_avg_class_accuracy', summary='max')
-        wandb.define_metric('Validation/eval_mean_loss', summary='min')
-
         # Debugging metrics
         wandb.define_metric('Validation/top10variance_avg', summary='mean')
 
+        setup_wandb_classification_metrics()
+
     def log_string(str):
-        logger.info(str)
-        print(str)
+        _log_string(str, logger)
 
     def bn_momentum_adjust(m, momentum):
         if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.BatchNorm1d):
@@ -170,38 +210,6 @@ def main(config):
         elif classname.find('Linear') != -1:
             torch.nn.init.xavier_normal_(m.weight.data)
             torch.nn.init.constant_(m.bias.data, 0.0)
-
-    def setup_logging_dir():
-        # Create logging directory
-        timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
-        experiment_dir = Path('./log/')
-        experiment_dir.mkdir(exist_ok=True)
-        experiment_dir = experiment_dir.joinpath('masters')
-        experiment_dir.mkdir(exist_ok=True)
-        if config["log_dir is None"]:
-            experiment_dir = experiment_dir.joinpath(timestr)
-        else:
-            if "log/active_learning" in str(config["log_dir"]):
-                experiment_dir = config["log_dir"]
-            else:
-                experiment_dir = experiment_dir.joinpath(config["log_dir"])
-        experiment_dir.mkdir(exist_ok=True)
-        checkpoints_dir = experiment_dir.joinpath('checkpoints/')
-        checkpoints_dir.mkdir(exist_ok=True)
-        log_dir = experiment_dir.joinpath('logs/')
-        log_dir.mkdir(exist_ok=True)
-        return experiment_dir, log_dir, checkpoints_dir
-
-    def setup_logger():
-        # Setup logger (might ditch this)
-        logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_handler = logging.FileHandler('%s/%s.txt' % (log_dir, config["model"]))
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-        log_string('PARAMETER ...')
-        log_string(config)
 
     def setup_data_loaders():
 
@@ -255,7 +263,7 @@ def main(config):
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
         checkpoint_path = str(experiment_dir) + '/checkpoints/best_model.pth'
-        loaded_pretrained=True
+        loaded_pretrained = True
         # Check for models that have already been trained.
         try:
             checkpoint = torch.load(checkpoint_path)
@@ -457,33 +465,34 @@ def main(config):
                 # number of cell-batches to each cell in the grid.
                 samples_per_cell = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
                 # Collect the variances together based on the GRID_CELLs they represent
-                variance, features = [], []
+                cell_variance, cell_features = [], []
                 samples_per_cell_enumerator = enumerate(samples_per_cell)
                 for idx, num_samples in samples_per_cell_enumerator:
                     if num_samples == 1:
-                        variance.append(all_eval_variance[idx])
-                        features.append(all_eval_features[idx])
+                        cell_variance.append(all_eval_variance[idx])
+                        cell_features.append(all_eval_features[idx])
                     else:
-                        variance.append(np.mean(all_eval_variance[idx:idx + num_samples]))
-                        features.append(np.mean(all_eval_features[idx:idx + num_samples], axis=0))
+                        cell_variance.append(np.mean(all_eval_variance[idx:idx + num_samples]))
+                        cell_features.append(np.mean(all_eval_features[idx:idx + num_samples], axis=0))
 
-                variance = np.array(variance)
-                features = np.array(features)
-                variance = variance / variance.sum()  # Normalise to [-1,1]
-                features = features / features.sum()  # Normalise to [-1,1]
+                cell_variance = np.array(cell_variance)
+                cell_features = np.array(cell_features)
+                cell_variance = cell_variance / cell_variance.sum()  # Normalise to [-1,1]
+                cell_features = cell_features / cell_features.sum()  # Normalise to [-1,1]
 
                 np.savez_compressed(savepath, points=all_eval_points[unique_indices],
                                     preds=all_eval_pred[unique_indices],
-                                    target=all_eval_target[unique_indices], variance=variance,
-                                    point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[
+                                    target=all_eval_target[unique_indices], variance=cell_variance,
+                                    point_variance=np.repeat(cell_variance, VAL_DATASET.grid_cell_to_segment)[
                                         unique_indices],
-                                    grid_mask=VAL_DATASET.grid_mask, features=features,
-                                    samples_per_cell=samples_per_cell)
+                                    grid_mask=VAL_DATASET.grid_mask, features=cell_features,
+                                    # samples_per_cell=samples_per_cell
+                                    )
                 import shutil
                 shutil.copy(savepath, savepath[:-4] + f'_epoch{epoch}.npz')
                 log_string('Saved model validation predictions.')
-                np.sort(variance)
-                wandb.log({'Validation/top10variance_avg': np.mean(variance[:10])}, commit=False)
+                np.sort(cell_variance)
+                wandb.log({'Validation/top10variance_avg': np.mean(cell_variance[:10])}, commit=False)
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
             # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
@@ -583,9 +592,11 @@ def main(config):
 
     # HYPER PARAMETER
     os.environ["CUDA_VISIBLE_DEVICES"] = config["gpu"]
-    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir()
+    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir(config)
     logger = logging.getLogger("Model")
-    setup_logger()
+    setup_logger(logger, log_dir, config)
+    log_string('PARAMETERS ...')
+    log_string(config)
     setup_wandb_metrics()
 
     # Define constants
@@ -616,7 +627,8 @@ def main(config):
         if config["validate_only"]:
             start_epoch = config["epoch - 1"]
         else:
-            config["epoch"] = start_epoch + config["epoch"]  # from start epoch train another K epochs (as given by config["epoch)
+            config["epoch"] = start_epoch + config[
+                "epoch"]  # from start epoch train another K epochs (as given by config["epoch)
 
     for epoch in range(start_epoch, config["epoch"]):
         log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{config["epoch"]}) ****')
@@ -676,7 +688,7 @@ def main(config):
                            'Train/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
                 if config["log_merged_training_set"]:
                     if config["relative_point_coords"]:
-                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:,:, [6, 7, 8, 3]])
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:, :, [6, 7, 8, 3]])
                     else:
                         all_train_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
@@ -687,7 +699,6 @@ def main(config):
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(BATCH_SIZE, -1),
                                     np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1), i, epoch, 'Train',
                                     pred_labels.exp().cpu().data.numpy(), config["log_merged_training_batches"])
-
 
             best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
                                                            best_train_iou)
@@ -870,7 +881,8 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
     if config["log_merged_validation"]:
         if config["relative_point_coords"]:
-            all_eval_points.append(np.array(points.transpose(1, 2).cpu())[:,:, [6, 7, 8, 3]])  # Get the normalized xyzI
+            all_eval_points.append(
+                np.array(points.transpose(1, 2).cpu())[:, :, [6, 7, 8, 3]])  # Get the normalized xyzI
         else:
             all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
