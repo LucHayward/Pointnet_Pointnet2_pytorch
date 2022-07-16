@@ -163,6 +163,13 @@ class MastersDataset(Dataset):
                 points = self.segment_points[0]
                 labels = self.segment_labels[0]
 
+            # Ensure there are no duplicate points
+            points, unique_index = np.unique(points, axis=0, return_index=True)
+            labels = labels[unique_index]
+            self.segment_points[0] = points
+            self.segment_labels[0] = labels
+            del unique_index
+
             self.segments_idxs = np.arange(len(self.segment_points))
 
             num_points_in_segment = points.shape[0]
