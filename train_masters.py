@@ -110,7 +110,7 @@ def setup_logging_dir(config, exp_dir='masters'):
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
     experiment_dir = Path('./log/')
     experiment_dir.mkdir(exist_ok=True)
-    experiment_dir = experiment_dir.joinpath(experiment_dir)
+    experiment_dir = experiment_dir.joinpath(exp_dir)
     experiment_dir.mkdir(exist_ok=True)
     if config["log_dir"] is None:
         experiment_dir = experiment_dir.joinpath(timestr)

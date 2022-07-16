@@ -107,8 +107,9 @@ def main(config):
     TRAIN_DATASET = MastersDataset('train', Path(config['data_path']), sample_all_points=True)
     VAL_DATASET = MastersDataset('validate', Path(config['data_path']), sample_all_points=True)
     val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
-    X_train, y_train = np.vstack(TRAIN_DATASET.data_segment), np.hstack(TRAIN_DATASET.labels_segment)
-    X_val, y_val = np.vstack(VAL_DATASET.data_segment), np.hstack(VAL_DATASET.labels_segment)
+    # CHECK might need to undo this to make getting the variance back easier
+    X_train, y_train = TRAIN_DATASET.segment_points[0], TRAIN_DATASET.segment_labels[0]
+    X_val, y_val = VAL_DATASET.segment_points[0], VAL_DATASET.segment_labels[0]
     log_string(f"Training data: {X_train.shape}")
     log_string(f"Validation data: {X_val.shape}")
 
@@ -138,9 +139,13 @@ def main(config):
         # here we could easily include probabilities or log_probs from the model instead of prediction variance
         preds_vals = np.array(preds_vals)
         pred_variances = preds_vals.var(axis=0)  # This should be the prediction variance at each point
+        pred_probs = classifier.predict_proba(X_val)
 
         # Should be able to convert the points into cells by going backwards over samples_per_cell
-        # for idx, segments_in_cell in enumerate(VAL_DATASET.grid_cell_to_segment)
+        # Collect all the points together per cell, get the mean variance
+        cell_variance = []
+        for cell_idx in np.unique(VAL_DATASET.grid_mask):
+            cell_variance.append(np.mean(pred_variances[VAL_DATASET.grid_mask == cell_idx]))
 
         # Log the metrics and predictions for later use in active_learning.py
         log_string('Save model training predictions...')
@@ -153,7 +158,7 @@ def main(config):
         log_string('Saving at %s' % savepath)
         np.savez_compressed(savepath, points=X_val,
                             preds=preds_val,
-                            target=y_val, variance=None,  # cell_variance
+                            target=y_val, variance=cell_variance,  # cell_variance OR pred_probs?
                             point_variance=pred_variances,
                             grid_mask=VAL_DATASET.grid_mask,
                             features=X_val)
