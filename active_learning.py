@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import pickle
 
 import numpy as np
@@ -270,6 +271,13 @@ def calculate_iou(preds, target):
 
 def main(args):
     global AL_ITERATION
+    if args.model == 'pointnet++':
+        MODEL = importlib.import_module("train_masters")
+    elif args.model == "RF":
+        MODEL = importlib.import_module("train_rf")
+    elif args.model == "KPConv":
+        raise NotImplementedError
+
     # generate_initial_data_split(initial_labelling_percentage=5)
     for i in range(5):
         AL_ITERATION = i
@@ -302,10 +310,10 @@ def main(args):
             # train_args.batch_size = 8
             # train_args.validate_only = True
 
-            print(f"--- running training loop {i} ---")
-            wandb.config.update(train_args)
-            train_masters.main(wandb.config)
-            print(f"--- finished training loop {i} ---")
+        print(f"--- running training loop {i} ---")
+        wandb.config.update(train_args)
+        MODEL.main(wandb.config)
+        print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
         with np.load(LOG_DIR / str(AL_ITERATION) / 'train' / 'val_predictions.npz') as npz_file:
@@ -329,7 +337,7 @@ def main(args):
         adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
                                                                                 NUM_CLUSTERS)
         new_point_idxs = \
-        np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
+            np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
@@ -350,9 +358,11 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model', default='pointnet++', help="Which model (pointnet++, RF, KPConv)")
+    parser.add_argument('--model', default='pointnet++', help="Which model (pointnet++, RF, KPConv)",
+                        choices=["pointnet++", "RF", "KPConv"])
 
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     import os
