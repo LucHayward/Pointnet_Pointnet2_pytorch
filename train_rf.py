@@ -80,6 +80,16 @@ def log_metrics(target, preds, prefix=None, logger=None) -> None:
     metrics_dict['discardIoU'] = discardIoU
     _log_string(pformat(metrics_dict), logger)
 
+def classification_confidence_from_diverging_probability(probs):
+    """
+    Given a set of probabilities [0,1] for a binary classifier (closer to 0/1 is more probable of that value),
+    converts these to classification certainties.
+    i.e. the bigger the value [0,1] the more confident the model was in its prediction (regrdless of class)
+    :param probs: Diverging probabilities (probability of class 1)
+    :return: classification confidence irrespective of class.
+    """
+    # Shift the numbers from [0,1] to [-.5,.5] -> [-1,1] -> [0,1]
+    return np.abs((probs-0.5)*2)
 
 def main(config):
     def log_string(str):
