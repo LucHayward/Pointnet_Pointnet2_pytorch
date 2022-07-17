@@ -20,9 +20,6 @@ AL_ITERATION = 0
 GROUP_NAME = None
 NOTES = None
 
-NUM_CLUSTERS = 25
-NUM_CELLS_LABELING_BUDGET = 20
-
 LOG_DIR = Path("log/active_learning")
 FINISHED = False
 
@@ -57,12 +54,12 @@ def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points
     np.save(save_dir / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
-def select_new_points_to_label(dataset, viewer, percentage_cells=5):
+def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
     completed_selection = False
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells / 100:.0f}/{num_grid_cells}) for labelling")
+        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -172,6 +169,10 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
     if b is not None:
         np.random.shuffle(uncertainty_ordering_idxs[b:])
 
+    # CHECK is normalizing this the same as cosine?
+    # if args.normalize_feats:
+    #     from sklearn.preprocessing import normalize
+    #     features = normalize(features)
     kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(features)
 
     cluster_ids, cluster_sizes = np.unique(kmeans.labels_, return_counts=True)
@@ -205,7 +206,7 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
     return adjusted_uncertainty_ordering_idxs, kmeans.labels_
 
 
-def generate_initial_data_split(initial_labelling_percentage):
+def generate_initial_data_split(initial_labelling_budget):
     # get full pcd
     cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
     initial_dataset = None
@@ -224,7 +225,7 @@ def generate_initial_data_split(initial_labelling_percentage):
     v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
     selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init,
-                                                                        initial_labelling_percentage)
+                                                                        initial_labelling_budget)
     save_split_dataset(initial_dataset, selected_labelled_idxs)
     del initial_dataset
 
@@ -290,7 +291,7 @@ def main(args):
     elif args.model == "KPConv":
         raise NotImplementedError
 
-    # generate_initial_data_split(initial_labelling_percentage=5)
+    # generate_initial_data_split(initial_labelling_budget=args.init_label_budget)
     for i in tqdm(range(5), desc="AL Loop"):
         AL_ITERATION = i
 
@@ -334,7 +335,7 @@ def main(args):
 
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        MODEL.main(wandb.config)
+        # MODEL.main(wandb.config)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -357,9 +358,9 @@ def main(args):
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
         adjusted_uncertainty_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
-                                                                                NUM_CLUSTERS)
+                                                                                args.num_clusters)
         new_point_idxs = \
-            np.where(np.in1d(predict_grid_mask, adjusted_uncertainty_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
+            np.where(np.in1d(predict_grid_mask, adjusted_uncertainty_ordering_idxs[:args.label_budget]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
@@ -382,6 +383,10 @@ def parse_args():
 
     parser.add_argument('--model', default='RF', help="Which model (pointnet++, RF, KPConv)",
                         choices=["pointnet++", "RF", "KPConv"])
+    parser.add_argument('--init_label_budget', default = 0.05, help="Initial labelling budget as a fraction of cells")
+    parser.add_argument('--label_budget', default=0.05, help="Labelling budget after each AL iteration")
+    parser.add_argument('--num_clusters', default=75, help='Number of clusters for KMeans')
+    parser.add_argument('--distance_metric', default='cosine', help='Distance metric for clustering in feature space')
 
     return parser.parse_args()
 
