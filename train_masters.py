@@ -116,7 +116,7 @@ def setup_logging_dir(config, exp_dir='masters'):
         experiment_dir = experiment_dir.joinpath(timestr)
     else:
         if "log/active_learning" in str(config["log_dir"]):
-            experiment_dir = config["log_dir"]
+            experiment_dir = Path(config["log_dir"])
         else:
             experiment_dir = experiment_dir.joinpath(config["log_dir"])
     experiment_dir.mkdir(exist_ok=True)

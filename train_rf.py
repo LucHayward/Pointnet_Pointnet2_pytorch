@@ -1,13 +1,15 @@
 import logging
 from pprint import pprint, pformat
+from line_profiler_pycharm import profile
 
 import torch.utils.data
-from joblib import dump
+from joblib import dump, load
 
 import numpy as np
 import pptk
 from pathlib import Path
 import wandb
+from tqdm import tqdm
 
 from data_utils.MastersDataset import MastersDataset
 
@@ -44,7 +46,7 @@ def parse_args():
 
     return parser.parse_args()
 
-
+@profile
 def log_metrics(target, preds, prefix=None, logger=None) -> None:
     """
     Log the confusion matrix, the confusion matrix normalized over true_labels (category),
@@ -78,6 +80,7 @@ def log_metrics(target, preds, prefix=None, logger=None) -> None:
     wandb.log({prefix: metrics_dict})
     metrics_dict['keepIoU'] = keepIoU
     metrics_dict['discardIoU'] = discardIoU
+    _log_string(f"{prefix} metrics:", logger)
     _log_string(pformat(metrics_dict), logger)
 
 def classification_confidence_from_diverging_probability(probs):
@@ -113,14 +116,18 @@ def main(config):
     log_string(f"Training data: {X_train.shape}")
     log_string(f"Validation data: {X_val.shape}")
 
-    # Setup classifier, train and perform predictions
-    classifier = RandomForestClassifier(n_estimators=config["n_estimators"],
-                                        max_depth=config['max_depth'],
-                                        min_samples_split=config['min_samples_split'],
-                                        n_jobs=4,
-                                        verbose=1)
-    classifier.fit(X=X_train, y=y_train)
-    dump(classifier, checkpoints_dir / 'random_forest.joblib')
+    if (checkpoints_dir/'random_forest.joblib').exists():
+        log_string("Loading prefit random forest")
+        classifier = load(checkpoints_dir/'random_forest.joblib')
+    else:
+        # Setup classifier, train and perform predictions
+        classifier = RandomForestClassifier(n_estimators=config["n_estimators"],
+                                            max_depth=config['max_depth'],
+                                            min_samples_split=config['min_samples_split'],
+                                            n_jobs=4,
+                                            verbose=1)
+        classifier.fit(X=X_train, y=y_train)
+        dump(classifier, checkpoints_dir / 'random_forest.joblib')
     log_string(f"Feature importances:\n{classifier.feature_importances_}")
 
     preds_train = classifier.predict(X_train)
@@ -128,24 +135,31 @@ def main(config):
 
     # for i, sample in enumerate(val_data_loader):
     preds_val = classifier.predict(X_val)
-    log_metrics(y_train, preds_train, 'Validation', logger)
+    log_metrics(y_val, preds_val, 'Validation', logger)
 
     if config["active_learning"]:
-        preds_vals = [preds_val]
-        for i in range(int(config["validation_repeats"])-1):
-            classifier.fit(X=X_train, y=y_train)
-            preds_vals.append(classifier.predict(X_val))
+        if config["uncertainty_metric"] == "variance":
+            preds_vals = [preds_val]
+            for i in range(int(config["validation_repeats"])-1):
+                classifier.fit(X=X_train, y=y_train)
+                preds_vals.append(classifier.predict(X_val))
 
-        # here we could easily include probabilities or log_probs from the model instead of prediction variance
-        preds_vals = np.array(preds_vals)
-        pred_variances = preds_vals.var(axis=0)  # This should be the prediction variance at each point
-        pred_probs = classifier.predict_proba(X_val)
+            # here we could easily include probabilities or log_probs from the model instead of prediction variance
+            preds_vals = np.array(preds_vals)
+            pred_uncertainty = preds_vals.var(axis=0)  # This should be the prediction variance at each point
+        elif config["uncertainty_metric"] == "probability":
+            pred_probs = classifier.predict_proba(X_val)
+            # 1- to make more confident predictions closer to 0 (uncertainty)
+            pred_uncertainty = 1-classification_confidence_from_diverging_probability(pred_probs[:,1])
 
         # Should be able to convert the points into cells by going backwards over samples_per_cell
         # Collect all the points together per cell, get the mean variance
-        cell_variance = []
-        for cell_idx in np.unique(VAL_DATASET.grid_mask):
-            cell_variance.append(np.mean(pred_variances[VAL_DATASET.grid_mask == cell_idx]))
+        cell_uncertainty = []
+        cell_features = []
+        for cell_idx in tqdm(np.unique(VAL_DATASET.grid_mask), desc='Rebuilding cells'):
+            cell_idx_mask = VAL_DATASET.grid_mask == cell_idx
+            cell_uncertainty.append(np.mean(pred_uncertainty[cell_idx_mask]))
+            cell_features.append(np.mean(X_val[cell_idx_mask], axis=0))
 
         # Log the metrics and predictions for later use in active_learning.py
         log_string('Save model training predictions...')
@@ -158,10 +172,10 @@ def main(config):
         log_string('Saving at %s' % savepath)
         np.savez_compressed(savepath, points=X_val,
                             preds=preds_val,
-                            target=y_val, variance=cell_variance,  # cell_variance OR pred_probs?
-                            point_variance=pred_variances,
+                            target=y_val, variance=cell_uncertainty,  # cell_variance OR pred_probs?
+                            point_variance=pred_uncertainty,
                             grid_mask=VAL_DATASET.grid_mask,
-                            features=X_val)
+                            features=cell_features)
 
 
 if __name__ == '__main__':
