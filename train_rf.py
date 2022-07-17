@@ -64,23 +64,22 @@ def log_metrics(target, preds, prefix=None, logger=None) -> None:
     keepIoU, discardIoU = jaccard_score(target, preds, average=None)
     mIoU = jaccard_score(target, preds, average='macro')
 
-    metrics_dict = {'TP': tp,
-                    'FP': fp,
-                    'TN': tn,
-                    'FN': fn,
-                    'category-TP': cat_tp,
-                    'category-FP': cat_fp,
-                    'category-TN': cat_tn,
-                    'category-FN': cat_fn,
-                    'Precision': precision,
-                    'Recall': recall,
-                    'F1': f1,
-                    'accuracy': accuracy,
-                    'mIoU': mIoU}
-    wandb.log({prefix: metrics_dict})
-    metrics_dict['keepIoU'] = keepIoU
-    metrics_dict['discardIoU'] = discardIoU
-    _log_string(f"{prefix} metrics:", logger)
+    metrics_dict = {f'{prefix}/TP': tp,
+                    f'{prefix}/FP': fp,
+                    f'{prefix}/TN': tn,
+                    f'{prefix}/FN': fn,
+                    f'{prefix}/category-TP': cat_tp,
+                    f'{prefix}/category-FP': cat_fp,
+                    f'{prefix}/category-TN': cat_tn,
+                    f'{prefix}/category-FN': cat_fn,
+                    f'{prefix}/Precision': precision,
+                    f'{prefix}/Recall': recall,
+                    f'{prefix}/F1': f1,
+                    f'{prefix}/accuracy': accuracy,
+                    f'{prefix}/mIoU': mIoU}
+    wandb.log(metrics_dict)
+    metrics_dict[f'{prefix}/keepIoU'] = keepIoU
+    metrics_dict[f'{prefix}/discardIoU'] = discardIoU
     _log_string(pformat(metrics_dict), logger)
 
 def classification_confidence_from_diverging_probability(probs):

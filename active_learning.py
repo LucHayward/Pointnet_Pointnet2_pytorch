@@ -10,6 +10,8 @@ from sklearn.metrics import accuracy_score, jaccard_score
 import yaml
 from argparse import Namespace
 
+from tqdm import tqdm
+
 import Visualisation_utils
 import train_masters
 from data_utils.MastersDataset import MastersDataset
@@ -241,7 +243,7 @@ def log_merged_metrics(train_labels, predict_preds, predict_target):
 
     accuracy = accuracy_score(y_true=merged_target, y_pred=merged_preds)
     IoU = jaccard_score(merged_target, merged_preds)
-    mIoU = jaccard_score(merged_target, merged_preds, average='true')
+    mIoU = jaccard_score(merged_target, merged_preds, average='macro')
 
     # accuracy = sum(merged_preds == merged_target) / len(merged_target)
     #
@@ -289,7 +291,7 @@ def main(args):
         raise NotImplementedError
 
     # generate_initial_data_split(initial_labelling_percentage=5)
-    for i in range(5):
+    for i in tqdm(range(5), desc="AL Loop"):
         AL_ITERATION = i
 
         # Setup the wandb logging using group names inside the loop so that you can track the runs
@@ -332,7 +334,7 @@ def main(args):
 
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        # MODEL.main(wandb.config)
+        MODEL.main(wandb.config)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
