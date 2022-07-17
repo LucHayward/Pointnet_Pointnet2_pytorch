@@ -5,6 +5,7 @@ import pickle
 import numpy as np
 import pptk
 from pathlib import Path
+from sklearn.metrics import accuracy_score, jaccard_score
 
 import yaml
 from argparse import Namespace
@@ -145,7 +146,7 @@ def round_to_N_ignoring_leading_zeros(number, ending_values_to_keep=4):
     return eval(f'{number:2.{float_limiter + 1 + ending_values_to_keep}f}')
 
 
-def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9):
+def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0.9):
     """
     Score each sample with its uncertainty U
     Clusters the samples into K clusters based on their feature embeddings
@@ -154,19 +155,20 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     The result is a ranking of regions based on uncertainty and diversity
     (such that the most uncertain regions are ranked first, but repeat regions from the same cluster are unlikely).
     :param penalty_factor: How much to reduce the weighting of subsequent cells in a cluster (1 = no change, 0 = remove)
-    :return: adjusted variance ordering idxs,
+    :return: adjusted uncertainty ordering idxs,
     """
     from sklearn import cluster
-    variance_ordering_idxs = variance.argsort()[::-1]
+    uncertainty_ordering_idxs = uncertainty.argsort()[::-1]
 
-    # Find idxs for zero variance cells and shuffle those
+    # Find idxs for zero uncertainty cells and shuffle those
+    # TODO shuffle all within unique buckets
     b = None
-    for i, x in enumerate(variance_ordering_idxs):
-        if variance[x] == 0:
+    for i, x in enumerate(uncertainty_ordering_idxs):
+        if uncertainty[x] == 0:
             b = i
             break
     if b is not None:
-        np.random.shuffle(variance_ordering_idxs[b:])
+        np.random.shuffle(uncertainty_ordering_idxs[b:])
 
     kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(features)
 
@@ -174,31 +176,31 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     for c, n in zip(cluster_ids, cluster_sizes):
         print(f"Clusters {c}: {n} cells")
 
-    print(F"Debug: Initial ordering ({len(variance_ordering_idxs)} cells):")
-    for idx in variance_ordering_idxs[:20]:
+    print(F"Debug: Initial ordering ({len(uncertainty_ordering_idxs)} cells):")
+    for idx in uncertainty_ordering_idxs[:20]:
         print(
-            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]:.5g} ")
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  uncertainty {uncertainty[idx]:.5g} ")
 
-    adjusted_variance = np.copy(variance)
-    for i, idx in enumerate(variance_ordering_idxs):  # iterate over the clusters in order of variance
+    adjusted_uncertainty = np.copy(uncertainty)
+    for i, idx in enumerate(uncertainty_ordering_idxs):  # iterate over the clusters in order of uncertainty
         current_cluster = kmeans.labels_[idx]
-        for x in range(i + 1, len(variance_ordering_idxs)):  # iterate over the remaining clusters in order of variance
-            x = variance_ordering_idxs[x]
-            if kmeans.labels_[x] == current_cluster:  # Scale the variances in the same cluster
-                adjusted_variance[x] *= penalty_factor
+        for x in range(i + 1, len(uncertainty_ordering_idxs)):  # iterate over the remaining clusters in order of uncertainty
+            x = uncertainty_ordering_idxs[x]
+            if kmeans.labels_[x] == current_cluster:  # Scale the uncertaintys in the same cluster
+                adjusted_uncertainty[x] *= penalty_factor
 
     print(
-        f"Old variance_ordering_idxs:\n"
-        f"{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
-    adjusted_variance_ordering_idxs = adjusted_variance.argsort()[::-1]
+        f"Old uncertainty_ordering_idxs:\n"
+        f"{list(zip(uncertainty_ordering_idxs[:10], kmeans.labels_[uncertainty_ordering_idxs[:10]]))}")
+    adjusted_uncertainty_ordering_idxs = adjusted_uncertainty.argsort()[::-1]
     print(
-        f"New variance_ordering_idxs:\n"
-        f"{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
-    for idx in adjusted_variance_ordering_idxs[:20]:
+        f"New uncertainty_ordering_idxs:\n"
+        f"{list(zip(adjusted_uncertainty_ordering_idxs[:10], kmeans.labels_[adjusted_uncertainty_ordering_idxs[:10]]))}")
+    for idx in adjusted_uncertainty_ordering_idxs[:20]:
         print(
-            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.5g}")
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  uncertainty {adjusted_uncertainty[idx]:.5g}")
 
-    return adjusted_variance_ordering_idxs, kmeans.labels_
+    return adjusted_uncertainty_ordering_idxs, kmeans.labels_
 
 
 def generate_initial_data_split(initial_labelling_percentage):
@@ -310,9 +312,19 @@ def main(args):
             # train_args.batch_size = 8
             # train_args.validate_only = True
 
+
+        elif args.model == 'RF':
+            with open(Path(f"configs/RandomForests/default.yaml")) as yaml_args:
+                train_args = yaml.safe_load(yaml_args)
+                train_args = Namespace(**train_args)
+            train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
+            train_args.data_path = LOG_DIR / str(AL_ITERATION)
+            train_args.data_path.mkdir(exist_ok=True, parents=True)
+            train_args.log_dir.mkdir(exist_ok=True, parents=True)
+
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        MODEL.main(wandb.config)
+        # MODEL.main(wandb.config)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -334,10 +346,10 @@ def main(args):
         #                                                               len(selected_cells) * 3, predict_grid_mask)
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
-        adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
+        adjusted_uncertainty_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
                                                                                 NUM_CLUSTERS)
         new_point_idxs = \
-            np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
+            np.where(np.in1d(predict_grid_mask, adjusted_uncertainty_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
@@ -358,7 +370,7 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model', default='pointnet++', help="Which model (pointnet++, RF, KPConv)",
+    parser.add_argument('--model', default='RF', help="Which model (pointnet++, RF, KPConv)",
                         choices=["pointnet++", "RF", "KPConv"])
 
     return parser.parse_args()
@@ -372,9 +384,8 @@ if __name__ == '__main__':
 
     os.environ["WANDB_MODE"] = "dryrun"
 
-    GROUP_NAME = 'AL: 50%start_20epoch_5%increase'
-    NOTES = "starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the " \
-            "50% start non-active learning otherwise something has gone wrong"
+    GROUP_NAME = f'AL-{args.model}: Test'
+    NOTES = "Testing RF"
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
