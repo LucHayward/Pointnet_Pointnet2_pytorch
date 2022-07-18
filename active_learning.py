@@ -1,11 +1,16 @@
+import argparse
+import importlib
 import pickle
 
 import numpy as np
 import pptk
 from pathlib import Path
+from sklearn.metrics import accuracy_score, jaccard_score
 
 import yaml
 from argparse import Namespace
+
+from tqdm import tqdm
 
 import Visualisation_utils
 import train_masters
@@ -14,9 +19,6 @@ from data_utils.MastersDataset import MastersDataset
 AL_ITERATION = 0
 GROUP_NAME = None
 NOTES = None
-
-NUM_CLUSTERS = 25
-NUM_CELLS_LABELING_BUDGET = 20
 
 LOG_DIR = Path("log/active_learning")
 FINISHED = False
@@ -52,12 +54,12 @@ def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points
     np.save(save_dir / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
-def select_new_points_to_label(dataset, viewer, percentage_cells=5):
+def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
     completed_selection = False
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells / 100:.0f}/{num_grid_cells}) for labelling")
+        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -143,7 +145,7 @@ def round_to_N_ignoring_leading_zeros(number, ending_values_to_keep=4):
     return eval(f'{number:2.{float_limiter + 1 + ending_values_to_keep}f}')
 
 
-def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9):
+def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0.9):
     """
     Score each sample with its uncertainty U
     Clusters the samples into K clusters based on their feature embeddings
@@ -152,54 +154,59 @@ def get_diversity_ranking(features, variance, n_clusters=10, penalty_factor=0.9)
     The result is a ranking of regions based on uncertainty and diversity
     (such that the most uncertain regions are ranked first, but repeat regions from the same cluster are unlikely).
     :param penalty_factor: How much to reduce the weighting of subsequent cells in a cluster (1 = no change, 0 = remove)
-    :return: adjusted variance ordering idxs,
+    :return: adjusted uncertainty ordering idxs,
     """
     from sklearn import cluster
-    variance_ordering_idxs = variance.argsort()[::-1]
+    uncertainty_ordering_idxs = uncertainty.argsort()[::-1]
 
-    # Find idxs for zero variance cells and shuffle those
+    # Find idxs for zero uncertainty cells and shuffle those
+    # TODO shuffle all within unique buckets
     b = None
-    for i, x in enumerate(variance_ordering_idxs):
-        if variance[x] == 0:
+    for i, x in enumerate(uncertainty_ordering_idxs):
+        if uncertainty[x] == 0:
             b = i
             break
     if b is not None:
-        np.random.shuffle(variance_ordering_idxs[b:])
+        np.random.shuffle(uncertainty_ordering_idxs[b:])
 
+    # CHECK is normalizing this the same as cosine?
+    # if args.normalize_feats:
+    #     from sklearn.preprocessing import normalize
+    #     features = normalize(features)
     kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(features)
 
     cluster_ids, cluster_sizes = np.unique(kmeans.labels_, return_counts=True)
     for c, n in zip(cluster_ids, cluster_sizes):
         print(f"Clusters {c}: {n} cells")
 
-    print(F"Debug: Initial ordering ({len(variance_ordering_idxs)} cells):")
-    for idx in variance_ordering_idxs[:20]:
+    print(F"Debug: Initial ordering ({len(uncertainty_ordering_idxs)} cells):")
+    for idx in uncertainty_ordering_idxs[:20]:
         print(
-            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {variance[idx]:.5g} ")
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  uncertainty {uncertainty[idx]:.5g} ")
 
-    adjusted_variance = np.copy(variance)
-    for i, idx in enumerate(variance_ordering_idxs):  # iterate over the clusters in order of variance
+    adjusted_uncertainty = np.copy(uncertainty)
+    for i, idx in enumerate(uncertainty_ordering_idxs):  # iterate over the clusters in order of uncertainty
         current_cluster = kmeans.labels_[idx]
-        for x in range(i + 1, len(variance_ordering_idxs)):  # iterate over the remaining clusters in order of variance
-            x = variance_ordering_idxs[x]
-            if kmeans.labels_[x] == current_cluster:  # Scale the variances in the same cluster
-                adjusted_variance[x] *= penalty_factor
+        for x in range(i + 1, len(uncertainty_ordering_idxs)):  # iterate over the remaining clusters in order of uncertainty
+            x = uncertainty_ordering_idxs[x]
+            if kmeans.labels_[x] == current_cluster:  # Scale the uncertaintys in the same cluster
+                adjusted_uncertainty[x] *= penalty_factor
 
     print(
-        f"Old variance_ordering_idxs:\n"
-        f"{list(zip(variance_ordering_idxs[:10], kmeans.labels_[variance_ordering_idxs[:10]]))}")
-    adjusted_variance_ordering_idxs = adjusted_variance.argsort()[::-1]
+        f"Old uncertainty_ordering_idxs:\n"
+        f"{list(zip(uncertainty_ordering_idxs[:10], kmeans.labels_[uncertainty_ordering_idxs[:10]]))}")
+    adjusted_uncertainty_ordering_idxs = adjusted_uncertainty.argsort()[::-1]
     print(
-        f"New variance_ordering_idxs:\n"
-        f"{list(zip(adjusted_variance_ordering_idxs[:10], kmeans.labels_[adjusted_variance_ordering_idxs[:10]]))}")
-    for idx in adjusted_variance_ordering_idxs[:20]:
+        f"New uncertainty_ordering_idxs:\n"
+        f"{list(zip(adjusted_uncertainty_ordering_idxs[:10], kmeans.labels_[adjusted_uncertainty_ordering_idxs[:10]]))}")
+    for idx in adjusted_uncertainty_ordering_idxs[:20]:
         print(
-            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  variance {adjusted_variance[idx]:.5g}")
+            f"Idx {idx}, Cluster {kmeans.labels_[idx]},  uncertainty {adjusted_uncertainty[idx]:.5g}")
 
-    return adjusted_variance_ordering_idxs, kmeans.labels_
+    return adjusted_uncertainty_ordering_idxs, kmeans.labels_
 
 
-def generate_initial_data_split(initial_labelling_percentage):
+def generate_initial_data_split(initial_labelling_budget):
     # get full pcd
     cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
     initial_dataset = None
@@ -218,7 +225,7 @@ def generate_initial_data_split(initial_labelling_percentage):
     v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
     selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init,
-                                                                        initial_labelling_percentage)
+                                                                        initial_labelling_budget)
     save_split_dataset(initial_dataset, selected_labelled_idxs)
     del initial_dataset
 
@@ -235,9 +242,13 @@ def log_merged_metrics(train_labels, predict_preds, predict_target):
     merged_preds = np.hstack((train_labels, predict_preds))
     merged_target = np.hstack((train_labels, predict_target))
 
-    accuracy = sum(merged_preds == merged_target) / len(merged_target)
+    accuracy = accuracy_score(y_true=merged_target, y_pred=merged_preds)
+    IoU = jaccard_score(merged_target, merged_preds)
+    mIoU = jaccard_score(merged_target, merged_preds, average='macro')
 
-    IoU, mIoU = calculate_iou(merged_preds, merged_target)
+    # accuracy = sum(merged_preds == merged_target) / len(merged_target)
+    #
+    # IoU, mIoU = calculate_iou(merged_preds, merged_target)
 
     MERGED_ACCURACY.append(accuracy)
     MERGED_IOU.append(mIoU)
@@ -245,36 +256,44 @@ def log_merged_metrics(train_labels, predict_preds, predict_target):
 
 def calculate_iou(preds, target):
     """
+    Deprecated, user sklearn.metrics.jaccard_score(target,preds)
     Calculates the iou and mIoU for a binary classifier give the predictions and the target labels
     :param preds: the predicted class labels
     :param target:  the target class labels
     :return: the IoU of each class and the meanIoU
     """
-    total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
-    for l in range(2):
-        target_l = (target == l)
-        pred_l = (preds == l)
+    IoU = jaccard_score(target, preds)
+    mIoU = jaccard_score(target, preds, average='true')
 
-        total_seen_class[l] += np.sum(target_l)  # How many times the label was available
-        # How often the predicted label was correct in the batch
-        total_correct_class[l] += np.sum(pred_l & target_l)
-        # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
-        total_iou_denominator_class[l] += np.sum((pred_l | target_l))
-
-    IoU = np.array(total_correct_class) / (np.array(total_iou_denominator_class,
-                                                    dtype=np.float64) + 1e-6)  # correct prediction/class occurrences + false prediction
-    mIoU = np.mean(IoU)
+    # total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
+    # for l in range(2):
+    #     target_l = (target == l)
+    #     pred_l = (preds == l)
+    #
+    #     total_seen_class[l] += np.sum(target_l)  # How many times the label was available
+    #     # How often the predicted label was correct in the batch
+    #     total_correct_class[l] += np.sum(pred_l & target_l)
+    #     # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
+    #     total_iou_denominator_class[l] += np.sum((pred_l | target_l))
+    #
+    # IoU = np.array(total_correct_class) / (np.array(total_iou_denominator_class,
+    #                                                 dtype=np.float64) + 1e-6)  # correct prediction/class occurrences + false prediction
+    # mIoU = np.mean(IoU)
     return IoU, mIoU
 
 
-def main():
+def main(args):
     global AL_ITERATION
-    # generate_initial_data_split(initial_labelling_percentage=5)
-    for i in range(5):
+    if args.model == 'pointnet++':
+        MODEL = importlib.import_module("train_masters")
+    elif args.model == "RF":
+        MODEL = importlib.import_module("train_rf")
+    elif args.model == "KPConv":
+        raise NotImplementedError
+
+    # generate_initial_data_split(initial_labelling_budget=args.init_label_budget)
+    for i in tqdm(range(5), desc="AL Loop"):
         AL_ITERATION = i
-        #   Now train on the trained dataset for K epochs ((or until delta train_loss < L))
-        #   Can do this by calling train_masters.py with limited epochs or some special stop condition
-        #   Or just repeating everything gross
 
         # Setup the wandb logging using group names inside the loop so that you can track the runs
         # as several lines on the same plot
@@ -282,29 +301,41 @@ def main():
                    notes=NOTES)
         if i == 0: wandb.run.log_code(".")
 
-        with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
-            train_args = yaml.safe_load(yaml_args)
-            train_args = Namespace(**train_args)
-        train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
-        train_args.data_path = LOG_DIR / str(AL_ITERATION)
-        train_args.data_path.mkdir(exist_ok=True, parents=True)
-        train_args.log_dir.mkdir(exist_ok=True, parents=True)
+        if args.model == 'pointnet++':
+            with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
+                train_args = yaml.safe_load(yaml_args)
+                train_args = Namespace(**train_args)
+            train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
+            train_args.data_path = LOG_DIR / str(AL_ITERATION)
+            train_args.data_path.mkdir(exist_ok=True, parents=True)
+            train_args.log_dir.mkdir(exist_ok=True, parents=True)
 
-        # Move the best_train_model from the previous iteration to this iterations log_dir
-        if AL_ITERATION > 0:
-            import shutil
-            checkpoint_dir = (train_args.log_dir / 'checkpoints')
-            checkpoint_dir.mkdir(exist_ok=True, parents=True)
-            old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
-            shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
+            # Move the best_train_model from the previous iteration to this iterations log_dir
+            if AL_ITERATION > 0:
+                import shutil
+                checkpoint_dir = (train_args.log_dir / 'checkpoints')
+                checkpoint_dir.mkdir(exist_ok=True, parents=True)
+                old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
+                shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
 
-        # train_args.epoch = 20  # set in config yaml
-        # train_args.npoint *= 4
-        # train_args.batch_size = 8
-        # train_args.validate_only = True
+            # train_args.epoch = 20  # set in config yaml
+            # train_args.npoint *= 4
+            # train_args.batch_size = 8
+            # train_args.validate_only = True
+
+
+        elif args.model == 'RF':
+            with open(Path(f"configs/RandomForests/default.yaml")) as yaml_args:
+                train_args = yaml.safe_load(yaml_args)
+                train_args = Namespace(**train_args)
+            train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
+            train_args.data_path = LOG_DIR / str(AL_ITERATION)
+            train_args.data_path.mkdir(exist_ok=True, parents=True)
+            train_args.log_dir.mkdir(exist_ok=True, parents=True)
+
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        # train_masters.main(train_args)
+        # MODEL.main(wandb.config)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -313,10 +344,10 @@ def main():
             predict_preds = npz_file['preds']
             predict_target = npz_file['target']
             predict_variance = npz_file['variance']  # Variances are normalised to [-1,1]
-            predict_point_variance = npz_file['point_variance']  # is used
+            predict_point_variance = npz_file['point_variance']  # was used
             predict_grid_mask = npz_file['grid_mask'].astype('int16')
             predict_features = npz_file['features']
-            predict_samples_per_cell = npz_file['samples_per_cell']
+            # predict_samples_per_cell = npz_file['samples_per_cell']
 
         # Show merged pointcloud in pptk
         # val_old_ds = MastersDataset('validate', LOG_DIR / str(AL_ITERATION), sample_all_points=True)
@@ -326,10 +357,10 @@ def main():
         #                                                               len(selected_cells) * 3, predict_grid_mask)
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
-        adjusted_variance_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
-                                                                                NUM_CLUSTERS)
+        adjusted_uncertainty_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
+                                                                                args.num_clusters)
         new_point_idxs = \
-        np.where(np.in1d(predict_grid_mask, adjusted_variance_ordering_idxs[:NUM_CELLS_LABELING_BUDGET]))[0]
+            np.where(np.in1d(predict_grid_mask, adjusted_uncertainty_ordering_idxs[:args.label_budget]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
@@ -347,16 +378,30 @@ def main():
         wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou})
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--model', default='RF', help="Which model (pointnet++, RF, KPConv)",
+                        choices=["pointnet++", "RF", "KPConv"])
+    parser.add_argument('--init_label_budget', default = 0.05, help="Initial labelling budget as a fraction of cells")
+    parser.add_argument('--label_budget', default=0.05, help="Labelling budget after each AL iteration")
+    parser.add_argument('--num_clusters', default=75, help='Number of clusters for KMeans')
+    parser.add_argument('--distance_metric', default='cosine', help='Distance metric for clustering in feature space')
+
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     import os
     import wandb
 
+    args = parse_args()
+
     os.environ["WANDB_MODE"] = "dryrun"
 
-    GROUP_NAME = 'AL: 50%start_20epoch_5%increase'
-    NOTES = "starting at 50% for 20 epochs with a 5% increase. Expecting to see similar results to the " \
-            "50% start non-active learning otherwise something has gone wrong"
+    GROUP_NAME = f'AL-{args.model}: Test'
+    NOTES = "Testing RF"
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-    main()
+    main(args)

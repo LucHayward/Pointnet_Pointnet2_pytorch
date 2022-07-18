@@ -80,6 +80,10 @@ def parse_args():
                         help='Force the label distribution per batch to be approximately even')
     parser.add_argument('--sample_all_validation', action='store_true',
                         help='Samples all the points in a grid for the validation')
+    parser.add_argument('--relative_point_coords', action='store_true',
+                        help='Use the old S3DIS point features (relativeXYZ,IGB,XYZ/max(xyz)')
+    parser.add_argument('--save_intermediate_models', default=True,
+                        help='Save models at each epoch instead of only the "best"')
 
     # Exposing model hparams
     # Pointnet Set Abstraction: Group All options
@@ -101,10 +105,97 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
+def setup_logging_dir(config, exp_dir='masters'):
+    # Create logging directory
+    timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
+    experiment_dir = Path('./log/')
+    experiment_dir.mkdir(exist_ok=True)
+    experiment_dir = experiment_dir.joinpath(exp_dir)
+    experiment_dir.mkdir(exist_ok=True)
+    if config["log_dir"] is None:
+        experiment_dir = experiment_dir.joinpath(timestr)
+    else:
+        if "log/active_learning" in str(config["log_dir"]):
+            experiment_dir = Path(config["log_dir"])
+        else:
+            experiment_dir = experiment_dir.joinpath(config["log_dir"])
+    experiment_dir.mkdir(exist_ok=True)
+    checkpoints_dir = experiment_dir.joinpath('checkpoints/')
+    checkpoints_dir.mkdir(exist_ok=True)
+    log_dir = experiment_dir.joinpath('logs/')
+    log_dir.mkdir(exist_ok=True)
+    return experiment_dir, log_dir, checkpoints_dir
+
+
+def setup_logger(logger, log_dir, config):
+    # Setup logger (might ditch this)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler = logging.FileHandler('%s/%s.txt' % (log_dir, config["model"]))
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+
+def setup_wandb_classification_metrics():
+    # Train classification metrics
+    wandb.define_metric('Train/TP', summary='max')
+    wandb.define_metric('Train/FP', summary='min')
+    wandb.define_metric('Train/TN', summary='max')
+    wandb.define_metric('Train/FN', summary='min')
+
+    wandb.define_metric('Train/category-TP', summary='max')
+    wandb.define_metric('Train/category-FP', summary='min')
+    wandb.define_metric('Train/category-TN', summary='max')
+    wandb.define_metric('Train/category-FN', summary='min')
+
+    wandb.define_metric('Train/Precision', summary='max')
+    wandb.define_metric('Train/Recall', summary='max')
+    wandb.define_metric('Train/F1', summary='max')
+    wandb.define_metric('Train/mIoU', summary='max')
+    wandb.define_metric('Train/accuracy', summary='max')
+    wandb.define_metric('Train/mean_loss', summary='min')
+
+    # Validation Classification metrics
+    wandb.define_metric('validation/TP', summary='max')
+    wandb.define_metric('validation/FP', summary='min')
+    wandb.define_metric('validation/TN', summary='max')
+    wandb.define_metric('validation/FN', summary='min')
+
+    wandb.define_metric('validation/category-TP', summary='max')
+    wandb.define_metric('validation/category-FP', summary='min')
+    wandb.define_metric('validation/category-TN', summary='max')
+    wandb.define_metric('validation/category-FN', summary='min')
+
+    wandb.define_metric('Validation/Precision', summary='max')
+    wandb.define_metric('Validation/Recall', summary='max')
+    wandb.define_metric('Validation/F1', summary='max')
+    wandb.define_metric('Validation/eval_point_mIoU', summary='max')
+    wandb.define_metric('Validation/eval_point_accuracy', summary='max')
+    wandb.define_metric('Validation/eval_point_avg_class_accuracy', summary='max')
+    wandb.define_metric('Validation/eval_mean_loss', summary='min')
+
+
+def _log_string(str, logger):
+    logger.info(str)
+    print(str)
+
+def main(config):
+    def setup_wandb_metrics():
+        # Inner epoch steps
+        wandb.define_metric('Train/inner_epoch_step')
+        wandb.define_metric('Train/inner_epoch/*', step_metric="Train/inner_epoch_step")
+
+        wandb.define_metric('Validation/inner_epoch_step')
+        wandb.define_metric('Validation/inner_epoch/*', step_metric="Validation/inner_epoch_step")
+
+        # Debugging metrics
+        wandb.define_metric('Validation/top10variance_avg', summary='mean')
+
+        setup_wandb_classification_metrics()
+
     def log_string(str):
-        logger.info(str)
-        print(str)
+        _log_string(str, logger)
 
     def bn_momentum_adjust(m, momentum):
         if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.BatchNorm1d):
@@ -120,38 +211,6 @@ def main(args):
             torch.nn.init.xavier_normal_(m.weight.data)
             torch.nn.init.constant_(m.bias.data, 0.0)
 
-    def setup_logging_dir():
-        # Create logging directory
-        timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
-        experiment_dir = Path('./log/')
-        experiment_dir.mkdir(exist_ok=True)
-        experiment_dir = experiment_dir.joinpath('masters')
-        experiment_dir.mkdir(exist_ok=True)
-        if args.log_dir is None:
-            experiment_dir = experiment_dir.joinpath(timestr)
-        else:
-            if "log/active_learning" in str(args.log_dir):
-                experiment_dir = args.log_dir
-            else:
-                experiment_dir = experiment_dir.joinpath(args.log_dir)
-        experiment_dir.mkdir(exist_ok=True)
-        checkpoints_dir = experiment_dir.joinpath('checkpoints/')
-        checkpoints_dir.mkdir(exist_ok=True)
-        log_dir = experiment_dir.joinpath('logs/')
-        log_dir.mkdir(exist_ok=True)
-        return experiment_dir, log_dir, checkpoints_dir
-
-    def setup_logger():
-        # Setup logger (might ditch this)
-        logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_handler = logging.FileHandler('%s/%s.txt' % (log_dir, args.model))
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-        log_string('PARAMETER ...')
-        log_string(args)
-
     def setup_data_loaders():
 
         def _debug_loaders():
@@ -159,20 +218,20 @@ def main(args):
             vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
 
         log_string("Loading the train dataset")
-        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
-                                       sample_all_points=True)
+        TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=config["force_even"],
+                                       sample_all_points=True, relative_coords=config["relative_point_coords"])
         log_string("Loading the validation dataset")
-        VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=args.force_even,
-                                     sample_all_points=True)
+        VAL_DATASET = MastersDataset("validate", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=config["force_even"],
+                                     sample_all_points=True, relative_coords=config["relative_point_coords"])
         train_data_loader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
-                                                        shuffle=args.shuffle_training_data, num_workers=0,
+                                                        shuffle=config["shuffle_training_data"], num_workers=0,
                                                         pin_memory=True,
                                                         drop_last=True)
 
         val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=BATCH_SIZE,
                                                       shuffle=False, num_workers=0, pin_memory=True,
                                                       drop_last=False)
-        if args.force_even:
+        if config["force_even"]:
             TRAIN_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
             VAL_DATASET.batch_label_counts = np.zeros(BATCH_SIZE)
 
@@ -196,21 +255,22 @@ def main(args):
     def setup_model():
         # Loading the model
         # TODO log this file in wandb
-        MODEL = importlib.import_module(args.model)
-        shutil.copy('models/%s.py' % args.model, str(experiment_dir))
+        MODEL = importlib.import_module(config["model"])
+        shutil.copy('models/%s.py' % config["model"], str(experiment_dir))
         shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
-        classifier = MODEL.get_model(2, points_vector_size=4).cuda()
+        classifier = MODEL.get_model(2, points_vector_size=(9 if config["relative_point_coords"] else 4)).cuda()
         criterion = MODEL.get_loss().cuda()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
         checkpoint_path = str(experiment_dir) + '/checkpoints/best_model.pth'
+        loaded_pretrained = True
         # Check for models that have already been trained.
         try:
             checkpoint = torch.load(checkpoint_path)
             start_epoch = checkpoint['epoch']
             classifier.load_state_dict(checkpoint['model_state_dict'])
             log_string('Use pretrain model')
-            # if args.only_train_last_two_layers:
+            # if config["only_train_last_two_layers"]:
             #     for param in classifier.parameters():
             #         param.requires_grad = False
             #     classifier.conv1.weight.requires_grad = True
@@ -223,38 +283,46 @@ def main(args):
 
         except:
             log_string(f'No existing model, starting training from scratch...({checkpoint_path})')
+            loaded_pretrained = False
             start_epoch = 0
             classifier = classifier.apply(weights_init)
+
         # Setup otpimizer
-        if args.optimizer == 'Adam':
+        if config["optimizer"] == 'Adam':
             optimizer = torch.optim.Adam(
                 classifier.parameters(),
-                lr=args.learning_rate,
+                lr=config["learning_rate"],
                 betas=(0.9, 0.999),
                 eps=1e-08,
-                weight_decay=args.decay_rate
+                weight_decay=config["decay_rate"]
             )
+            if loaded_pretrained:
+                log_string("Loading optimizer state dict")
+                try:
+                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                except KeyError:
+                    log_string("No optimizer state dict found, initializing as normal")
         else:
-            optimizer = torch.optim.SGD(classifier.parameters(), lr=args.learning_rate, momentum=0.9)
+            optimizer = torch.optim.SGD(classifier.parameters(), lr=config["learning_rate"], momentum=0.9)
 
         return classifier, criterion, optimizer, start_epoch
 
     def update_lr_momentum():
-        lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
+        lr = max(config["learning_rate"] * (config["lr_decay"] ** (epoch // config["step_size"])), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
-        wandb.log({'lr': lr, 'epoch': epoch}, commit=False)
+        wandb.log({'lr': lr}, commit=False)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECCAY ** (epoch // MOMENTUM_DECCAY_STEP))
         if momentum < 0.01:
             momentum = 0.01
         print('BN momentum updated to: %f' % momentum)
-        wandb.log({'bn_momentum': momentum, 'epoch': epoch}, commit=False)
+        wandb.log({'bn_momentum': momentum}, commit=False)
         return lr, momentum
 
     def post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target, best_train_iou):
         unique_indices = None
-        if args.log_merged_training_set:
+        if config["log_merged_training_set"]:
             all_train_points = np.vstack(np.vstack(all_train_points))
             all_train_pred = np.hstack(np.vstack(all_train_pred))
             all_train_target = np.hstack(np.vstack(all_train_target))
@@ -280,10 +348,26 @@ def main(args):
 
             # visualise_prediction(all_train_points[:, :3], all_train_pred, all_train_target, epoch,
             #                      "Train", wandb_section="Visualise-Merged")
+            tn, tp, fn, fp = \
+                np.histogram(create_confusion_mask(all_train_points, all_train_pred, all_train_target),
+                             [0, 1, 2, 3, 4])[0]
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fp)
+            f1 = 2 * (recall * precision) / (recall + precision)
+            percentage_category_confusion = [round(tp / (tp + fn), 3), round(fp / (tn + fp), 3),
+                                             round(fn / (tp + fn), 3), round(tn / (tn + fp), 3)]
+            # Could do this with sklearn.metrics.confusion_matrix(normalise='true')
 
             wandb.log({'Train/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_train_target,
                                                                              preds=all_train_pred,
-                                                                             class_names=["keep", "discard"])})
+                                                                             class_names=["keep", "discard"]),
+                       'Train/TP': tp, 'Train/FP': fp,
+                       'Train/FN': fn, 'Train/TN': tn,
+                       'Train/category-TP': percentage_category_confusion[0],
+                       'Train/category-FP': percentage_category_confusion[1],
+                       'Train/category-FN': percentage_category_confusion[2],
+                       'Train/category-TN': percentage_category_confusion[3],
+                       'Train/Precision': precision, 'Train/Recall': recall, 'Train/F1': f1, }, commit=False)
 
         mean_loss = loss_sum / num_batches
         accuracy = total_correct / float(total_seen)
@@ -297,9 +381,9 @@ def main(args):
         log_string('Training mIoU: %f' % mIoU)
         wandb.log({'Train/mean_loss': mean_loss,
                    'Train/accuracy': accuracy,
-                   'Train/mIoU': mIoU, 'epoch': epoch}, commit=False)
+                   'Train/mIoU': mIoU}, commit=False)
 
-        if args.active_learning:
+        if config["active_learning"] or config["save_intermediate_models"]:
             log_string("Saving intermediary training model")
             savepath = str(checkpoints_dir) + f'model_epoch{epoch}.pth'
             state = {
@@ -313,11 +397,11 @@ def main(args):
 
         if mIoU > best_train_iou:
             best_train_iou = mIoU
-            if args.save_best_train_model:
+            if config["save_best_train_model"]:
                 nonlocal SAVE_CURRENT_EPOCH_PREDS
                 SAVE_CURRENT_EPOCH_PREDS = True
 
-                if args.active_learning:
+                if config["active_learning"]:
                     # Save the best model training predictions thus far incase we want them later for AL visualisation
                     log_string('Save model training predictions...')
                     savepath = str(experiment_dir) + '/train_predictions.npz'
@@ -358,7 +442,7 @@ def main(args):
 
     def post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target, labelweights, best_iou,
                                         all_eval_variance, all_eval_features):
-        if args.log_merged_validation:
+        if config["log_merged_validation"]:
             unique_points, unique_indices = np.unique(all_eval_points[:, :3], axis=0, return_index=True)
             unique_indices.sort()
             unique_points = all_eval_points[unique_indices, :3]
@@ -381,33 +465,34 @@ def main(args):
                 # number of cell-batches to each cell in the grid.
                 samples_per_cell = np.array(VAL_DATASET.grid_cell_to_segment) // NUM_POINTS
                 # Collect the variances together based on the GRID_CELLs they represent
-                variance, features = [], []
+                cell_variance, cell_features = [], []
                 samples_per_cell_enumerator = enumerate(samples_per_cell)
                 for idx, num_samples in samples_per_cell_enumerator:
                     if num_samples == 1:
-                        variance.append(all_eval_variance[idx])
-                        features.append(all_eval_features[idx])
+                        cell_variance.append(all_eval_variance[idx])
+                        cell_features.append(all_eval_features[idx])
                     else:
-                        variance.append(np.mean(all_eval_variance[idx:idx + num_samples]))
-                        features.append(np.mean(all_eval_features[idx:idx + num_samples], axis=0))
+                        cell_variance.append(np.mean(all_eval_variance[idx:idx + num_samples]))
+                        cell_features.append(np.mean(all_eval_features[idx:idx + num_samples], axis=0))
 
-                variance = np.array(variance)
-                features = np.array(features)
-                variance = variance / variance.sum()  # Normalise to [-1,1]
-                features = features / features.sum()  # Normalise to [-1,1]
+                cell_variance = np.array(cell_variance)
+                cell_features = np.array(cell_features)
+                cell_variance = cell_variance / cell_variance.sum()  # Normalise to [-1,1]
+                cell_features = cell_features / cell_features.sum()  # Normalise to [-1,1]
 
                 np.savez_compressed(savepath, points=all_eval_points[unique_indices],
                                     preds=all_eval_pred[unique_indices],
-                                    target=all_eval_target[unique_indices], variance=variance,
-                                    point_variance=np.repeat(variance, VAL_DATASET.grid_cell_to_segment)[
+                                    target=all_eval_target[unique_indices], variance=cell_variance,
+                                    point_variance=np.repeat(cell_variance, VAL_DATASET.grid_cell_to_segment)[
                                         unique_indices],
-                                    grid_mask=VAL_DATASET.grid_mask, features=features,
-                                    samples_per_cell=samples_per_cell)
+                                    grid_mask=VAL_DATASET.grid_mask, features=cell_features,
+                                    # samples_per_cell=samples_per_cell
+                                    )
                 import shutil
                 shutil.copy(savepath, savepath[:-4] + f'_epoch{epoch}.npz')
                 log_string('Saved model validation predictions.')
-                np.sort(variance)
-                wandb.log({'Validation/top10variance_avg': np.mean(variance[:10])}, commit=False)
+                np.sort(cell_variance)
+                wandb.log({'Validation/top10variance_avg': np.mean(cell_variance[:10])}, commit=False)
 
             # validation_dataset_points = validation_dataset_points.astype('float32')
             # trained_idxs = (np.isin(validation_dataset_points[:, 0], unique_points[:, 0]) & np.isin(validation_dataset_points[:, 1], unique_points[:, 1]) & np.isin(
@@ -444,13 +529,21 @@ def main(args):
             precision = tp / (tp + fp)
             recall = tp / (tp + fp)
             f1 = 2 * (recall * precision) / (recall + precision)
-            Visualisation_utils.get_confusion_matrix_strings(tp, tn, fp, fn, len(all_eval_target))
+            percentage_category_confusion = [round(tp / (tp + fn), 3), round(fp / (tn + fp), 3),
+                                             round(fn / (tp + fn), 3), round(tn / (tn + fp), 3)]
+            # Could do this with sklearn.metrics.confusion_matrix(normalise='true')
+
             wandb.log({'Validation/confusion_matrix': wandb.plot.confusion_matrix(probs=None, y_true=all_eval_target,
                                                                                   preds=all_eval_pred,
                                                                                   class_names=["keep", "discard"]),
-                       'Validation/Precision': precision,
-                       'Validation/Recall': recall,
-                       'Validation/F1': f1}, commit=False)
+                       'Validation/TP': tp, 'Validation/FP': fp,
+                       'Validation/FN': fn, 'Validation/TN': tn,
+                       'Validation/category-TP': percentage_category_confusion[0],
+                       'Validation/category-FP': percentage_category_confusion[1],
+                       'Validation/category-FN': percentage_category_confusion[2],
+                       'Validation/category-TN': percentage_category_confusion[3],
+                       'Validation/Precision': precision, 'Validation/Recall': recall, 'Validation/F1': f1},
+                      commit=False)
 
         labelweights = labelweights.astype(np.float32) / np.sum(labelweights.astype(np.float32))
         mIoU = np.mean(
@@ -468,8 +561,7 @@ def main(args):
         wandb.log({'Validation/eval_mean_loss': eval_mean_loss,
                    'Validation/eval_point_mIoU': mIoU,
                    'Validation/eval_point_accuracy': eval_point_accuracy,
-                   'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy,
-                   'epoch': epoch}, commit=False)
+                   'Validation/eval_point_avg_class_accuracy': eval_point_avg_class_accuracy}, commit=False)
 
         iou_per_class_str = '------- IoU --------\n'
         for l in range(NUM_CLASSES):
@@ -499,23 +591,26 @@ def main(args):
         return best_iou
 
     # HYPER PARAMETER
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir()
+    os.environ["CUDA_VISIBLE_DEVICES"] = config["gpu"]
+    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir(config)
     logger = logging.getLogger("Model")
-    setup_logger()
+    setup_logger(logger, log_dir, config)
+    log_string('PARAMETERS ...')
+    log_string(config)
+    setup_wandb_metrics()
 
     # Define constants
-    DATA_PATH = Path(args.data_path)
+    DATA_PATH = Path(config["data_path"])
     NUM_CLASSES = 2
 
-    NUM_POINTS = args.npoint
-    BATCH_SIZE = args.batch_size
-    BLOCK_SIZE = args.block_size
+    NUM_POINTS = config["npoint"]
+    BATCH_SIZE = config["batch_size"]
+    BLOCK_SIZE = config["block_size"]
 
     LEARNING_RATE_CLIP = 1e-5
     MOMENTUM_ORIGINAL = 0.1
     MOMENTUM_DECCAY = 0.5
-    MOMENTUM_DECCAY_STEP = args.step_size
+    MOMENTUM_DECCAY_STEP = config["step_size"]
 
     SAVE_CURRENT_EPOCH_PREDS = False
 
@@ -526,16 +621,18 @@ def main(args):
     # Training loop
     run_epoch = 0
     best_val_iou, best_train_iou = 0, 0
-    if args.active_learning:
-        # For AL we pass in the number of epochs to run AL for as args.epoch.
+    if config["active_learning"]:
+        # For AL we pass in the number of epochs to run AL for as config["epoch"].
         # Adding start epoch (from the pretrained model) offsets correctly
-        if args.validate_only:
-            start_epoch = args.epoch - 1
+        if config["validate_only"]:
+            start_epoch = config["epoch - 1"]
         else:
-            args.epoch = start_epoch + args.epoch  # from start epoch train another K epochs (as given by args.epoch)
+            config["epoch"] = start_epoch + config[
+                "epoch"]  # from start epoch train another K epochs (as given by config["epoch)
 
-    for epoch in range(start_epoch, args.epoch):
-        log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{args.epoch}) ****')
+    for epoch in range(start_epoch, config["epoch"]):
+        log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{config["epoch"]}) ****')
+        wandb.log({'epoch': epoch}, commit=False)
         lr, momentum = update_lr_momentum()
 
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x, momentum))
@@ -544,7 +641,7 @@ def main(args):
 
         classifier = classifier.train()  # Set model to training mode
 
-        if not args.validate_only:
+        if not config["validate_only"]:
             all_train_points, all_train_pred, all_train_target = [], [], []
             total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 
@@ -553,7 +650,7 @@ def main(args):
                 optimizer.zero_grad()
 
                 points = points.data.numpy()
-                if args.augment_points: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
+                if config["augment_points"]: points[:, :, :3] = provider.rotate_point_cloud_z(points[:, :, :3])
                 points = torch.Tensor(points)
                 points, target_labels = points.float().cuda(), target_labels.long().cuda()
                 points = points.transpose(2, 1)  # Convert points to num_batches * channels * num_points
@@ -583,23 +680,25 @@ def main(args):
                     # Total predictions + Class occurrences (Union prediction of class (right or wrong) and actual class occurrences.)
                     total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
 
-                wandb.log({'Train/inner_epoch_loss_sum': loss_sum,
-                           'Train/inner_epoch_accuracy_sum': total_correct / total_seen,
-                           'Train/inner_epoch_loss': loss,
-                           'Train/inner_epoch_accuracy': correct / len(batch_labels),
-                           'Train/inner_epoch_class_ratio(percent_keeps)': total_seen_class[0] / len(batch_labels),
-                           'epoch': epoch,
-                           'Train/inner_epoch_step': (i + epoch * len(train_data_loader))})
-                if args.log_merged_training_set:
-                    all_train_points.append(np.array(points.transpose(1, 2).cpu()))
+                wandb.log({'Train/inner_epoch/loss_sum': loss_sum,
+                           'Train/inner_epoch/accuracy_sum': total_correct / total_seen,
+                           'Train/inner_epoch/loss': loss,
+                           'Train/inner_epoch/accuracy': correct / len(batch_labels),
+                           'Train/inner_epoch/class_ratio(percent_keeps)': total_seen_class[1] / sum(total_seen_class),
+                           'Train/inner_epoch_step': (i + epoch * len(train_data_loader))}, commit=False)
+                if config["log_merged_training_set"]:
+                    if config["relative_point_coords"]:
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu())[:, :, [6, 7, 8, 3]])
+                    else:
+                        all_train_points.append(np.array(points.transpose(1, 2).cpu()))
                     all_train_pred.append(pred_choice.reshape(BATCH_SIZE, -1))
                     all_train_target.append(np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1))
                 # Visualise the first batch in every sample
-                if args.log_first_batch_cloud and i == 0:
+                if config["log_first_batch_cloud"] and i == 0:
                     print(f"Visualising Epoch {epoch} Mini-Batch {i}")
                     visualise_batch(np.array(points.transpose(1, 2).cpu()), pred_choice.reshape(BATCH_SIZE, -1),
                                     np.array(target_labels.cpu()).reshape(BATCH_SIZE, -1), i, epoch, 'Train',
-                                    pred_labels.exp().cpu().data.numpy(), args.log_merged_training_batches)
+                                    pred_labels.exp().cpu().data.numpy(), config["log_merged_training_batches"])
 
             best_train_iou = post_training_logging_and_vis(all_train_points, all_train_pred, all_train_target,
                                                            best_train_iou)
@@ -616,33 +715,33 @@ def main(args):
             classifier = classifier.eval()
             all_eval_points, all_eval_pred, all_eval_target, all_eval_variance, all_eval_features = [], [], [], [], []
 
-            repeats = args.validation_repeats
-            if args.active_learning is True:
+            repeats = config["validation_repeats"]
+            if config["active_learning is True"]:
                 log_string("Enabling dropout")
                 enable_dropout(classifier)
 
-            log_string(f'---- EPOCH {run_epoch + 1:03d} VALIDATION ----')
+            log_string(f'---- EPOCH {run_epoch + 1:03d} ({epoch + 1}/{config["epoch"]}) VALIDATION ----')
             for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader),
                                                    desc="Validation"):
                 labelweights, total_correct, total_seen, loss_sum = validation_batch(BATCH_SIZE, NUM_CLASSES,
                                                                                      NUM_POINTS, all_eval_points,
                                                                                      all_eval_pred, all_eval_target,
-                                                                                     args, classifier, criterion,
+                                                                                     config, classifier, criterion,
                                                                                      epoch, i, labelweights,
                                                                                      loss_sum, points,
                                                                                      target_labels, total_correct,
                                                                                      total_correct_class,
                                                                                      total_iou_denominator_class,
                                                                                      total_seen, total_seen_class,
-                                                                                     train_data_loader, weights,
+                                                                                     val_data_loader, weights,
                                                                                      repeats, all_eval_variance,
                                                                                      all_eval_features)
 
-            if args.log_merged_validation:
+            if config["log_merged_validation"]:
                 all_eval_points = np.vstack(np.vstack(all_eval_points))
                 all_eval_pred = np.hstack(np.vstack(all_eval_pred))
                 all_eval_target = np.hstack(np.vstack(all_eval_target))
-            if args.active_learning:
+            if config["active_learning"]:
                 all_eval_variance = np.hstack(all_eval_variance)
                 all_eval_features = np.vstack(np.vstack(all_eval_features))
             best_val_iou = post_validation_logging_and_vis(all_eval_points, all_eval_pred, all_eval_target,
@@ -703,31 +802,27 @@ def variation_ratio(arr):
     raise NotImplementedError
 
 
-def binary_column_mode(arr, out=None):
+def binary_row_mode(arr):
     """
     Computes the column-wise mode of arr binary array
     :param arr: a 2d binary array
     :param out: the output array whihc has been passed in to the function
     :return: if no array was passed in then a new one is returned instead.
     """
-    do_return = False
-    if out is None:
-        out = np.empty(arr.shape[1], dtype=np.bool_)
-        do_return = True
+    out = np.empty(arr.shape[0], dtype=np.bool_)
     for i in range(len(out)):
         # out[i] = mode1d(arr[:,i])
-        size = arr[:, i].size
-        count = np.sum(arr[:, i])
+        size = arr[i].size
+        count = np.sum(arr[i])
         count = np.left_shift(count, 1)
         out[i] = count // size >= 1
-    if do_return:
-        return out
+    return out
 
 
 # @profile
-def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, args,
+def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_eval_pred, all_eval_target, config,
                      classifier, criterion, epoch, i, labelweights, loss_sum, points, target_labels, total_correct,
-                     total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, train_data_loader,
+                     total_correct_class, total_iou_denominator_class, total_seen, total_seen_class, val_data_loader,
                      weights, repeats=1, all_eval_variance=None, all_eval_features=None):
     if torch.is_tensor(points):
         points = points.data.numpy()
@@ -745,7 +840,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         # from scipy.stats import mode
         pred_logits = torch.stack(pred_logits)
         pred_logits = pred_logits.contiguous().view(repeats, -1, 2)
-        pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (5,N) labels
+        pred_choice = pred_logits.cpu().data.max(2)[1].numpy().astype('int8')  # (repeats,N) labels
         pred_variances = pred_choice.var(axis=0)  # get the variance of the ensemble predictions
         pred_variances = pred_variances.reshape(target_labels.shape)
         # Get the sum(variance) over each batch-cell (grid cells may be split into many batch-cells)
@@ -754,7 +849,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
         # pred_choice = mode(pred_choice)
         # pred_choice = pred_choice[0].ravel()  # N average labels
-        pred_choice = binary_column_mode(pred_choice)
+        pred_choice = binary_row_mode(pred_choice)
 
         pred_logits = pred_logits[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))
@@ -772,12 +867,11 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
     loss_sum += loss
     tmp, _ = np.histogram(batch_labels, range(NUM_CLASSES + 1))
     labelweights += tmp
-    wandb.log({'Validation/inner_epoch_loss_sum': loss_sum,
-               'Validation/inner_epoch_accuracy_sum': total_correct / total_seen,
-               'Validation/inner_epoch_loss': loss,
-               'Validation/inner_epoch_accuracy': correct / len(batch_labels),
-               'epoch': epoch,
-               'Validation/inner_epoch_step': (i + epoch * len(train_data_loader))})
+    wandb.log({'Validation/inner_epoch/loss_sum': loss_sum,
+               'Validation/inner_epoch/accuracy_sum': total_correct / total_seen,
+               'Validation/inner_epoch/loss': loss,
+               'Validation/inner_epoch/accuracy': correct / len(batch_labels),
+               'Validation/inner_epoch_step': (i + epoch * len(val_data_loader))}, commit=False)
     # Logging and visualisation and IoU
     for l in range(NUM_CLASSES):
         total_seen_class[l] += np.sum((batch_labels == l))  # How many times the label was in the batch
@@ -785,25 +879,39 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         total_correct_class[l] += np.sum((pred_choice == l) & (batch_labels == l))
         # Class occurrences + total predictions (Union prediction of class (right or wrong) and actual class occurrences.)
         total_iou_denominator_class[l] += np.sum(((pred_choice == l) | (batch_labels == l)))
-    if args.log_merged_validation:
-        all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
+    if config["log_merged_validation"]:
+        if config["relative_point_coords"]:
+            all_eval_points.append(
+                np.array(points.transpose(1, 2).cpu())[:, :, [6, 7, 8, 3]])  # Get the normalized xyzI
+        else:
+            all_eval_points.append(np.array(points.transpose(1, 2).cpu()))
         all_eval_pred.append(pred_choice.reshape(points.shape[0], -1))
         all_eval_target.append(np.array(target_labels.cpu()).astype('int8').reshape(points.shape[0], -1))
-    if args.log_first_batch_cloud and i == 0:
+    if config["log_first_batch_cloud"] and i == 0:
         visualise_batch(np.array(points.transpose(1, 2).cpu()),
                         pred_choice.reshape(points.shape[0], -1),
                         np.array(target_labels.cpu()).reshape(points.shape[0], -1), i, epoch,
                         "Validation",
-                        pred_logits.exp().cpu().numpy(), merged=args.log_merged_validation)
+                        pred_logits.exp().cpu().numpy(), merged=config["log_merged_validation"])
     return labelweights, total_correct, total_seen, loss_sum
 
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False,
-               name='hand selected validation sample all points MSG',
-               notes="Starting from scratch, using the reversed validation (30%) dataset sampling all points in training and in validation, using the msg model")
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
+               name='30% sample all pre-s3dis higherWD local_coords',
+               notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
+                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4 and local coords")
     wandb.run.log_code(".")
-    main(args)
+    main(wandb.config)
     wandb.finish()
+#     Tested with local points => bad results
+#     Tested as normal with higher WD 1e-2, => good results but can't resolve the fences and does less well on training set
+#     Tested as normal with medium WD 1e-3
+#     Tested with local points and higher WD 1e-2
+#     as normal with adamW,
+#     with local points and adamW with higher WD
+
+#  Also want to test augmenting the points by rotating around the axis
+#  Can also try forcing even classes

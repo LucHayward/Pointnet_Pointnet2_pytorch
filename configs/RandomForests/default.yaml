@@ -1,0 +1,15 @@
+---
+#Active Learning
+active_learning: True
+validation_repeats: 1
+uncertainty_metric: probability
+
+#Logging and data paths
+data_path: data/PatrickData/Church/MastersFormat/hand_selected_reversed
+log_dir: test
+
+# RF HParams
+max_depth: 32
+min_samples_split: 20
+model: RF
+n_estimators: 32

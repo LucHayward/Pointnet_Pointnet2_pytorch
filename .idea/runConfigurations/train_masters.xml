@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="train_masters" type="PythonConfigurationType" factoryName="Python" folderName="Masters" nameIsGenerated="true">
+  <configuration default="false" name="train_masters" type="PythonConfigurationType" factoryName="Python" folderName="Masters/train_masters" nameIsGenerated="true">
     <module name="Pointnet_Pointnet2_pytorch" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />

@@ -12,6 +12,7 @@ from torch import save, load
 from time import time
 
 from Visualisation_utils import turbo_colormap_data
+
 rng = np.random.default_rng()
 
 
@@ -55,7 +56,7 @@ class MastersDataset(Dataset):
 
     # @profile
     def __init__(self, split, data_path: Path, num_points_in_block=4096, block_size=1.0, sample_all_points=False,
-                 force_even=False):
+                 force_even=False, relative_coords=False, npy_array=None):
         """
         Setup the dataset for the heritage data. Expects .npy format XYZIR.
         :param split: {train, validate, test} if you wish to split the data specify the set here and in the pathname of the files
@@ -64,7 +65,7 @@ class MastersDataset(Dataset):
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
-        assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test"'
+        assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test", or "None"'
         self.split = split
         self.num_points_in_block = num_points_in_block
         self.block_size = block_size
@@ -77,35 +78,49 @@ class MastersDataset(Dataset):
         #     self.batch_label_counts = None
         #     self.
 
-        # Given the data_path
-        # Load all the segments that are for this split
-        segment_paths = sorted(data_path.glob('*.npy'))
-        if split is not None:  # if split is None then just load all the .npy files
-            segment_paths = [path for path in segment_paths if split in str(path)]
-        assert len(segment_paths) > 0, "No segments in path"
         self.segment_points, self.segment_labels = [], []
         self.segment_coord_min, self.segment_coord_max = [], []
 
         num_points_per_segment = []
         labelweights = np.zeros(2)
-
-        # For each segment load all the points and split the labels out, recording their relative weights
-        for path in tqdm(segment_paths):
-            xyzir = np.load(path)
-            points, labels = xyzir[:, :-1], xyzir[:, -1]
+        if npy_array is not None:
+            points, labels = npy_array[:, :-1], npy_array[:, -1]
             self.segment_points.append(points)
             self.segment_labels.append(labels)
 
             coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
             self.segment_coord_min.append(coord_min)
             self.segment_coord_max.append(coord_max)
-            # assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
-            #     "segments smaller than block_size"
 
             weights, _ = np.histogram(labels, [0, 1, 2])
 
             labelweights += weights
             num_points_per_segment.append(len(labels))
+        else:
+            # Given the data_path
+            # Load all the segments that are for this split
+            segment_paths = sorted(data_path.glob('*.npy'))
+            if split is not None:  # if split is None then just load all the .npy files
+                segment_paths = [path for path in segment_paths if split in str(path)]
+            assert len(segment_paths) > 0, "No segments in path"
+
+            # For each segment load all the points and split the labels out, recording their relative weights
+            for path in tqdm(segment_paths):
+                xyzir = np.load(path)
+                points, labels = xyzir[:, :-1], xyzir[:, -1]
+                self.segment_points.append(points)
+                self.segment_labels.append(labels)
+
+                coord_min, coord_max = np.amin(points, axis=0)[:3], np.amax(points, axis=0)[:3]
+                self.segment_coord_min.append(coord_min)
+                self.segment_coord_max.append(coord_max)
+                # assert np.all((np.max(points[:, :3], axis=0) - np.min(points[:, :3], axis=0))[:2] >= block_size), \
+                #     "segments smaller than block_size"
+
+                weights, _ = np.histogram(labels, [0, 1, 2])
+
+                labelweights += weights
+                num_points_per_segment.append(len(labels))
 
         # Weights as inverse ratio (ie if labels=[10,20] labelweights = [2,1])
         labelweights = labelweights / np.sum(labelweights)
@@ -128,7 +143,6 @@ class MastersDataset(Dataset):
             self.segments_idxs = np.array(segment_idxs)
         else:
             # Sample every point in the segment in turn following a grid pattern.
-            # Just need to return all the points in one go.
 
             # self.segments_idxs = np.arange(len(self.segment_points))
             # # First check if a cache exists
@@ -148,6 +162,13 @@ class MastersDataset(Dataset):
             else:
                 points = self.segment_points[0]
                 labels = self.segment_labels[0]
+
+            # Ensure there are no duplicate points
+            points, unique_index = np.unique(points, axis=0, return_index=True)
+            labels = labels[unique_index]
+            self.segment_points[0] = points
+            self.segment_labels[0] = labels
+            del unique_index
 
             self.segments_idxs = np.arange(len(self.segment_points))
 
@@ -186,18 +207,19 @@ class MastersDataset(Dataset):
                 np.random.shuffle(point_idxs)
                 data_batch = points[point_idxs, :]
 
-                # Get Normalized (-1,1) xyz values
-                # normlized_xyz = np.zeros((point_size, 3))
-                # normlized_xyz[:, 0] = data_batch[:, 0] / coord_max[0]
-                # normlized_xyz[:, 1] = data_batch[:, 1] / coord_max[1]
-                # normlized_xyz[:, 2] = data_batch[:, 2] / coord_max[2]
+                if relative_coords:
+                    # Get Normalized (-1,1) xyz values
+                    normalized_xyz = data_batch[:, :3] / coord_max
 
-                #        # Shift XY to start at (0,0)
-                #         data_batch[:, 0] = data_batch[:, 0] - (s_x + self.block_size / 2.0)
-                #         data_batch[:, 1] = data_batch[:, 1] - (s_y + self.block_size / 2.0)
-                #         data_batch[:, 3:6] /= 255.0
+                    # Center the points around (0,0) in the XY-plane
+                    min_xy_data_batch = np.min(data_batch[:, :2], axis=0)
+                    max_xy_data_batch = np.max(data_batch[:, :2], axis=0)
+                    center_xy = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
+                    relative_xyz = data_batch[:, :3] - np.hstack((center_xy, 0))
 
-                # data_batch = np.concatenate((data_batch, normlized_xyz), axis=1)
+                    # relative_XYZ, III, normalized_XYZ
+                    data_batch = np.column_stack((relative_xyz, data_batch[:, [3, 3, 3]], normalized_xyz))
+
                 # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
                 # batch? It's actually getting a weight to assign to each point though.
                 label_batch = labels[point_idxs].astype(int)
@@ -346,8 +368,8 @@ class MastersDataset(Dataset):
         """
         Return the batch sample for a given idx
         """
-        return (self.data_segment[idx], self.labels_segment[idx])
-                # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
+        return self.data_segment[idx], self.labels_segment[idx]
+        # self.sample_weight_segment[idx], self.point_idxs_segment[idx])
         # return self.data_segment, self.labels_segment, self.sample_weight_segment, self.point_idxs_segment
 
     def _split_grid_shape(self, points, grid_shape):
@@ -370,7 +392,7 @@ class MastersDataset(Dataset):
         print("Sorting by x axis...", end='')
         stime = time()
         points.view((f'{points.dtype.name},' * points.shape[1])[:-1]).sort(order=['f0'], axis=0)
-        print(f"{time()-stime:.2f}s")
+        print(f"{time() - stime:.2f}s")
 
         total_distances = points[:, :2].max(axis=0) - points[:, :2].min(axis=0)
         intervals_x = np.asarray(

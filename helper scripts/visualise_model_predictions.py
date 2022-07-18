@@ -10,23 +10,23 @@ import models.pointnet2_sem_seg as Model
 
 from tqdm import tqdm
 
-log_path = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/hand_selected_reversed_start_pretrained_all_layers')
-data_path = Path(
+LOG_PATH = Path(
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/30%_pretrained_higherWD')
+DATA_PATH = Path(
     '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
+RELATIVE_COORDS = False
+MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/model.pth'
 
-model_checkpoint_path = log_path / 'checkpoints/best_model.pth'
-
-model_checkpoint = torch.load(model_checkpoint_path)
+model_checkpoint = torch.load(MODEL_CHECKPOINT_PATH)
 print(f"Reached best validation_IoU at epoch {model_checkpoint['epoch']}\n"
       f"IoU: {model_checkpoint['class_avg_iou']}")
 
 # Check this in the logs on wandb
-classifier = Model.get_model(2, points_vector_size=4)
+classifier = Model.get_model(2, points_vector_size=(9 if RELATIVE_COORDS else 4))
 classifier.load_state_dict(model_checkpoint['model_state_dict'])
 classifier.cuda()
 
-dataset = MastersDataset("validate", data_path, sample_all_points=True)
+dataset = MastersDataset("validate", DATA_PATH, sample_all_points=True, relative_coords=RELATIVE_COORDS)
 
 grid_data = dataset.__getitem__(0)
 BATCH_SIZE = 16
@@ -36,10 +36,10 @@ num_batches = int(np.ceil(available_batches / BATCH_SIZE))
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = [], [], [], []
 
 val_data_loader = torch.utils.data.DataLoader(dataset, batch_size=16,
-                                              shuffle=True, num_workers=0, pin_memory=True,
+                                              shuffle=False, num_workers=0, pin_memory=True,
                                               drop_last=False)
 classifier.eval()
-for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader), desc="Validation"):
+for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val_data_loader), desc="Inference"):
 
     centers = points[:, :, :2].mean(axis=1)
     for center in centers:
@@ -73,9 +73,11 @@ for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val
 
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = np.vstack(np.vstack(all_eval_points)), np.hstack(
     np.vstack(all_eval_pred)), np.hstack(np.vstack(all_eval_target)), np.hstack(np.vstack(all_eval_probs))
-print("Showing intensity, predictions, target, difference, probability")
+print("Showing intensity, predictions, target, difference")
 v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
                 all_eval_pred != all_eval_target)
+# v = pptk.viewer(all_eval_points[:, 6:], all_eval_pred, all_eval_target,
+#                 all_eval_pred != all_eval_target)
 
 total_seen_class, total_correct_class, total_iou_denominator_class = [0, 0], [0, 0], [0, 0]
 for l in range(2):
@@ -94,4 +96,16 @@ mIoU = np.mean(IoU)
 print(f"IoU keep: {IoU[0]}\n"
       f"IoU discard: {IoU[1]}\n"
       f"mIoU: {mIoU}")
+
+from Visualisation_utils import create_confusion_mask, get_confusion_matrix_strings
+
+tn, tp, fn, fp = np.histogram(create_confusion_mask(all_eval_points, all_eval_pred, all_eval_target), [0, 1, 2, 3, 4])[
+    0]
+precision = tp / (tp + fp)
+recall = tp / (tp + fp)
+f1 = 2 * (recall * precision) / (recall + precision)
+
+cnp, cpp, cpt = Visualisation_utils.get_confusion_matrix_strings(tp, tn, fp, fn, len(all_eval_target))
+print(cnp, cpp, cpt, sep="\n\n")
+
 pass
