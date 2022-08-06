@@ -37,7 +37,7 @@ class get_model(nn.Module):
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
         l0_points = self.fp1(l0_xyz, l1_xyz, None, l1_points)  # Gets us back to the original number of points
 
-        feat = F.relu(self.bn1(self.conv1(l0_points)))
+        feat = F.relu(self.bn1(self.conv1(l0_points))) # Maybe not so many layers here?
         x = []
         for i in range(repeats):
             x.append(self.drop1(feat))
