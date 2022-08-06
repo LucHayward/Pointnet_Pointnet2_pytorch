@@ -716,7 +716,7 @@ def main(config):
             all_eval_points, all_eval_pred, all_eval_target, all_eval_variance, all_eval_features = [], [], [], [], []
 
             repeats = config["validation_repeats"]
-            if config["active_learning is True"]:
+            if config["active_learning"] is True:
                 log_string("Enabling dropout")
                 enable_dropout(classifier)
 
@@ -806,8 +806,7 @@ def binary_row_mode(arr):
     """
     Computes the column-wise mode of arr binary array
     :param arr: a 2d binary array
-    :param out: the output array whihc has been passed in to the function
-    :return: if no array was passed in then a new one is returned instead.
+    :return:
     """
     out = np.empty(arr.shape[0], dtype=np.bool_)
     for i in range(len(out)):
@@ -898,7 +897,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
                name='30% sample all pre-s3dis higherWD local_coords',
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "

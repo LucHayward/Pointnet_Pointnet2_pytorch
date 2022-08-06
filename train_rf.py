@@ -55,6 +55,9 @@ def log_metrics(target, preds, prefix=None, logger=None) -> None:
     :param preds: predicted binary labels
     :param prefix: Train/Validation
     """
+    #    pn pp
+    # an tn fp
+    # ap fn tp
     tn, fp, fn, tp = confusion_matrix(target, preds).ravel()
     cat_tn, cat_fp, cat_fn, cat_tp = confusion_matrix(target, preds, normalize='true').ravel()
     precision = precision_score(target, preds)

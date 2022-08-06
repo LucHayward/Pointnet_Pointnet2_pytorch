@@ -114,6 +114,18 @@ def visualise_batch(points, pred, target_labels, batch_num, epoch, data_split, c
             visualise_prediction(points_batch[:, :3], pred[idx], target_labels[idx], epoch, data_split, batch_num,
                                  wandb_section='Visualise-Batch')
 
+def o3d_from_npy(points):
+    """
+    Convert an npy array (xyzir) to an O3D pcd
+    :param points:
+    :return:
+    """
+    import open3d as o3d
+    pts = o3d.utility.Vector3dVector(points[:,:3])
+    colours = o3d.utility.Vector3dVector(points[:,[4,3,3]])
+    pcd = o3d.geometry.PointCloud(pts)
+    pcd.colors = colours
+    return pcd
 
 def create_confusion_mask(points, pred, target_labels):
     confusion_mask = np.zeros(len(points), dtype=int)  # pptk/wandb

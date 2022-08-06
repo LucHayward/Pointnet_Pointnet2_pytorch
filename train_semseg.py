@@ -492,7 +492,7 @@ if __name__ == '__main__':
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 10, 'validation': 2}}  # TODO: Dynamically
     config = {}
     config.update(args.__dict__)
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="PointNet2-Pytorch",
                config=config, name='random validation 1:4', resume=False)
     wandb.run.log_code(".")
