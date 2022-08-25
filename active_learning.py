@@ -59,7 +59,7 @@ def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
     num_grid_cells = len(dataset.grid_cell_to_segment)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select 5% of the cells ({num_grid_cells * percentage_cells:.0f}/{num_grid_cells}) for labelling")
+        print(f"Select {percentage_cells*100}% of the cells ({num_grid_cells * percentage_cells:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -67,7 +67,8 @@ def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
         viewer.set(selected=selected_labelled_idxs)
         print(f"Selected {len(selected_labelled_idxs)} points from {len(selected_cells)} cells "
               f"({len(selected_labelled_idxs) / len(dataset.grid_mask) * 100:.2f}% of points, "
-              f"{len(selected_cells) / num_grid_cells * 100:.2f}% of area)")
+              f"{len(selected_cells) / num_grid_cells * 100:.2f}% of area)\n"
+              f"DEBUG: keep:discard = {np.unique(dataset.segment_labels[0][selected_labelled_idxs], return_counts=True)[1]/len(selected_labelled_idxs)*100}")
         completed_selection = input("Happy with selection? To adjust enter N, otherwise enter Y").upper() == "Y"
 
     return selected_labelled_idxs, selected_cells
@@ -206,15 +207,15 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
     return adjusted_uncertainty_ordering_idxs, kmeans.labels_
 
 
-def generate_initial_data_split(initial_labelling_budget):
+def generate_initial_data_split(initial_labelling_budget, init_dataset_path=Path("data/PatrickData/Church/MastersFormat")):
     # get full pcd
-    cache_initial_dataset = Path("data/PatrickData/Church/MastersFormat/cache_full_dataset.pickle")
+    cache_initial_dataset = init_dataset_path/'cache_full_dataset.pickle'
     initial_dataset = None
     if cache_initial_dataset.exists():
         with open(cache_initial_dataset, "rb") as cache_file:
             initial_dataset = pickle.load(cache_file)
     else:
-        initial_dataset = MastersDataset(None, Path("data/PatrickData/Church/MastersFormat"),
+        initial_dataset = MastersDataset(None, init_dataset_path,
                                          sample_all_points=True)
         with open(cache_initial_dataset, "wb") as cache_file:
             pickle.dump(initial_dataset, cache_file)
@@ -292,7 +293,7 @@ def main(args):
         raise NotImplementedError
 
     # generate_initial_data_split(initial_labelling_budget=args.init_label_budget)
-    for i in tqdm(range(5), desc="AL Loop"):
+    for i in tqdm(range(6), desc="AL Loop"):
         AL_ITERATION = i
 
         # Setup the wandb logging using group names inside the loop so that you can track the runs
@@ -302,7 +303,7 @@ def main(args):
         if i == 0: wandb.run.log_code(".")
 
         if args.model == 'pointnet++':
-            with open(Path(f"configs/pointnet++/50%_trained.yaml"), 'r') as yaml_args:
+            with open(Path(f"configs/pointnet++/lowerWD.yaml"), 'r') as yaml_args:
                 train_args = yaml.safe_load(yaml_args)
                 train_args = Namespace(**train_args)
             train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
@@ -335,7 +336,7 @@ def main(args):
 
         print(f"--- running training loop {i} ---")
         wandb.config.update(train_args)
-        # MODEL.main(wandb.config)
+        MODEL.main(wandb.config)
         print(f"--- finished training loop {i} ---")
 
         #   Now we need the predictions from the last good trained model (which we saved in the training)
@@ -391,16 +392,17 @@ def parse_args():
     return parser.parse_args()
 
 
+
 if __name__ == '__main__':
     import os
     import wandb
 
     args = parse_args()
 
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
 
-    GROUP_NAME = f'AL-{args.model}: Test'
-    NOTES = "Testing RF"
+    GROUP_NAME = f'AL-{args.model}: WD1e-2_5%_repeat5'
+    NOTES = "WD 1e-2 Pointnet++ 5% area, 5 repeats"
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
