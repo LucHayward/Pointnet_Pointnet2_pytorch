@@ -1,0 +1,55 @@
+---
+
+# Not changed for hparam tuning
+model: pointnet2_sem_seg
+gpu: '0'
+data_path: null # if null must be set in the loading script
+log_dir: null # if null must be set in the loading script
+
+# Tune these early and likely not change much
+epoch: 20
+optimizer: Adam
+decay_rate: 0.01
+step_size: 10
+lr_decay: 0.7
+
+
+# Active Learning
+active_learning: true
+#train_loss_delta: 0.005
+#train_miou_delta: 0.01
+#validation_epochs: 5  # How often to check validation
+save_best_train_model: true # Save the best model from the training based on mIoU
+validation_repeats: 5  # How many repeats with new dropout should be done.
+
+# Common hparams to be tuned
+batch_size: 16
+learning_rate: 0.001
+npoint: 4096
+block_size: 1.0
+augment_points: false
+
+# Logging/Visualisation parameters
+log_first_batch_cloud: false
+log_merged_validation: true
+log_merged_training_batches: false
+log_merged_training_set: true
+
+# Debugging parameters
+validate_only: false
+shuffle_training_data: true
+force_even: false
+sample_all_validation: true
+
+# Exposing model hparams
+# Pointnet Set Abstraction: Group All options
+psa1_group_all: false
+psa2_group_all: false
+psa3_group_all: false
+psa4_group_all: false
+
+# Pointnet Set Abstraction: Sphere Radius
+sa1_radius: 0.1
+sa2_radius: 0.2
+sa3_radius: 0.4
+sa4_radius: 0.8

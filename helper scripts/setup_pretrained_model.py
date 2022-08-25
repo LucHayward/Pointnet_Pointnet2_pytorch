@@ -24,6 +24,6 @@ state = {
     'model_state_dict': classifier.state_dict(),
     'optimizer_state_dict': checkpoint['optimizer_state_dict']
 }
-savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/30%_pretrained_higherWD_local_coords/checkpoints/")
+savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/active_learning/5%_start_pretrained_all_layers_WD1e-2/0/train/checkpoints")
 savepath.mkdir(parents=True, exist_ok=True)
 torch.save(state, savepath/"best_model.pth")
