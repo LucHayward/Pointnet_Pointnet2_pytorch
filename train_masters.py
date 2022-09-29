@@ -627,8 +627,8 @@ def main(config):
         if config["validate_only"]:
             start_epoch = config["epoch - 1"]
         else:
-            config["epoch"] = start_epoch + config[
-                "epoch"]  # from start epoch train another K epochs (as given by config["epoch)
+            # from start epoch train another K epochs (as given by config["epoch)
+            config.update({"epoch": start_epoch + config["epoch"]}, allow_val_change=True)
 
     for epoch in range(start_epoch, config["epoch"]):
         log_string(f'**** Epoch {run_epoch + 1} ({epoch + 1}/{config["epoch"]}) ****')
@@ -846,9 +846,10 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
         pred_variances = pred_variances.sum(axis=1).astype('float32')
         all_eval_variance.append(pred_variances)
 
-        # pred_choice = mode(pred_choice)
-        # pred_choice = pred_choice[0].ravel()  # N average labels
-        pred_choice = binary_row_mode(pred_choice)
+        from scipy.stats import mode
+        pred_choice = mode(pred_choice)
+        pred_choice = pred_choice[0].ravel()  # N average labels
+        # pred_choice = binary_row_mode(pred_choice)
 
         pred_logits = pred_logits[0]  # Just take one of them we only need it to calculate the loss
         all_eval_features.append(np.mean(trans_feat.cpu().numpy(), axis=-1))

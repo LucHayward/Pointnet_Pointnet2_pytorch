@@ -22,9 +22,9 @@ classifier.conv2 = nn.Conv1d(128, 2, 1)
 state = {
     'epoch': 0,
     'model_state_dict': classifier.state_dict(),
-    'optimizer_state_dict': checkpoint['optimizer_state_dict']
+    # 'optimizer_state_dict': checkpoint['optimizer_state_dict']
 }
-savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/active_learning/AL-pointnet++: WD1e-2_5%_repeat5/0/train/checkpoints/")
+savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/active_learning/AL-pointnet++: WD1e-2_5%_repeat10epochs12/0/train/checkpoints/")
 
 
 savepath.mkdir(parents=True, exist_ok=True)

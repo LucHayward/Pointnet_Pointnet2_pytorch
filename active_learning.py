@@ -25,6 +25,8 @@ FINISHED = False
 
 MERGED_ACCURACY = []
 MERGED_IOU = []
+MERGED_TRAIN_PERCENTAGE = []
+MERGED_VAL_PERCENTAGE = []
 
 
 def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points=None, labels=None):
@@ -54,12 +56,14 @@ def save_split_dataset(dataset, selected_points_idxs, dataset_merge=None, points
     np.save(save_dir / f"validate.npy", np.column_stack((val_points, val_labels[:, None])))
 
 
-def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
+def select_new_points_to_label(dataset, viewer, proportion_cells=0.05):
     completed_selection = False
     num_grid_cells = len(dataset.grid_cell_to_segment)
+    args.label_budget = int(num_grid_cells * args.label_budget)
     selected_label_idxs, selected_cells = None, None
     while not completed_selection:
-        print(f"Select {percentage_cells*100}% of the cells ({num_grid_cells * percentage_cells:.0f}/{num_grid_cells}) for labelling")
+        print(
+            f"Select {proportion_cells * 100}% of the cells ({num_grid_cells * proportion_cells:.0f}/{num_grid_cells}) for labelling")
         input("Waiting for selection...(enter)")
         selected = viewer.get('selected')
         selected_cells = np.unique(dataset.grid_mask[selected])  # CHECK don't think we need to preserve order here.
@@ -68,7 +72,7 @@ def select_new_points_to_label(dataset, viewer, percentage_cells=0.05):
         print(f"Selected {len(selected_labelled_idxs)} points from {len(selected_cells)} cells "
               f"({len(selected_labelled_idxs) / len(dataset.grid_mask) * 100:.2f}% of points, "
               f"{len(selected_cells) / num_grid_cells * 100:.2f}% of area)\n"
-              f"DEBUG: keep:discard = {np.unique(dataset.segment_labels[0][selected_labelled_idxs], return_counts=True)[1]/len(selected_labelled_idxs)*100}")
+              f"DEBUG: keep:discard = {np.unique(dataset.segment_labels[0][selected_labelled_idxs], return_counts=True)[1] / len(selected_labelled_idxs) * 100}")
         completed_selection = input("Happy with selection? To adjust enter N, otherwise enter Y").upper() == "Y"
 
     return selected_labelled_idxs, selected_cells
@@ -188,7 +192,8 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
     adjusted_uncertainty = np.copy(uncertainty)
     for i, idx in enumerate(uncertainty_ordering_idxs):  # iterate over the clusters in order of uncertainty
         current_cluster = kmeans.labels_[idx]
-        for x in range(i + 1, len(uncertainty_ordering_idxs)):  # iterate over the remaining clusters in order of uncertainty
+        for x in range(i + 1,
+                       len(uncertainty_ordering_idxs)):  # iterate over the remaining clusters in order of uncertainty
             x = uncertainty_ordering_idxs[x]
             if kmeans.labels_[x] == current_cluster:  # Scale the uncertaintys in the same cluster
                 adjusted_uncertainty[x] *= penalty_factor
@@ -207,9 +212,10 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
     return adjusted_uncertainty_ordering_idxs, kmeans.labels_
 
 
-def generate_initial_data_split(initial_labelling_budget, init_dataset_path=Path("data/PatrickData/Church/MastersFormat")):
+def generate_initial_data_split(initial_labelling_budget,
+                                init_dataset_path=Path("data/PatrickData/Church/MastersFormat")):
     # get full pcd
-    cache_initial_dataset = init_dataset_path/'cache_full_dataset.pickle'
+    cache_initial_dataset = init_dataset_path / 'cache_full_dataset.pickle'
     initial_dataset = None
     if cache_initial_dataset.exists():
         with open(cache_initial_dataset, "rb") as cache_file:
@@ -292,8 +298,12 @@ def main(args):
     elif args.model == "KPConv":
         raise NotImplementedError
 
+    num_AL_loop = 6
+    MERGED_TRAIN_PERCENTAGE=[args.init_label_budget*100]
+    for i in range(num_AL_loop-1):
+        MERGED_TRAIN_PERCENTAGE.append(MERGED_TRAIN_PERCENTAGE[-1]+args.label_budget*100)
     # generate_initial_data_split(initial_labelling_budget=args.init_label_budget)
-    for i in tqdm(range(6), desc="AL Loop"):
+    for i in tqdm(range(num_AL_loop), desc="AL Loop"):
         AL_ITERATION = i
 
         # Setup the wandb logging using group names inside the loop so that you can track the runs
@@ -303,7 +313,7 @@ def main(args):
         if i == 0: wandb.run.log_code(".")
 
         if args.model == 'pointnet++':
-            with open(Path(f"configs/pointnet++/lowerWD.yaml"), 'r') as yaml_args:
+            with open(Path(f"configs/pointnet++/lowerWDepochs12.yaml"), 'r') as yaml_args:
                 train_args = yaml.safe_load(yaml_args)
                 train_args = Namespace(**train_args)
             train_args.log_dir = LOG_DIR / str(AL_ITERATION) / 'train'
@@ -318,6 +328,8 @@ def main(args):
                 checkpoint_dir.mkdir(exist_ok=True, parents=True)
                 old_best_model = LOG_DIR / str(AL_ITERATION - 1) / 'train/checkpoints/best_train_model.pth'
                 shutil.copy(old_best_model, checkpoint_dir / 'best_model.pth')
+            else:
+                train_args.epoch = 6
 
             # train_args.epoch = 20  # set in config yaml
             # train_args.npoint *= 4
@@ -359,14 +371,13 @@ def main(args):
         # diverse_cells = get_diverse_cells_by_distance(high_var_cells, high_var_point_idxs, predict_points, predict_grid_mask, predict_features[high_var_cells])
 
         adjusted_uncertainty_ordering_idxs, cluster_labels = get_diversity_ranking(predict_features, predict_variance,
-                                                                                args.num_clusters)
+                                                                                   args.num_clusters)
         new_point_idxs = \
             np.where(np.in1d(predict_grid_mask, adjusted_uncertainty_ordering_idxs[:args.label_budget]))[0]
         # v_new = pptk.viewer(predict_points[new_point_idxs, :3], predict_points[new_point_idxs, -1], predict_preds[new_point_idxs], predict_target[new_point_idxs], predict_point_variance[new_point_idxs], predict_grid_mask[new_point_idxs])
         # v.set(selected=new_point_idxs)
 
         train_dataset = MastersDataset("train", LOG_DIR / str(AL_ITERATION))
-
         log_merged_metrics(train_dataset.segment_labels[0], predict_preds, predict_target)
 
         AL_ITERATION += 1
@@ -375,8 +386,8 @@ def main(args):
 
     wandb.init(project="Masters", name=f'{GROUP_NAME}_summary', group=GROUP_NAME,
                notes=NOTES)
-    for acc, iou in zip(MERGED_ACCURACY, MERGED_IOU):
-        wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou})
+    for acc, iou, train_p, val_p in zip(MERGED_ACCURACY, MERGED_IOU, MERGED_TRAIN_PERCENTAGE, MERGED_VAL_PERCENTAGE):
+        wandb.log({'merged_accuracy': acc, 'merged_mIoU': iou, 'train_percentage': train_p, 'val_percentage': val_p})
 
 
 def parse_args():
@@ -384,13 +395,12 @@ def parse_args():
 
     parser.add_argument('--model', default='RF', help="Which model (pointnet++, RF, KPConv)",
                         choices=["pointnet++", "RF", "KPConv"])
-    parser.add_argument('--init_label_budget', default = 0.05, help="Initial labelling budget as a fraction of cells")
+    parser.add_argument('--init_label_budget', default=0.05, help="Initial labelling budget as a fraction of cells")
     parser.add_argument('--label_budget', default=0.05, help="Labelling budget after each AL iteration")
     parser.add_argument('--num_clusters', default=75, help='Number of clusters for KMeans')
     parser.add_argument('--distance_metric', default='cosine', help='Distance metric for clustering in feature space')
 
     return parser.parse_args()
-
 
 
 if __name__ == '__main__':
@@ -400,9 +410,10 @@ if __name__ == '__main__':
     args = parse_args()
 
     # os.environ["WANDB_MODE"] = "dryrun"
+    args.label_budget = 19
 
-    GROUP_NAME = f'AL-{args.model}: WD1e-2_5%_repeat5'
-    NOTES = "WD 1e-2 Pointnet++ 5% area, 5 repeats"
+    GROUP_NAME = f'AL-{args.model}: WD1e-2_5%_repeat10epochs12'
+    NOTES = "WD 1e-2 Pointnet++ 5% area, 10 repeats, 12epoch"
     LOG_DIR = LOG_DIR / GROUP_NAME
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
