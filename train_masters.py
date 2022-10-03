@@ -374,7 +374,7 @@ def main(config):
 
         mIoU = np.mean(
             np.array(total_correct_class) / (np.array(total_iou_denominator_class,
-                                                      dtype=np.float) + 1e-6))  # correct prediction/class occurrences + false prediction
+                                                      dtype=float) + 1e-6))  # correct prediction/class occurrences + false prediction
 
         log_string('Training mean loss: %f' % mean_loss)
         log_string('Training accuracy: %f' % accuracy)

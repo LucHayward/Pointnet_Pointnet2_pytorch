@@ -1,6 +1,8 @@
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from line_profiler_pycharm import profile
+
 from models.pointnet2_utils import PointNetSetAbstraction, PointNetFeaturePropagation
 
 
@@ -23,6 +25,7 @@ class get_model(nn.Module):
         self.drop1 = nn.Dropout(dropout_prob)
         self.conv2 = nn.Conv1d(128, num_classes, 1)
 
+    # @profile
     def forward(self, xyz, get_features=False, repeats=1):
         l0_points = xyz
         l0_xyz = xyz[:, :3, :]  # Just the XYZ values
