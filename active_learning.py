@@ -269,6 +269,7 @@ def calculate_iou(preds, target):
     :param target:  the target class labels
     :return: the IoU of each class and the meanIoU
     """
+    raise DeprecationWarning
     IoU = jaccard_score(target, preds)
     mIoU = jaccard_score(target, preds, average='true')
 

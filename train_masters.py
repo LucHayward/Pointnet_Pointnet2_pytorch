@@ -898,11 +898,10 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
-               name='30% sample all pre-s3dis higherWD local_coords',
-               notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
-                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4 and local coords")
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters", config=args, resume=False,
+               name='s3dis-xyz',
+               notes="")
     wandb.run.log_code(".")
     main(wandb.config)
     wandb.finish()

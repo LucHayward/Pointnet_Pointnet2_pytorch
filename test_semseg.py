@@ -83,9 +83,9 @@ def main(args):
     BATCH_SIZE = args.batch_size
     NUM_POINT = args.num_point
 
-    root = 'data/s3dis/stanford_indoor3d/'
+    root = 'data/'
     if args.data_path is not None:
-        root = f'data/s3dis/{args.data_path}'
+        root = f'data/{args.data_path}'
 
     TEST_DATASET_WHOLE_SCENE = ScannetDatasetWholeScene(root, split='test', test_area=args.test_area, block_points=NUM_POINT, num_classes=NUM_CLASSES)
     log_string("The number of test data is: %d" % len(TEST_DATASET_WHOLE_SCENE))

@@ -43,7 +43,7 @@ def inplace_relu(m):
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
-    parser.add_argument('--model', type=str, default='pointnet_sem_seg', help='model name [default: pointnet_sem_seg]')
+    parser.add_argument('--model', type=str, default='pointnet2_sem_seg', help='model name [default: pointnet_sem_seg]')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch Size during training [default: 16]')
     parser.add_argument('--epoch', default=32, type=int, help='Epoch to run [default: 32]')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='Initial learning rate [default: 0.001]')
@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument('--test_area', type=int, default=5, help='Which area to use for test, option: 1-6 [default: 5]')
     parser.add_argument('--num_classes', type=int, default=13, help='number of class_labels [default: 13]')
     parser.add_argument('--block_size', default=1.0, type=float, help='column size for sampling (tbc)')
-    parser.add_argument('--data_path', default=None,
+    parser.add_argument('--data_path', default='S3DIS/original_npy',
                         help='If data path needs to change, set it here. Should point to data root')
 
     # New arguments
@@ -147,9 +147,9 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    root = 'data/s3dis/stanford_indoor3d/'
+    root = 'data/'
     if args.data_path is not None:
-        root = f'data/s3dis/{args.data_path}'
+        root = f'data/{args.data_path}'
     NUM_CLASSES = args.num_classes
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
@@ -492,9 +492,9 @@ if __name__ == '__main__':
     config = {'grid_shape_original': (10, 10,), 'data_split': {'training': 10, 'validation': 2}}  # TODO: Dynamically
     config = {}
     config.update(args.__dict__)
-    os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="PointNet2-Pytorch",
-               config=config, name='random validation 1:4', resume=False)
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(project="Masters",
+               config=config, name='S3DIS-xyz', resume=False)
     wandb.run.log_code(".")
     main(args)
     wandb.finish()
