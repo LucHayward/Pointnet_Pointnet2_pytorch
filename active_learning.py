@@ -71,7 +71,7 @@ def select_new_points_to_label(dataset, viewer, proportion_cells=0.05):
         viewer.set(selected=selected_labelled_idxs)
         print(f"Selected {len(selected_labelled_idxs)} points from {len(selected_cells)} cells "
               f"({len(selected_labelled_idxs) / len(dataset.grid_mask) * 100:.2f}% of points, "
-              f"{len(selected_cells) / num_grid_cells * 100:.2f}% of area)\n"
+              f"{len(selected_cells) / num_grid_cells * 100:.2f}% of area)\n" #TODO change area to volume, 
               f"DEBUG: keep:discard = {np.unique(dataset.segment_labels[0][selected_labelled_idxs], return_counts=True)[1] / len(selected_labelled_idxs) * 100}")
         completed_selection = input("Happy with selection? To adjust enter N, otherwise enter Y").upper() == "Y"
 
@@ -213,7 +213,8 @@ def get_diversity_ranking(features, uncertainty, n_clusters=10, penalty_factor=0
 
 
 def generate_initial_data_split(initial_labelling_budget,
-                                init_dataset_path=Path("data/PatrickData/Church/MastersFormat")):
+                                init_dataset_path="data/PatrickData/Church/MastersFormat"):
+    init_dataset_path = Path(init_dataset_path)
     # get full pcd
     cache_initial_dataset = init_dataset_path / 'cache_full_dataset.pickle'
     initial_dataset = None
@@ -302,7 +303,7 @@ def main(args):
     MERGED_TRAIN_PERCENTAGE=[args.init_label_budget*100]
     for i in range(num_AL_loop-1):
         MERGED_TRAIN_PERCENTAGE.append(MERGED_TRAIN_PERCENTAGE[-1]+args.label_budget*100)
-    # generate_initial_data_split(initial_labelling_budget=args.init_label_budget)
+    generate_initial_data_split(initial_labelling_budget=args.init_label_budget, init_dataset_path=args.data_path)
     for i in tqdm(range(num_AL_loop), desc="AL Loop"):
         AL_ITERATION = i
 
@@ -399,6 +400,7 @@ def parse_args():
     parser.add_argument('--label_budget', default=0.05, help="Labelling budget after each AL iteration")
     parser.add_argument('--num_clusters', default=75, help='Number of clusters for KMeans')
     parser.add_argument('--distance_metric', default='cosine', help='Distance metric for clustering in feature space')
+    parser.add_argument('--data_path', default='data/PatrickData/Church/MastersFormat', help='Data path from root')
 
     return parser.parse_args()
 
@@ -410,12 +412,12 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     args.label_budget = 19
 
-    GROUP_NAME = f'AL-{args.model}: WD1e-2_5%_repeat10epochs12'
-    NOTES = "WD 1e-2 Pointnet++ 5% area, 10 repeats, 12epoch"
-    LOG_DIR = LOG_DIR / GROUP_NAME
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    # GROUP_NAME = f'AL-{args.model}: WD1e-2_5%_repeat10epochs12'
+    # NOTES = "WD 1e-2 Pointnet++ 5% area, 10 repeats, 12epoch"
+    # LOG_DIR = LOG_DIR / GROUP_NAME
+    # LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     main(args)

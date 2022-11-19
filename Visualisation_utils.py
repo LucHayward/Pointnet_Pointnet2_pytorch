@@ -349,7 +349,7 @@ def pptk_full_dataset(dataset, include_grid_mask: bool = False, include_intensit
     attributes = [np.hstack(dataset.segment_labels)]
     if include_grid_mask:
         attributes.append(dataset.grid_mask)
-    if include_intensity:
+    if include_intensity and dataset.segment_points[0].shape[1]>3:
         attributes.append(np.vstack(dataset.segment_points)[:, 3])
     v.attributes(*attributes)
     v.color_map(turbo_colormap_data)
