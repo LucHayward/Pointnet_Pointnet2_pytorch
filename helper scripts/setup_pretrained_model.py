@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import torch
 import pptk
@@ -8,7 +10,7 @@ import models.pointnet2_sem_seg as MODEL
 
 # Load the pretrained model (13 classes)
 # checkpoint = torch.load("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/sem_seg/pretrained_pointnet2_sem_seg/checkpoints/best_model.pth")
-checkpoint = torch.load("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/best_model_pretrainedS3DIS.pth")
+checkpoint = torch.load("log/best_model_pretrainedS3DISxyz.pth")
 
 
 classifier = MODEL.get_model(13, points_vector_size=4)
@@ -24,7 +26,10 @@ state = {
     'model_state_dict': classifier.state_dict(),
     # 'optimizer_state_dict': checkpoint['optimizer_state_dict']
 }
-savepath = Path("/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/active_learning/AL-pointnet++: WD1e-2_5%_repeat10epochs12/0/train/checkpoints/")
+exp_name = 'temp'
+if len(sys.argv)>1:
+    exp_name=sys.argv[1]
+savepath = Path(f"log/{exp_name}/checkpoints/")
 
 
 savepath.mkdir(parents=True, exist_ok=True)

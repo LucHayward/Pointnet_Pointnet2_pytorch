@@ -592,7 +592,7 @@ def main(config):
 
     # HYPER PARAMETER
     os.environ["CUDA_VISIBLE_DEVICES"] = config["gpu"]
-    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir(config)
+    experiment_dir, log_dir, checkpoints_dir = setup_logging_dir(config, '')
     logger = logging.getLogger("Model")
     setup_logger(logger, log_dir, config)
     log_string('PARAMETERS ...')
@@ -899,8 +899,8 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 if __name__ == '__main__':
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False, group="local_point_test",
-               name='30% sample all pre-s3dis higherWD local_coords',
+    wandb.init(project="Masters", config=args, resume=False, group="final",
+               name=f"{'-'.join(args.data_path.split('/')[-2:])}",
                notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
                      "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4 and local coords")
     wandb.run.log_code(".")
