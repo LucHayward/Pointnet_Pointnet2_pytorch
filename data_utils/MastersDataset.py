@@ -1,17 +1,10 @@
-import os
-from line_profiler_pycharm import profile
-
-import numpy as np
-
-from tqdm import tqdm
-from torch.utils.data import Dataset
 from pathlib import Path
-
 # import pptk  # For visualisation
-from torch import save, load
 from time import time
 
-from Visualisation_utils import turbo_colormap_data
+import numpy as np
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
 rng = np.random.default_rng()
 

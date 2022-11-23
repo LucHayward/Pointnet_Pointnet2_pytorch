@@ -1,11 +1,9 @@
 import os
-from line_profiler_pycharm import profile
 
 import numpy as np
-
-from tqdm import tqdm
 from torch.utils.data import Dataset
-from Visualisation_utils import turbo_colormap_data
+from tqdm import tqdm
+
 # import pptk
 
 rng = np.random.default_rng()

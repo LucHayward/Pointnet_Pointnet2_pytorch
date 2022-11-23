@@ -1,23 +1,19 @@
+import argparse
 import logging
-from pprint import pprint, pformat
-from line_profiler_pycharm import profile
-
-import torch.utils.data
-from joblib import dump, load
-
-import numpy as np
 # import pptk
 from pathlib import Path
+from pprint import pformat
+
+import numpy as np
+import torch.utils.data
 import wandb
+from joblib import dump, load
+from line_profiler_pycharm import profile
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix, jaccard_score
 from tqdm import tqdm
 
 from data_utils.MastersDataset import MastersDataset
-
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix, jaccard_score
-
-import argparse
-
 from train_masters import setup_logging_dir, setup_logger, setup_wandb_classification_metrics, _log_string
 
 
@@ -46,7 +42,7 @@ def parse_args():
 
     return parser.parse_args()
 
-@profile
+# @profile
 def log_metrics(target, preds, prefix=None, logger=None) -> None:
     """
     Log the confusion matrix, the confusion matrix normalized over true_labels (category),
