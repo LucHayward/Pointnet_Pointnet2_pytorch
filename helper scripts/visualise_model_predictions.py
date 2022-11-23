@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from pathlib import Path
-import pptk
+# import pptk
 
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
@@ -74,8 +74,8 @@ for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = np.vstack(np.vstack(all_eval_points)), np.hstack(
     np.vstack(all_eval_pred)), np.hstack(np.vstack(all_eval_target)), np.hstack(np.vstack(all_eval_probs))
 print("Showing intensity, predictions, target, difference")
-v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
-                all_eval_pred != all_eval_target)
+# v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
+#                 all_eval_pred != all_eval_target)
 # v = pptk.viewer(all_eval_points[:, 6:], all_eval_pred, all_eval_target,
 #                 all_eval_pred != all_eval_target)
 

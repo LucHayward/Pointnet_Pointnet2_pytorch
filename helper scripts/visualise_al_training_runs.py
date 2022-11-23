@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from pathlib import Path
-import pptk
+# import pptk
 
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
@@ -18,14 +18,14 @@ def visualise_predicitons(merged=False):
                 np.column_stack((val_target, val_points[:, [3, 3]])),
                 np.column_stack((val_diff, val_points[:, [3, 3]]))]
 
-    vt = pptk.viewer(train_points[:, :3], train_attr[0], train_attr[1], train_attr[2])
-    vv = pptk.viewer(val_points[:, :3], val_attr[0], val_attr[1], val_attr[2])
-    if merged:
-        vm = pptk.viewer(np.vstack((train_points[:, :3], val_points[:, :3])), np.vstack((train_attr[0], val_attr[0])),
-                         np.vstack((train_attr[1], val_attr[1])), np.vstack((train_attr[2], val_attr[2])))
-        return vt, vv, vm
-    else:
-        return vt, vv
+    # vt = pptk.viewer(train_points[:, :3], train_attr[0], train_attr[1], train_attr[2])
+    # vv = pptk.viewer(val_points[:, :3], val_attr[0], val_attr[1], val_attr[2])
+    # if merged:
+    #     vm = pptk.viewer(np.vstack((train_points[:, :3], val_points[:, :3])), np.vstack((train_attr[0], val_attr[0])),
+    #                      np.vstack((train_attr[1], val_attr[1])), np.vstack((train_attr[2], val_attr[2])))
+    #     return vt, vv, vm
+    # else:
+    #     return vt, vv
 
 
 # Get the path to the training run

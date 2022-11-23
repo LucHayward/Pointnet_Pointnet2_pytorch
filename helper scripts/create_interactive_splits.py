@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import pptk
+# import pptk
 import open3d as o3d
 from pathlib import Path
 
@@ -12,8 +12,8 @@ path = Path("data/PatrickData/Church/MastersFormat/hand_selected_reversed")
 dataset_t = MastersDataset("train", path)
 dataset_v = MastersDataset("validate", path)
 
-vt = Visualisation_utils.pptk_full_dataset(dataset_t)
-vv = Visualisation_utils.pptk_full_dataset(dataset_v)
+# vt = Visualisation_utils.pptk_full_dataset(dataset_t)
+# vv = Visualisation_utils.pptk_full_dataset(dataset_v)
 
 # selected = v.get("selected")
 # output = np.hstack((dataset.segment_points[0][selected], dataset.segment_labels[0][selected,None]))

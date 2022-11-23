@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from Visualisation_utils import turbo_colormap_data
-import pptk
+# import pptk
 
 rng = np.random.default_rng()
 

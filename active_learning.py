@@ -3,7 +3,7 @@ import importlib
 import pickle
 
 import numpy as np
-import pptk
+# import pptk
 from pathlib import Path
 from sklearn.metrics import accuracy_score, jaccard_score
 
@@ -227,10 +227,10 @@ def generate_initial_data_split(initial_labelling_budget,
         with open(cache_initial_dataset, "wb") as cache_file:
             pickle.dump(initial_dataset, cache_file)
 
-    v_init = Visualisation_utils.pptk_full_dataset(initial_dataset, include_grid_mask=True, include_intensity=True)
-    v_init.color_map(
-        Visualisation_utils.turbo_colormap_data[::16] * 16)  # Repeats colours distinguishing adjacent cells.
-    v_init.color_map("summer")  # Best for intensity which is all we have to work with.
+    # v_init = Visualisation_utils.pptk_full_dataset(initial_dataset, include_grid_mask=True, include_intensity=True)
+    # v_init.color_map(
+    #     Visualisation_utils.turbo_colormap_data[::16] * 16)  # Repeats colours distinguishing adjacent cells.
+    # v_init.color_map("summer")  # Best for intensity which is all we have to work with.
 
     selected_labelled_idxs, selected_cells = select_new_points_to_label(initial_dataset, v_init,
                                                                         initial_labelling_budget)

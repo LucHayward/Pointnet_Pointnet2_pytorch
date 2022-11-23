@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 import torch
-import pptk
+# import pptk
 import open3d as o3d
 from pathlib import Path
 

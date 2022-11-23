@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from pathlib import Path
 
-import pptk  # For visualisation
+# import pptk  # For visualisation
 from torch import save, load
 from time import time
 
@@ -299,11 +299,11 @@ class MastersDataset(Dataset):
         print("Sampled:\n", np.unique(point_sample_cnt, return_counts=True))
         print("Returned:\n", np.unique(point_returned_cnt, return_counts=True))
 
-        v = pptk.viewer(self.segment_points[0][point_sample_cnt > 0, :3],
-                        self.segment_labels[0][point_sample_cnt > 0])
-        v_all = pptk.viewer(self.segment_points[0][:, :3], self.segment_labels[0])
-        v_returned = pptk.viewer(self.segment_points[0][point_returned_cnt > 0, :3],
-                                 self.segment_labels[0][point_returned_cnt > 0])
+        # v = pptk.viewer(self.segment_points[0][point_sample_cnt > 0, :3],
+        #                 self.segment_labels[0][point_sample_cnt > 0])
+        # v_all = pptk.viewer(self.segment_points[0][:, :3], self.segment_labels[0])
+        # v_returned = pptk.viewer(self.segment_points[0][point_returned_cnt > 0, :3],
+        #                          self.segment_labels[0][point_returned_cnt > 0])
 
         return point_sample_cnt, point_returned_cnt
 
@@ -444,7 +444,7 @@ class MastersDataset(Dataset):
 
 if __name__ == '__main__':
     from pathlib import Path
-    import pptk
+    # import pptk
 
 
     def _test_sample_all_points():

@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-import pptk
+# import pptk
 from tabulate import tabulate
 from tqdm import tqdm
 
@@ -167,19 +167,19 @@ def visualise_prediction(points, pred, target_labels, epoch, data_split, batch_n
     f1_keep = 2 * (recall_keep * precision_keep) / (recall_keep + precision_keep)
 
     if os.environ.get("WANDB_MODE") is not None:  # Only in DryRun mode
-        v = pptk.viewer(points)
-        v.color_map(turbo_colormap_data)
-        v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
+        # v = pptk.viewer(points)
+        # v.color_map(turbo_colormap_data)
+        # v.set(point_size=0.01, lookat=np.mean(points, axis=0), r=20, phi=.9, theta=0.4)
 
         if confidences is not None:
             # Could do this by applying it as a label or as a alpha mask
             # Confidence of prediction intervals histogram
             print()
             print(np.histogram(confidences.max(1).round(1), np.linspace(0.5, 1, 6)))
-            v.attributes(pred, target_labels, confusion_mask,
-                         np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
-        else:
-            v.attributes(pred, target_labels, confusion_mask)
+        #     v.attributes(pred, target_labels, confusion_mask,
+        #                  np.hstack((confusion_mask_rgb255 / 255, confidences.max(1).round(1)[:, None])))
+        # else:
+        #     v.attributes(pred, target_labels, confusion_mask)
 
         # import open3d as o3d
         # pcd = o3d.geometry.PointCloud()
@@ -337,23 +337,23 @@ def generate_bounding_cube(origin, size):
     return generate_bounding_wireframe_points(np.array(origin), np.array(origin) + size, 10 * size)
 
 
-def pptk_full_dataset(dataset, include_grid_mask: bool = False, include_intensity: bool = False):
-    """
-    Visualise a given dataset object
-    :param include_grid_mask: Also visualise the grid (assuming it is included)
-    :param include_intensity: Also visualise the intensity
-    :param dataset: S3DISDataLoader Dataset dataset containing points and labels
-    :return: pptk viewer instance
-    """
-    v = pptk.viewer(np.vstack(dataset.segment_points)[:, :3])
-    attributes = [np.hstack(dataset.segment_labels)]
-    if include_grid_mask:
-        attributes.append(dataset.grid_mask)
-    if include_intensity and dataset.segment_points[0].shape[1]>3:
-        attributes.append(np.vstack(dataset.segment_points)[:, 3])
-    v.attributes(*attributes)
-    v.color_map(turbo_colormap_data)
-    return v
+# def pptk_full_dataset(dataset, include_grid_mask: bool = False, include_intensity: bool = False):
+#     """
+#     Visualise a given dataset object
+#     :param include_grid_mask: Also visualise the grid (assuming it is included)
+#     :param include_intensity: Also visualise the intensity
+#     :param dataset: S3DISDataLoader Dataset dataset containing points and labels
+#     :return: pptk viewer instance
+#     """
+#     # v = pptk.viewer(np.vstack(dataset.segment_points)[:, :3])
+#     attributes = [np.hstack(dataset.segment_labels)]
+#     if include_grid_mask:
+#         attributes.append(dataset.grid_mask)
+#     if include_intensity and dataset.segment_points[0].shape[1]>3:
+#         attributes.append(np.vstack(dataset.segment_points)[:, 3])
+#     v.attributes(*attributes)
+#     v.color_map(turbo_colormap_data)
+#     return v
 
 
 def numpy_inverse_index(array, index):

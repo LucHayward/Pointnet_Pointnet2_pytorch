@@ -18,7 +18,7 @@ import shutil
 
 from tqdm import tqdm
 import numpy as np
-import pptk
+# import pptk
 
 import wandb
 from line_profiler_pycharm import profile
@@ -213,9 +213,9 @@ def main(config):
 
     def setup_data_loaders():
 
-        def _debug_loaders():
-            vt = pptk.viewer(all_train_points[:, :3], all_train_labels)
-            vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
+        # def _debug_loaders():
+            # vt = pptk.viewer(all_train_points[:, :3], all_train_labels)
+            # vv = pptk.viewer(all_val_points[:, :3], all_val_labels)
 
         log_string("Loading the train dataset")
         TRAIN_DATASET = MastersDataset("train", DATA_PATH, NUM_POINTS, BLOCK_SIZE, force_even=config["force_even"],
