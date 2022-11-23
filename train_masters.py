@@ -1,27 +1,22 @@
 import argparse
-import importlib
-import os
-
-import Visualisation_utils
-import active_learning
-from Visualisation_utils import visualise_batch, visualise_prediction, turbo_colormap_data, create_confusion_mask
-from data_utils.MastersDataset import MastersDataset
-import provider
-from sklearn.metrics import confusion_matrix
-
-import torch
 import datetime
-from pathlib import Path
-import sys
+import importlib
 import logging
+import os
 import shutil
+import sys
+from pathlib import Path
 
-from tqdm import tqdm
 import numpy as np
-# import pptk
-
+import torch
 import wandb
-from line_profiler_pycharm import profile
+from tqdm import tqdm
+
+import provider
+from Visualisation_utils import visualise_batch, create_confusion_mask
+from data_utils.MastersDataset import MastersDataset
+
+# import pptk
 
 classes = ["keep", "discard"]
 sys.path.append("models")
