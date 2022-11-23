@@ -901,8 +901,7 @@ if __name__ == '__main__':
     os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False, group="final",
                name=f"{'-'.join(args.data_path.split('/')[-2:])}",
-               notes="Starting from the S3DIS pretrained, using the reversed validation (30%) dataset sampling all points "
-                     "in training and in validation, with higher Weight Decay 1e-2 vs 1e-4 and local coords")
+               notes="")
     wandb.run.log_code(".")
     main(wandb.config)
     wandb.finish()
