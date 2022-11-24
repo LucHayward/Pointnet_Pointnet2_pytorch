@@ -14,5 +14,6 @@ module load python/miniconda3-py39
 source activate /scratch/hywluc001/conda-envs/pointnet
 
 cd Pointnet_Pointnet2_pytorch
+export CUDA_DEVICES_AVAILABLE=$GPU_DEVICE_ORDINAL
 python3 train_masters.py --data_path data/PatrickData/Bagni_Nerone/2.5% --epoch 60 --log_dir final/Bagni_Nerone_2.5%_s3dis --decay_rate 1e-2 --log_merged_validation --log_merged_training_set --sample_all_validation --shuffle_training_data
 
