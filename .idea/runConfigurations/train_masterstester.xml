@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_masters.py" />
-    <option name="PARAMETERS" value="--data_path &quot;data/PatrickData/Church/2.5%&quot; --epoch 60 --log_dir final/Church_2.5%_s3dis --decay_rate 1e-2 --log_merged_validation --log_merged_training_set --sample_all_validation --shuffle_training_data" />
+    <option name="PARAMETERS" value="--data_path data/PatrickData/Bagni_Nerone/2.5% --epoch 60 --log_dir final/Bagni_Nerone_2.5%_s3dis --decay_rate 1e-2 --log_merged_validation --log_merged_training_set --sample_all_validation --shuffle_training_data" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

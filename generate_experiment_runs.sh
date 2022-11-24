@@ -14,7 +14,7 @@ do
 #SBATCH --account=gpumk
 #SBATCH --partition=gpumk
 #SBATCH --nodes=1 --ntasks=8 --gres=gpu:pascal:1
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=\"P++_${dataset}_${split}\"
 #SBATCH --mail-user=hywluc001@myuct.ac.za
 #SBATCH --mail-type=ALL
@@ -41,7 +41,7 @@ echo "#!/bin/sh
 #SBATCH --account=gpumk
 #SBATCH --partition=gpumk
 #SBATCH --nodes=1 --ntasks=8 --gres=gpu:pascal:1
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=\"P++_${dataset}_${split}-s3dis\"
 #SBATCH --mail-user=hywluc001@myuct.ac.za
 #SBATCH --mail-type=ALL
