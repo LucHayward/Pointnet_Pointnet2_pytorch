@@ -1,19 +1,21 @@
-| P++_Bagni_Nerone_2.5%_s3dispascal.sh
-| P++_Bagni_Nerone_2.5%pascal.sh
-| P++_Bagni_Nerone_5%_s3dispascal.sh
-| P++_Bagni_Nerone_5%pascal.sh
-| P++_Bagni_Nerone_25%_s3dispascal.sh
-| P++_Bagni_Nerone_25%pascal.sh
-| P++_Bagni_Nerone_50%_s3dispascal.sh
-| P++_Bagni_Nerone_50%pascal.sh
-| P++_Church_2.5%_s3dispascal.sh
-| P++_Church_2.5%pascal.sh
-| P++_Church_5%_s3dispascal.sh
-| P++_Church_5%pascal.sh
-| P++_Church_25%_s3dispascal.sh
-| P++_Church_25%pascal.sh
-| P++_Church_50%_s3dispascal.sh
-| P++_Church_50%pascal.sh
+Done | P++_Bagni_Nerone_2.5%_s3dispascal.sh
+Done | P++_Bagni_Nerone_2.5%pascal.sh
+Done | P++_Bagni_Nerone_5%_s3dispascal.sh
+Done | P++_Bagni_Nerone_5%pascal.sh
+Done | P++_Bagni_Nerone_25%_s3dispascal.sh
+Done | P++_Bagni_Nerone_25%pascal.sh
+Done | P++_Bagni_Nerone_50%_s3dispascal.sh
+Done | P++_Bagni_Nerone_50%pascal.sh
+
+Done | P++_Church_2.5%_s3dispascal.sh
+Done | P++_Church_2.5%pascal.sh
+Done | P++_Church_5%_s3dispascal.sh
+Done | P++_Church_5%pascal.sh
+Done | P++_Church_25%_s3dispascal.sh
+Done | P++_Church_25%pascal.sh
+Done | P++_Church_50%_s3dispascal.sh
+Done | P++_Church_50%pascal.sh
+
 | P++_Lunnahoja_2.5%_s3dispascal.sh
 | P++_Lunnahoja_2.5%pascal.sh
 | P++_Lunnahoja_5%_s3dispascal.sh
@@ -22,211 +24,31 @@
 | P++_Lunnahoja_25%pascal.sh
 | P++_Lunnahoja_50%_s3dispascal.sh
 | P++_Lunnahoja_50%pascal.sh
-| P++_Montelupo_2.5%_s3dispascal.sh
-| P++_Montelupo_2.5%pascal.sh
-| P++_Montelupo_5%_s3dispascal.sh
-| P++_Montelupo_5%pascal.sh
-| P++_Montelupo_25%_s3dispascal.sh
-| P++_Montelupo_25%pascal.sh
+
+Done | P++_Montelupo_2.5%_s3dispascal.sh
+Done | P++_Montelupo_2.5%pascal.sh
+Done | P++_Montelupo_5%_s3dispascal.sh
+Done | P++_Montelupo_5%pascal.sh
+Done | P++_Montelupo_25%_s3dispascal.sh
+Done | P++_Montelupo_25%pascal.sh
 | P++_Montelupo_50%_s3dispascal.sh
-| P++_Montelupo_50%pascal.sh
+Done | P++_Montelupo_50%pascal.sh
+
 | P++_Monument_2.5%_s3dispascal.sh
-| P++_Monument_2.5%pascal.sh
-| P++_Monument_5%_s3dispascal.sh
-| P++_Monument_5%pascal.sh
-| P++_Monument_25%_s3dispascal.sh
-| P++_Monument_25%pascal.sh
-| P++_Monument_50%_s3dispascal.sh
-| P++_Monument_50%pascal.sh
-| P++_Piazza_2.5%_s3dispascal.sh
-| P++_Piazza_2.5%pascal.sh
+Done | P++_Monument_2.5%pascal.sh
+Done | P++_Monument_5%_s3dispascal.sh
+Done | P++_Monument_5%pascal.sh
+Done | P++_Monument_25%_s3dispascal.sh
+Done | P++_Monument_25%pascal.sh
+Done | P++_Monument_50%_s3dispascal.sh
+Done | P++_Monument_50%pascal.sh
+
+Done | P++_Piazza_2.5%_s3dispascal.sh
+Done | P++_Piazza_2.5%pascal.sh
 | P++_Piazza_5%_s3dispascal.sh
 | P++_Piazza_5%pascal.sh
 | P++_Piazza_25%_s3dispascal.sh
 | P++_Piazza_25%pascal.sh
 | P++_Piazza_50%_s3dispascal.sh
-| P++_Piazza_50%pascal.sh
-
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Bagni_Nerone_50%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_2.5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Church_50%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_2.5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Lunnahoja_50%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_2.5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Montelupo_50%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_2.5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Monument_50%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_2.5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_2.5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_5%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_5%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_25%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_25%pascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_50%_s3dispascal.sh
-sleep 60
-sbatch Pointnet_Pointnet2_pytorch/slurm_scripts/P++_Piazza_50%pascal.sh
-sleep 60
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Done | P++_Piazza_50%pascal.sh
 

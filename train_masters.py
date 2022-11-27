@@ -253,7 +253,8 @@ def main(config):
         MODEL = importlib.import_module(config["model"])
         shutil.copy('models/%s.py' % config["model"], str(experiment_dir))
         shutil.copy('models/pointnet2_utils.py', str(experiment_dir))
-        classifier = MODEL.get_model(2, points_vector_size=(9 if config["relative_point_coords"] else 4)).cuda()
+        # classifier = MODEL.get_model(2, points_vector_size=(9 if config["relative_point_coords"] else 4)).cuda()
+        classifier = MODEL.get_model(2, points_vector_size=(3)).cuda()
         criterion = MODEL.get_loss().cuda()
         classifier.apply(inplace_relu)
         wandb.watch(classifier, criterion, log='all', log_freq=10)
@@ -893,7 +894,7 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 
 if __name__ == '__main__':
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters", config=args, resume=False, group="final",
                name=f"{'-'.join(args.data_path.split('/')[-2:])}",
                notes="")

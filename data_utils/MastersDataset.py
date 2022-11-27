@@ -77,7 +77,8 @@ class MastersDataset(Dataset):
         num_points_per_segment = []
         labelweights = np.zeros(2)
         if npy_array is not None:
-            points, labels = npy_array[:, :-1], npy_array[:, -1]
+            # points, labels = npy_array[:, :-1], npy_array[:, -1]
+            points, labels = npy_array[:, :3], npy_array[:, -1]
             self.segment_points.append(points)
             self.segment_labels.append(labels)
 
@@ -100,7 +101,8 @@ class MastersDataset(Dataset):
             # For each segment load all the points and split the labels out, recording their relative weights
             for path in tqdm(segment_paths):
                 xyzir = np.load(path)
-                points, labels = xyzir[:, :-1], xyzir[:, -1]
+                # points, labels = xyzir[:, :-1], xyzir[:, -1]
+                points, labels = xyzir[:, :3], xyzir[:, -1]
                 self.segment_points.append(points)
                 self.segment_labels.append(labels)
 
