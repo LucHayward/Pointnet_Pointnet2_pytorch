@@ -8,7 +8,7 @@ import numpy as np
 import torch.utils.data
 import wandb
 from joblib import dump, load
-from line_profiler_pycharm import profile
+# from line_profiler_pycharm import profile
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix, jaccard_score
 from tqdm import tqdm
@@ -39,8 +39,42 @@ def parse_args():
     parser.add_argument('--validation_repeats', default=None)
 
 
-
     return parser.parse_args()
+
+def setup_wandb_classification_metrics():
+    # Train classification metrics
+    wandb.define_metric('Train/TP', summary='max')
+    wandb.define_metric('Train/FP', summary='min')
+    wandb.define_metric('Train/TN', summary='max')
+    wandb.define_metric('Train/FN', summary='min')
+
+    wandb.define_metric('Train/category-TP', summary='max')
+    wandb.define_metric('Train/category-FP', summary='min')
+    wandb.define_metric('Train/category-TN', summary='max')
+    wandb.define_metric('Train/category-FN', summary='min')
+
+    wandb.define_metric('Train/Precision', summary='max')
+    wandb.define_metric('Train/Recall', summary='max')
+    wandb.define_metric('Train/F1', summary='max')
+    wandb.define_metric('Train/mIoU', summary='max')
+    wandb.define_metric('Train/accuracy', summary='max')
+
+    # Validation Classification metrics
+    wandb.define_metric('Validation/TP', summary='max')
+    wandb.define_metric('Validation/FP', summary='min')
+    wandb.define_metric('Validation/TN', summary='max')
+    wandb.define_metric('Validation/FN', summary='min')
+
+    wandb.define_metric('Validation/category-TP', summary='max')
+    wandb.define_metric('Validation/category-FP', summary='min')
+    wandb.define_metric('Validation/category-TN', summary='max')
+    wandb.define_metric('Validation/category-FN', summary='min')
+
+    wandb.define_metric('Validation/Precision', summary='max')
+    wandb.define_metric('Validation/Recall', summary='max')
+    wandb.define_metric('Validation/F1', summary='max')
+    wandb.define_metric('Validation/mIoU', summary='max')
+    wandb.define_metric('Validation/accuracy', summary='max')
 
 # @profile
 def log_metrics(target, preds, prefix=None, logger=None) -> None:
@@ -179,12 +213,13 @@ def main(config):
 if __name__ == '__main__':
     import os
 
+    # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {8, 16, 32, 64} --max_depth ={16,32,64,128,256}
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters-RF", config=args,
-               # name='',
-               # notes=''
-               )
+    wandb.init(project="Masters-RF", config=args, resume=False,
+               name=f"{'-'.join(args.data_path.split('/')[-2:])}",
+               notes="")
     wandb.run.log_code(".")
+    setup_wandb_classification_metrics()
     main(wandb.config)
     wandb.finish()

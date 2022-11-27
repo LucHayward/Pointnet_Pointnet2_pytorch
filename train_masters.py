@@ -587,7 +587,7 @@ def main(config):
         return best_iou
 
     # HYPER PARAMETER
-    os.environ["CUDA_VISIBLE_DEVICES"] = config["gpu"]
+    # os.environ["CUDA_VISIBLE_DEVICES"] = config["gpu"]
     experiment_dir, log_dir, checkpoints_dir = setup_logging_dir(config, '')
     logger = logging.getLogger("Model")
     setup_logger(logger, log_dir, config)
