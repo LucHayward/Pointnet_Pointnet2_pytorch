@@ -746,6 +746,7 @@ def main(config):
 
         run_epoch += 1
         wandb.log({})
+        exit(0)
 
     log_string("Finished")
 
@@ -895,8 +896,8 @@ def validation_batch(BATCH_SIZE, NUM_CLASSES, NUM_POINTS, all_eval_points, all_e
 if __name__ == '__main__':
     args = parse_args()
     # os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(project="Masters", config=args, resume=False, group="final",
-               name=f"{'-'.join(args.data_path.split('/')[-2:])}",
+    wandb.init(project="Masters", config=args, resume=False, group="50%Validation",
+               name=f"{'-'.join(args.data_path.split('/')[-2:])}-50%Validation",
                notes="")
     wandb.run.log_code(".")
     main(wandb.config)

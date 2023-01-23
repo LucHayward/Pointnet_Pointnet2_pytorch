@@ -1,54 +1,91 @@
-| P++_Bagni_Nerone_2.5%_s3dispascal.sh
-| P++_Bagni_Nerone_2.5%pascal.sh
-| P++_Bagni_Nerone_5%_s3dispascal.sh
-| P++_Bagni_Nerone_5%pascal.sh
-| P++_Bagni_Nerone_25%_s3dispascal.sh
-| P++_Bagni_Nerone_25%pascal.sh
-| P++_Bagni_Nerone_50%_s3dispascal.sh
-| P++_Bagni_Nerone_50%pascal.sh
+Done | P++_Bagni_Nerone_2.5%_s3dispascal.sh
+Done | P++_Bagni_Nerone_2.5%pascal.sh
+Done | P++_Bagni_Nerone_5%_s3dispascal.sh
+Done | P++_Bagni_Nerone_5%pascal.sh
+Done | P++_Bagni_Nerone_25%_s3dispascal.sh
+Done | P++_Bagni_Nerone_25%pascal.sh
+Done | P++_Bagni_Nerone_50%_s3dispascal.sh
+Done | P++_Bagni_Nerone_50%pascal.sh
 
-| P++_Church_2.5%_s3dispascal.sh
-| P++_Church_2.5%pascal.sh
-| P++_Church_5%_s3dispascal.sh
-| P++_Church_5%pascal.sh
-| P++_Church_25%_s3dispascal.sh
-| P++_Church_25%pascal.sh
-| P++_Church_50%_s3dispascal.sh
-| P++_Church_50%pascal.sh
+Done | P++_Church_2.5%_s3dispascal.sh
+Done | P++_Church_2.5%pascal.sh
+Done | P++_Church_5%_s3dispascal.sh
+Done | P++_Church_5%pascal.sh
+Done | P++_Church_25%_s3dispascal.sh
+Done | P++_Church_25%pascal.sh
+Done | P++_Church_50%_s3dispascal.sh
+Done | P++_Church_50%pascal.sh
 
-| P++_Lunnahoja_2.5%_s3dispascal.sh
-| P++_Lunnahoja_2.5%pascal.sh
-| P++_Lunnahoja_5%_s3dispascal.sh
-| P++_Lunnahoja_5%pascal.sh
-| P++_Lunnahoja_25%_s3dispascal.sh
-| P++_Lunnahoja_25%pascal.sh
-| P++_Lunnahoja_50%_s3dispascal.sh
-| P++_Lunnahoja_50%pascal.sh
+Done | P++_Lunnahoja_2.5%_s3dispascal.sh
+Done | P++_Lunnahoja_2.5%pascal.sh
+Done | P++_Lunnahoja_5%_s3dispascal.sh
+Done | P++_Lunnahoja_5%pascal.sh
+Done | P++_Lunnahoja_25%_s3dispascal.sh
+Done | P++_Lunnahoja_25%pascal.sh
+Done | P++_Lunnahoja_50%_s3dispascal.sh
+Done | P++_Lunnahoja_50%pascal.sh
 
-| P++_Montelupo_2.5%_s3dispascal.sh
-| P++_Montelupo_2.5%pascal.sh
-| P++_Montelupo_5%_s3dispascal.sh
-| P++_Montelupo_5%pascal.sh
-| P++_Montelupo_25%_s3dispascal.sh
-| P++_Montelupo_25%pascal.sh
-| P++_Montelupo_50%_s3dispascal.sh
-| P++_Montelupo_50%pascal.sh
+Done | P++_Montelupo_2.5%_s3dispascal.sh
+Done | P++_Montelupo_2.5%pascal.sh
+Done | P++_Montelupo_5%_s3dispascal.sh
+Done | P++_Montelupo_5%pascal.sh
+Done | P++_Montelupo_25%_s3dispascal.sh
+Done | P++_Montelupo_25%pascal.sh
+Done | P++_Montelupo_50%_s3dispascal.sh
+Done | P++_Montelupo_50%pascal.sh
 
-| P++_Monument_2.5%_s3dispascal.sh
-| P++_Monument_2.5%pascal.sh
-| P++_Monument_5%_s3dispascal.sh
-| P++_Monument_5%pascal.sh
-| P++_Monument_25%_s3dispascal.sh
-| P++_Monument_25%pascal.sh
-| P++_Monument_50%_s3dispascal.sh
-| P++_Monument_50%pascal.sh
+Done | P++_Monument_2.5%_s3dispascal.sh
+Done | P++_Monument_2.5%pascal.sh
+Done | P++_Monument_5%_s3dispascal.sh
+Done | P++_Monument_5%pascal.sh
+Done | P++_Monument_25%_s3dispascal.sh
+Done | P++_Monument_25%pascal.sh
+Done | P++_Monument_50%_s3dispascal.sh
+Done | P++_Monument_50%pascal.sh
 
-| P++_Piazza_2.5%_s3dispascal.sh
-| P++_Piazza_2.5%pascal.sh
-| P++_Piazza_5%_s3dispascal.sh
-| P++_Piazza_5%pascal.sh
-| P++_Piazza_25%_s3dispascal.sh
-| P++_Piazza_25%pascal.sh
-| P++_Piazza_50%_s3dispascal.sh
-| P++_Piazza_50%pascal.sh
+Done | P++_Piazza_2.5%_s3dispascal.sh
+Done | P++_Piazza_2.5%pascal.sh
+Done | P++_Piazza_5%_s3dispascal.sh
+Done | P++_Piazza_5%pascal.sh
+Done | P++_Piazza_25%_s3dispascal.sh
+Done | P++_Piazza_25%pascal.sh
+Done | P++_Piazza_50%_s3dispascal.sh
+Done | P++_Piazza_50%pascal.sh
+
+Done | RF_Bagni_Nerone_2.5%.sh
+Done | RF_Bagni_Nerone_5%.sh
+Done | RF_Bagni_Nerone_25%.sh
+Done | RF_Bagni_Nerone_50%.sh
+
+Done | RF_Church_2.5%.sh
+Done | RF_Church_5%.sh
+Done | RF_Church_25%.sh
+Done | RF_Church_50%.sh
+
+Done | RF_Lunnahoja_2.5%.sh
+Done | RF_Lunnahoja_5%.sh
+Done | RF_Lunnahoja_25%.sh
+Done | RF_Lunnahoja_50%.sh
+
+Done | RF_Montelupo_2.5%.sh
+Done | RF_Montelupo_5%.sh
+Done | RF_Montelupo_25%.sh
+Done | RF_Montelupo_50%.sh
+
+Done | RF_Monument_2.5%.sh
+Done | RF_Monument_5%.sh
+Done | RF_Monument_25%.sh
+Done | RF_Monument_50%.sh
+
+Done | RF_Piazza_2.5%.sh
+Done | RF_Piazza_5%.sh
+Done | RF_Piazza_25%.sh
+Done | RF_Piazza_50%.sh
+
+
+wandb sync offline-run-20221127_210515-1lzvlxm5 offline-run-20221127_210831-15houuud offline-run-20221127_211307-q64y63lq offline-run-20221127_211353-2z7s7zle offline-run-20221127_212335-3b4ovz70 offline-run-20221127_212839-30a8fff8 offline-run-20221127_213145-281nss4y offline-run-20221127_215002-1b8pz078 offline-run-20221128_113605-63qkdtve offline-run-20221128_114242-1i94n23l offline-run-20221128_114558-11u7nv2e offline-run-20221128_114917-2bl0mie6 offline-run-20221128_115245-2ktgr79i offline-run-20221128_115749-2v4bjb1g offline-run-20221128_120054-3v7ie2iy offline-run-20221128_120421-3q9gzvtp offline-run-20221128_120737-35ozoml4 offline-run-20221128_121059-3rn8f69g offline-run-20221128_121416-1w2bke13 offline-run-20221128_121739-hx1zqkx2 offline-run-20221128_122057-ih6sszvq offline-run-20221128_122419-okg1qhol offline-run-20221128_122743-v59z8yzf offline-run-20221128_123103-ehzkhu51 offline-run-20221128_123423-2cskamoo offline-run-20221128_123742-35ii6ktp offline-run-20221128_124103-10w0duz6 offline-run-20221128_124429-y4da5v9j offline-run-20221128_124731-9q3knqny offline-run-20221128_125108-1yk8i596 offline-run-20221128_125424-1ptn9jyg offline-run-20221128_125747-ik64ghjn offline-run-20221128_130108-18xjv120
+
+
+
+
 

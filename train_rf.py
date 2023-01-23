@@ -1,5 +1,6 @@
 import argparse
 import logging
+import time
 # import pptk
 from pathlib import Path
 from pprint import pformat
@@ -26,9 +27,10 @@ def parse_args():
                         default='data/PatrickData/Church/MastersFormat/hand_selected_reversed')
 
     # RF HParams
-    parser.add_argument('--n_estimators', default=32, help='Number of trees to train')
-    parser.add_argument('--max_depth', default=32, help='Maximum depth of the tree')
-    parser.add_argument('--min_samples_split', default=20, help='')
+    parser.add_argument('--n_estimators', type=int, default=32, help='Number of trees to train')
+    parser.add_argument('--max_depth', type=int, default=32, help='Maximum depth of the tree')
+    parser.add_argument('--min_samples_split', type=int, default=20, help='')
+    parser.add_argument('--xgboost', action='store_true', help='Fit XGBoost as well as sklearn RF')
 
     # Expected values
     parser.add_argument('--model', default='RF', help='name of the model, expected for logger')
@@ -75,6 +77,40 @@ def setup_wandb_classification_metrics():
     wandb.define_metric('Validation/F1', summary='max')
     wandb.define_metric('Validation/mIoU', summary='max')
     wandb.define_metric('Validation/accuracy', summary='max')
+
+    # XGBoost Classification metrics
+    wandb.define_metric('XGB_Train/TP', summary='max')
+    wandb.define_metric('XGB_Train/FP', summary='min')
+    wandb.define_metric('XGB_Train/TN', summary='max')
+    wandb.define_metric('XGB_Train/FN', summary='min')
+
+    wandb.define_metric('XGB_Train/category-TP', summary='max')
+    wandb.define_metric('XGB_Train/category-FP', summary='min')
+    wandb.define_metric('XGB_Train/category-TN', summary='max')
+    wandb.define_metric('XGB_Train/category-FN', summary='min')
+
+    wandb.define_metric('XGB_Train/Precision', summary='max')
+    wandb.define_metric('XGB_Train/Recall', summary='max')
+    wandb.define_metric('XGB_Train/F1', summary='max')
+    wandb.define_metric('XGB_Train/mIoU', summary='max')
+    wandb.define_metric('XGB_Train/accuracy', summary='max')
+
+    # Validation Classification metrics
+    wandb.define_metric('XGB_Validation/TP', summary='max')
+    wandb.define_metric('XGB_Validation/FP', summary='min')
+    wandb.define_metric('XGB_Validation/TN', summary='max')
+    wandb.define_metric('XGB_Validation/FN', summary='min')
+
+    wandb.define_metric('XGB_Validation/category-TP', summary='max')
+    wandb.define_metric('XGB_Validation/category-FP', summary='min')
+    wandb.define_metric('XGB_Validation/category-TN', summary='max')
+    wandb.define_metric('XGB_Validation/category-FN', summary='min')
+
+    wandb.define_metric('XGB_Validation/Precision', summary='max')
+    wandb.define_metric('XGB_Validation/Recall', summary='max')
+    wandb.define_metric('XGB_Validation/F1', summary='max')
+    wandb.define_metric('XGB_Validation/mIoU', summary='max')
+    wandb.define_metric('XGB_Validation/accuracy', summary='max')
 
 # @profile
 def log_metrics(target, preds, prefix=None, logger=None) -> None:
@@ -148,6 +184,8 @@ def main(config):
     log_string(f"Training data: {X_train.shape}")
     log_string(f"Validation data: {X_val.shape}")
 
+    st = time.time()
+    print("Training Random Forest")
     if (checkpoints_dir/'random_forest.joblib').exists():
         log_string("Loading prefit random forest")
         classifier = load(checkpoints_dir/'random_forest.joblib')
@@ -156,19 +194,33 @@ def main(config):
         classifier = RandomForestClassifier(n_estimators=config["n_estimators"],
                                             max_depth=config['max_depth'],
                                             min_samples_split=config['min_samples_split'],
-                                            n_jobs=4,
+                                            n_jobs=8,
                                             verbose=1)
         classifier.fit(X=X_train, y=y_train)
         dump(classifier, checkpoints_dir / 'random_forest.joblib')
-    log_string(f"Feature importances:\n{classifier.feature_importances_}")
+        wandb.save(str(checkpoints_dir / 'random_forest.joblib'))
+    preds_train, preds_val = train_predict(X_train, X_val, classifier, log_string, logger, y_train, y_val)
+    print(f"RF: {time.time() - st}")
 
-    preds_train = classifier.predict(X_train)
-    log_metrics(y_train, preds_train, 'Train', logger)
+    if config['xgboost']:
+        st = time.time()
+        import xgboost as xgb
+        from xgboost import XGBClassifier
 
-    # for i, sample in enumerate(val_data_loader):
-    preds_val = classifier.predict(X_val)
-    log_metrics(y_val, preds_val, 'Validation', logger)
+        log_string("Training XGBoost")
+        xgboost = XGBClassifier(n_estimators=config["n_estimators"],
+                                max_depth=config['max_depth'],
+                                n_jobs=8,
+                                )
+        # xgboost = XGBClassifier()
+        xgboost.fit(X=X_train, y=y_train)
+        xgboost.save_model(str(checkpoints_dir / 'xgboost.model'))
+        wandb.save(str(checkpoints_dir / 'xgboost.model'))
+        preds_train_xgboost, preds_val_xgboost = train_predict(X_train, X_val, xgboost, log_string, logger, y_train, y_val, True)
+        print(f"XGBoost: {time.time() - st}")
 
+
+    print()
     if config["active_learning"]:
         if config["uncertainty_metric"] == "variance":
             preds_vals = [preds_val]
@@ -210,10 +262,23 @@ def main(config):
                             features=cell_features)
 
 
+def train_predict(X_train, X_val, classifier, log_string, logger, y_train, y_val, xgboost=False):
+    if xgboost: print("Producing results for XGBoost")
+    log_string(f"Feature importances:\n{classifier.feature_importances_}")
+    preds_train = classifier.predict(X_train)
+    prefix = 'Train' if not xgboost else 'XGB_Train'
+    log_metrics(y_train, preds_train, prefix, logger)
+    # for i, sample in enumerate(val_data_loader):
+    preds_val = classifier.predict(X_val)
+    prefix = 'Validation' if not xgboost else 'XGB_Validation'
+    log_metrics(y_val, preds_val, prefix, logger)
+    return preds_train, preds_val
+
+
 if __name__ == '__main__':
     import os
 
-    # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {8, 16, 32, 64} --max_depth ={16,32,64,128,256}
+    # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {32, 64} --max_depth ={16,32,64,128,256}
     args = parse_args()
     os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters-RF", config=args, resume=False,
