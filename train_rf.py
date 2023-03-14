@@ -176,8 +176,8 @@ def main(config):
 
     # Setup training/validation data
     TRAIN_DATASET = MastersDataset('train', Path(config['data_path']), sample_all_points=True)
-    VAL_DATASET = MastersDataset('validate', Path(config['data_path']), sample_all_points=True)
-    val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
+    VAL_DATASET = MastersDataset('validate', Path('/'.join(config['data_path'].split('/')[:-1])+"/50%"), sample_all_points=True)
+    # val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
     # CHECK might need to undo this to make getting the variance back easier
     X_train, y_train = TRAIN_DATASET.segment_points[0], TRAIN_DATASET.segment_labels[0]
     X_val, y_val = VAL_DATASET.segment_points[0], VAL_DATASET.segment_labels[0]
@@ -207,16 +207,22 @@ def main(config):
         import xgboost as xgb
         from xgboost import XGBClassifier
 
-        log_string("Training XGBoost")
-        xgboost = XGBClassifier(n_estimators=config["n_estimators"],
-                                max_depth=config['max_depth'],
-                                n_jobs=8,
-                                )
-        # xgboost = XGBClassifier()
-        xgboost.fit(X=X_train, y=y_train)
-        xgboost.save_model(str(checkpoints_dir / 'xgboost.model'))
-        wandb.save(str(checkpoints_dir / 'xgboost.model'))
-        preds_train_xgboost, preds_val_xgboost = train_predict(X_train, X_val, xgboost, log_string, logger, y_train, y_val, True)
+        if (checkpoints_dir/'xgboost.model').exists():
+            log_string("Loading prefit XGBoost model")
+            xgboost_model = xgb.Booster()
+            xgboost_model.load_model(str(checkpoints_dir/'xgboost.model'))
+        else:
+            log_string("Training XGBoost")
+            xgboost_model = XGBClassifier(n_estimators=config["n_estimators"],
+                                    max_depth=config['max_depth'],
+                                    n_jobs=8,
+                                    )
+            # xgboost = XGBClassifier()
+            xgboost_model.fit(X=X_train, y=y_train)
+            xgboost_model.save_model(str(checkpoints_dir / 'xgboost.model'))
+            wandb.save(str(checkpoints_dir / 'xgboost.model'))
+
+        preds_train_xgboost, preds_val_xgboost = train_predict(X_train, X_val, xgboost_model, log_string, logger, y_train, y_val, True)
         print(f"XGBoost: {time.time() - st}")
 
 
@@ -280,10 +286,11 @@ if __name__ == '__main__':
 
     # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {32, 64} --max_depth ={16,32,64,128,256}
     args = parse_args()
-    os.environ["WANDB_MODE"] = "dryrun"
+    # os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters-RF", config=args, resume=False,
-               name=f"{'-'.join(args.data_path.split('/')[-2:])}",
-               notes="")
+               name=f"{'-'.join(args.data_path.split('/')[-2:])}_50%Val",
+               notes="",
+               group="50%Validation")
     wandb.run.log_code(".")
     setup_wandb_classification_metrics()
     main(wandb.config)
