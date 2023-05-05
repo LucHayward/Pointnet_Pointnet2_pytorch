@@ -50,7 +50,7 @@ class PartNormalDataset(Dataset):
                 fns = [fn for fn in fns if ((fn[0:-4] in train_ids) or (fn[0:-4] in val_ids))]
             elif split == 'train':
                 fns = [fn for fn in fns if fn[0:-4] in train_ids]
-            elif split == 'val':
+            elif split == 'first':
                 fns = [fn for fn in fns if fn[0:-4] in val_ids]
             elif split == 'test':
                 fns = [fn for fn in fns if fn[0:-4] in test_ids]

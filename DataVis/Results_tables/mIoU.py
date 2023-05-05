@@ -1,7 +1,7 @@
 class Experiment:
-    def __init__(self, val, holdout, scene):
-        self.val = val
-        self.holdout = holdout
+    def __init__(self, first, second, scene):
+        self.first = first
+        self.second = second
         self.scene = scene
 
 bagni_nerone = Experiment("""Pointnet++	32.12	31.96	31.59	31.96	32.12	31.96	31.59	31.96
