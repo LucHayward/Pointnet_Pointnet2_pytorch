@@ -4,6 +4,7 @@ class DoubleExperiment:
         self.second = second
         self.scene = scene
 
+
 class SingleExperiment:
     def __init__(self, vals, scene):
         self.vals = vals

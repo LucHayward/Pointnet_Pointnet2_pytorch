@@ -1,7 +1,7 @@
-from experiment import SingleExperiment
+from .experiment import SingleExperiment
 
 bagni_nerone = SingleExperiment("""Pointnet++	0	0	0	0	0.01	0	0	0
-KPConv	73	0.92	0.23	0.02	7.3	-23.96	-2.9	0.08
+KPConv		0.92	0.23	0.02	7.3	-23.96	-2.9	0.08
 Point-Transformer	2.49	11.04	0.34	33.56	-24.77	6.63	-48.7	12.95""",  "Bagni Nerone")
 
 church = SingleExperiment("""Pointnet++	-12.88	-3.46	4.9	8.17	-15.16	-8.21	7.61	8.06
@@ -18,11 +18,11 @@ Point-Transformer	23.73	35.91	-1.12	-2.14	43.37	56.81	0	0""",  "Montelupo")
 
 monument = SingleExperiment("""Pointnet++	0	3.99	1.9	0	0	-0.85	0.09	0
 KPConv	-2.19	-2.18	14.11	-0.02	1.71	9.45	-1.97	11.32
-Point-Transformer	18.65	-12.55	0	0.4	0	0	0	22.06""", "Monument")
+Point-Transformer		-12.55	0	0.4	0	0	0	22.06""", "Monument")
 
 piazza = SingleExperiment("""Pointnet++	0.02	-0.03	-0.03	-0.05	-0.03	-0.03	-0.05	-0.05
 KPConv	1.5	-1.13	-7.2	-0.14	-13.52	5.98	-7.49	5
-Point-Transformer	4.64	-6.83	-1.08	0.24	33.62	-18.53	0	0""", "Piazza")
+Point-Transformer	4.64	-6.83	-1.08	0.24	33.62		0	0""", "Piazza")
 
 experiments = [bagni_nerone,
 church,
