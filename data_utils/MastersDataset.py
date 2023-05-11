@@ -227,10 +227,10 @@ class MastersDataset(Dataset):
                 sample_weight_segment.append(np.array(batch_weight))
                 point_idxs_segment.append(np.array(point_idxs))
 
-            data_segment = np.array(data_segment)
-            labels_segment = np.array(labels_segment)
-            sample_weight_segment = np.array(sample_weight_segment)
-            point_idxs_segment = np.array(point_idxs_segment)
+            data_segment = np.vstack(data_segment)
+            labels_segment = np.hstack(labels_segment)
+            sample_weight_segment = np.hstack(sample_weight_segment)
+            point_idxs_segment = np.hstack(point_idxs_segment)
             # Given all the points/labels reshape them to be returned as self.block_points batches.
             # This DOES mean some of the "blocks" will stretch over the cells.
             self.data_segment = data_segment.reshape((-1, self.num_points_in_block, data_segment.shape[1]))
