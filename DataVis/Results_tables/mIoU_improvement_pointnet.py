@@ -1,4 +1,4 @@
-from experiment import DoubleExperiment
+from .experiment import DoubleExperiment
 
 bagni_nerone = DoubleExperiment("""Pointnet++	0	0	0	0	0	0	0	0
 KPConv	40.88	60.84	63.68	64.38		59.92	63.45	64.36
@@ -10,7 +10,7 @@ KPConv	11.87	34.32	57.37	61.98		58.28	60.27	61.9
 Point-Transformer	7.01	38.42	-16.91	44.74	31.79	31.79	31.79	31.79
 Random Forest					37.83	52.97	62.44	63.25
 XGBoost					48.89	53.95	63.31	59.72""",
-                                "bagni_nerone")
+                                "Bagni Nerone")
 church = DoubleExperiment("""Pointnet++	0	0	0	0	0	0	0	0
 KPConv	25.05	9.76	-2.18	4.89	14.97	8.99	1.66	14.83
 Point-Transformer	19.05	16.65	-7.4	3.97	-6.66	-22.31	-30.26	-16.92

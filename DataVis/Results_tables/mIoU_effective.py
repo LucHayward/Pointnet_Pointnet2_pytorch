@@ -1,10 +1,10 @@
 from .experiment import SingleExperiment
 
-bagni_nerone = SingleExperiment("""Pointnet++	1.70	3.40	17.10	34.02	1.70	3.40	17.10	34.02
-KPConv	0.67	0.36	1.18	1.83		0.41	1.24	1.84
-Point-Transformer	0.27	0.85	6.90	11.56	0.33	1.40	6.99	28.34
-Random Forest					0.56	0.53	1.86	2.44
-XGBoost					0.60	0.77	1.88	4.01""",  "Bagni Nerone")
+bagni_nerone = SingleExperiment("""Pointnet++	33.82	35.36	48.69	65.98	33.82	35.36	48.69	65.98
+KPConv	73.68	93.16	96.45	98.17		92.29	96.28	98.16
+Point-Transformer	89.36	83.93	79.29	88.44	86.94	73.44	79.04	71.66
+Random Forest					78.00	89.93	94.42	97.56
+XGBoost					76.68	85.29	94.38	95.99""",  "Bagni Nerone")
 
 church = SingleExperiment("""Pointnet++	56.05	73.78	89.27	89.44	68.61	77.07	85.59	85.35
 KPConv	80.47	83.05	87.63	91.88	83.20	85.61	86.84	92.77
@@ -24,11 +24,11 @@ Point-Transformer	91.23	81.48	75.48	88.56	68.10	47.36	76.32	89.63
 Random Forest					38.29	82.15	89.95	96.59
 XGBoost					32.84	70.60	90.14	95.12""",  "Montelupo")
 
-monument = SingleExperiment("""Pointnet++	1.26	2.18	11.74	25.00	1.26	2.38	12.22	25.00
-KPConv	1.64	2.41	7.60	25.01	1.59	2.30	11.12	25.00
-Point-Transformer	2.03	3.19	12.51	24.80		2.57	12.51	25.00
-Random Forest					1.55	2.38	9.66	25.00
-XGBoost					1.56	2.48	12.51	25.00""", "Monument")
+monument = SingleExperiment("""Pointnet++	51.05	58.52	64.78	75.00	51.05	54.73	63.36	75.00
+KPConv	36.05	54.22	77.22	74.99	38.19	56.29	66.63	75.00
+Point-Transformer	20.68	39.31	62.47	75.20		51.24	62.47	75.00
+Random Forest					39.48	54.71	71.01	75.00
+XGBoost					39.29	52.97	62.49	75.00""", "Monument")
 
 piazza = SingleExperiment("""Pointnet++	44.20	46.14	58.92	73.08	44.18	46.16	58.95	73.11
 KPConv	62.00	61.47	65.72	81.69	60.54	62.54	71.12	81.76
