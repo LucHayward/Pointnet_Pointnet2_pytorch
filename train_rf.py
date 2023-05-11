@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {32, 64} --max_depth ={16,32,64,128,256}
     args = parse_args()
-    # os.environ["WANDB_MODE"] = "dryrun"
+    os.environ["WANDB_MODE"] = "dryrun"
     wandb.init(project="Masters-RF", config=args, resume=False,
                name=f"{'-'.join(args.data_path.split('/')[-2:])}_50%Val",
                notes="",
