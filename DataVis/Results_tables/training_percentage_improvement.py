@@ -6,7 +6,7 @@ Point-Transformer		-6.01	-10.69	4.49		-14.56	0.01	-28.73
 Random Forest						11.93	4.49	3.14
 XGBoost						8.62	9.08	1.62""",
                                 """Pointnet++		-0.01	0.00	0.00		0.00	0.00	0.00
-KPConv		22.44	23.05	4.61		53.70	1.99	1.63
+KPConv		22.44	23.05	4.61			1.99	1.63
 Point-Transformer		31.40	-55.33	61.65		0.00	0.00	0.00
 Random Forest						15.14	9.47	0.81
 XGBoost						5.06	9.36	-3.59""",
@@ -55,7 +55,7 @@ Random Forest						14.40	9.02	-11.35
 XGBoost						12.76	-0.51	0.02""",
                             """Pointnet++		-1.01	1.01	0.00		-0.16	0.07	0.09
 KPConv		18.75	9.77	2.19		11.01	21.19	-11.10
-Point-Transformer		18.27	12.40	-0.01		18.27	12.40	-22.07
+Point-Transformer		18.27	12.40	-0.01			12.40	-22.07
 Random Forest						8.75	1.73	0.00
 XGBoost						11.35	1.83	0.00""",
                             "Monument")
