@@ -181,7 +181,7 @@ class MastersDataset(Dataset):
                 grid_mask[grid_mask == i] = idx
 
             data_segment, labels_segment, sample_weight_segment, point_idxs_segment = \
-                np.array([]), np.array([]), np.array([]), np.array([])
+                [], [], [], []
             return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
             grid_cell_to_segment = []
 
@@ -222,13 +222,15 @@ class MastersDataset(Dataset):
 
                 grid_cell_to_segment.append(len(label_batch))
                 # Stack all the points/labels from this cell with the previous cells
-                data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
-                labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
-                sample_weight_segment = np.hstack(
-                    [sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
-                point_idxs_segment = np.hstack(
-                    [point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
+                data_segment.append(data_batch)
+                labels_segment.append(label_batch)
+                sample_weight_segment.append(batch_weight)
+                point_idxs_segment.append(point_idxs)
 
+            data_segment = np.array(data_segment)
+            labels_segment = np.array(labels_segment)
+            sample_weight_segment = np.array(sample_weight_segment)
+            point_idxs_segment = np.array(point_idxs_segment)
             # Given all the points/labels reshape them to be returned as self.block_points batches.
             # This DOES mean some of the "blocks" will stretch over the cells.
             self.data_segment = data_segment.reshape((-1, self.num_points_in_block, data_segment.shape[1]))
