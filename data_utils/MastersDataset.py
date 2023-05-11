@@ -222,10 +222,10 @@ class MastersDataset(Dataset):
 
                 grid_cell_to_segment.append(len(label_batch))
                 # Stack all the points/labels from this cell with the previous cells
-                data_segment.append(data_batch)
-                labels_segment.append(label_batch)
-                sample_weight_segment.append(batch_weight)
-                point_idxs_segment.append(point_idxs)
+                data_segment.append(np.array(data_batch))
+                labels_segment.append(np.array(label_batch))
+                sample_weight_segment.append(np.array(batch_weight))
+                point_idxs_segment.append(np.array(point_idxs))
 
             data_segment = np.array(data_segment)
             labels_segment = np.array(labels_segment)
