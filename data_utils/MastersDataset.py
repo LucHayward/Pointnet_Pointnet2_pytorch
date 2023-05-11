@@ -58,6 +58,44 @@ class MastersDataset(Dataset):
         :param block_size: size of the sampling column
         :param sample_all_points: Whether to sample random columns or the entire segment sequentially.
         """
+        from joblib import Parallel, delayed
+        def loop_body(cell_idx, points, labels, coord_max, relative_coords, labelweights, num_points_in_block):
+            point_idxs = np.where(grid_mask == cell_idx)[0]
+
+            # Get batches required
+            num_batches = int(np.ceil(point_idxs.size / num_points_in_block))
+
+            # Check: May not be necessary to actually pad out the batch like this for inference.
+            # If there are not enough points to fill the last batch, set it to replace points.
+            point_size = int(num_batches * num_points_in_block)
+            replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+
+            # Duplicate some point_idxs at random from the sample
+            point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
+            point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
+            np.random.shuffle(point_idxs)
+            data_batch = points[point_idxs, :]
+
+            if relative_coords:
+                # Get Normalized (-1,1) xyz values
+                normalized_xyz = data_batch[:, :3] / coord_max
+
+                # Center the points around (0,0) in the XY-plane
+                min_xy_data_batch = np.min(data_batch[:, :2], axis=0)
+                max_xy_data_batch = np.max(data_batch[:, :2], axis=0)
+                center_xy = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
+                relative_xyz = data_batch[:, :3] - np.hstack((center_xy, 0))
+
+                # relative_XYZ, III, normalized_XYZ
+                data_batch = np.column_stack((relative_xyz, data_batch[:, [3, 3, 3]], normalized_xyz))
+
+            # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
+            # batch? It's actually getting a weight to assign to each point though.
+            label_batch = labels[point_idxs].astype(int)
+            batch_weight = labelweights[label_batch]
+
+            return data_batch, label_batch, batch_weight, point_idxs, len(label_batch)
+
         assert split in ["train", "validate", "test", None], 'split must be "train", "validate", "test", or "None"'
         self.split = split
         self.num_points_in_block = num_points_in_block
@@ -185,57 +223,37 @@ class MastersDataset(Dataset):
             return_grid = [[[] for _ in range(grid_y)] for _ in range(grid_x)]
             grid_cell_to_segment = []
 
-            for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"):
-                point_idxs = np.where(grid_mask == cell_idx)[0]
+            # The loop_body function is now executed in parallel
+            results = Parallel(n_jobs=-1)(
+                delayed(loop_body)(cell_idx, points, labels, coord_max, relative_coords, self.labelweights,
+                                   self.num_points_in_block)
+                for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"))
 
-                # Get batches required
-                num_batches = int(np.ceil(point_idxs.size / self.num_points_in_block))
+            print(len(results))
+            data_segment, labels_segment, sample_weight_segment, point_idxs_segment, grid_cell_to_segment = zip(*results)
 
-                # Check: May not be necessary to actually pad out the batch like this for inference.
-                # If there are not enough points to fill the last batch, set it to replace points.
-                point_size = int(num_batches * self.num_points_in_block)
-                replace = False if (point_size - point_idxs.size <= point_idxs.size) else True
+            # Convert to numpy arrays
+            data_segment = np.array(data_segment)
+            labels_segment = np.array(labels_segment)
+            sample_weight_segment = np.array(sample_weight_segment)
+            point_idxs_segment = np.array(point_idxs_segment)
+            grid_cell_to_segment = np.array(grid_cell_to_segment)
 
-                # Duplicate some point_idxs at random from the sample
-                point_idxs_repeat = np.random.choice(point_idxs, point_size - point_idxs.size, replace=replace)
-                point_idxs = np.concatenate((point_idxs, point_idxs_repeat))
-                np.random.shuffle(point_idxs)
-                data_batch = points[point_idxs, :]
-
-                if relative_coords:
-                    # Get Normalized (-1,1) xyz values
-                    normalized_xyz = data_batch[:, :3] / coord_max
-
-                    # Center the points around (0,0) in the XY-plane
-                    min_xy_data_batch = np.min(data_batch[:, :2], axis=0)
-                    max_xy_data_batch = np.max(data_batch[:, :2], axis=0)
-                    center_xy = min_xy_data_batch + (max_xy_data_batch - min_xy_data_batch) / 2
-                    relative_xyz = data_batch[:, :3] - np.hstack((center_xy, 0))
-
-                    # relative_XYZ, III, normalized_XYZ
-                    data_batch = np.column_stack((relative_xyz, data_batch[:, [3, 3, 3]], normalized_xyz))
-
-                # No idea what this is meant to be doing. I think the idea is to get the weighting of the labels in this
-                # batch? It's actually getting a weight to assign to each point though.
-                label_batch = labels[point_idxs].astype(int)
-                batch_weight = self.labelweights[label_batch]
-
-                grid_cell_to_segment.append(len(label_batch))
-                # Stack all the points/labels from this cell with the previous cells
-                data_segment = np.vstack([data_segment, data_batch]) if data_segment.size else data_batch
-                labels_segment = np.hstack([labels_segment, label_batch]) if labels_segment.size else label_batch
-                sample_weight_segment = np.hstack(
-                    [sample_weight_segment, batch_weight]) if labels_segment.size else batch_weight
-                point_idxs_segment = np.hstack(
-                    [point_idxs_segment, point_idxs]) if point_idxs_segment.size else point_idxs
+            print(data_segment.shape)
+            print(labels_segment.shape)
+            print(sample_weight_segment.shape)
+            print(point_idxs_segment.shape)
+            print(grid_cell_to_segment.shape)
 
             # Given all the points/labels reshape them to be returned as self.block_points batches.
             # This DOES mean some of the "blocks" will stretch over the cells.
-            self.data_segment = data_segment.reshape((-1, self.num_points_in_block, data_segment.shape[1]))
-            self.labels_segment = labels_segment.reshape((-1, self.num_points_in_block))
-            self.sample_weight_segment = sample_weight_segment.reshape((-1, self.num_points_in_block))
-            self.point_idxs_segment = point_idxs_segment.reshape((-1, self.num_points_in_block))
-            self.grid_cell_to_segment = grid_cell_to_segment
+            self.data_segment = np.vstack(data_segment).reshape(
+                (-1, self.num_points_in_block, data_segment[0].shape[1]))
+            self.labels_segment = np.concatenate(labels_segment).reshape((-1, self.num_points_in_block))
+            self.sample_weight_segment = np.concatenate(sample_weight_segment).reshape((-1, self.num_points_in_block))
+            self.point_idxs_segment = np.concatenate(point_idxs_segment).reshape((-1, self.num_points_in_block))
+
+            self.grid_cell_to_segment = list(grid_cell_to_segment)
             self.grid_mask = grid_mask
 
             # No need to shuffle, done in the dataloader rather
@@ -243,6 +261,13 @@ class MastersDataset(Dataset):
             # np.random.shuffle(self.random_permutation_idx)
 
             self.grid_mask_segment = np.arange(len(self)).repeat(self.num_points_in_block)
+
+
+            # No need to shuffle, done in the dataloader rather
+            # self.random_permutation_idx = np.arange(len(self))
+            # np.random.shuffle(self.random_permutation_idx)
+
+            # self.grid_mask_segment = np.arange(len(self)).repeat(self.num_points_in_block)
 
             # save([self.num_points_in_block, self.data_segment, self.labels_segment, self.sample_weight_segment,
             #       self.point_idxs_segment], data_path / f"{split}_all_points.cache")
