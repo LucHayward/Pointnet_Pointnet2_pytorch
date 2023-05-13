@@ -224,26 +224,26 @@ class MastersDataset(Dataset):
             grid_cell_to_segment = []
 
             # The loop_body function is now executed in parallel
-            results = Parallel(n_jobs=-1)(
+            results = Parallel(n_jobs=-1, verbose=10, batch_size=256)(
                 delayed(loop_body)(cell_idx, points, labels, coord_max, relative_coords, self.labelweights,
                                    self.num_points_in_block)
                 for cell_idx in tqdm(np.unique(grid_mask), desc="Fill batches"))
 
-            print(len(results))
+            # print(len(results))
             data_segment, labels_segment, sample_weight_segment, point_idxs_segment, grid_cell_to_segment = zip(*results)
 
-            # Convert to numpy arrays
-            data_segment = np.array(data_segment)
-            labels_segment = np.array(labels_segment)
-            sample_weight_segment = np.array(sample_weight_segment)
-            point_idxs_segment = np.array(point_idxs_segment)
-            grid_cell_to_segment = np.array(grid_cell_to_segment)
+            # # Convert to numpy arrays
+            # data_segment = np.array(data_segment)
+            # labels_segment = np.array(labels_segment)
+            # sample_weight_segment = np.array(sample_weight_segment)
+            # point_idxs_segment = np.array(point_idxs_segment)
+            # grid_cell_to_segment = np.array(grid_cell_to_segment)
 
-            print(data_segment.shape)
-            print(labels_segment.shape)
-            print(sample_weight_segment.shape)
-            print(point_idxs_segment.shape)
-            print(grid_cell_to_segment.shape)
+            # print(data_segment.shape)
+            # print(labels_segment.shape)
+            # print(sample_weight_segment.shape)
+            # print(point_idxs_segment.shape)
+            # print(grid_cell_to_segment.shape)
 
             # Given all the points/labels reshape them to be returned as self.block_points batches.
             # This DOES mean some of the "blocks" will stretch over the cells.
