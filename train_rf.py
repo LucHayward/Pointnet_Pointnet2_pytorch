@@ -175,12 +175,23 @@ def main(config):
     setup_wandb_classification_metrics()
 
     # Setup training/validation data
-    TRAIN_DATASET = MastersDataset('train', Path(config['data_path']), sample_all_points=True)
-    VAL_DATASET = MastersDataset('validate', Path('/'.join(config['data_path'].split('/')[:-1])+"/50%"), sample_all_points=True)
-    # val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
-    # CHECK might need to undo this to make getting the variance back easier
-    X_train, y_train = TRAIN_DATASET.segment_points[0], TRAIN_DATASET.segment_labels[0]
-    X_val, y_val = VAL_DATASET.segment_points[0], VAL_DATASET.segment_labels[0]
+    if config["active_learning"]:
+        TRAIN_DATASET = MastersDataset('train', Path(config['data_path']), sample_all_points=True)
+        VAL_DATASET = MastersDataset('validate', Path('/'.join(config['data_path'].split('/')[:-1])+"/50%"), sample_all_points=True)
+        # val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
+        # CHECK might need to undo this to make getting the variance back easier
+        X_train, y_train = TRAIN_DATASET.segment_points[0], TRAIN_DATASET.segment_labels[0]
+        X_val, y_val = VAL_DATASET.segment_points[0], VAL_DATASET.segment_labels[0]
+    else:
+        # Setup training/validation data
+        TRAIN_DATASET = np.load(
+            "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Piazza/2.5%/train.npy")
+        VAL_DATASET = np.load(
+            "/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Piazza/2.5%/validate.npy")
+        # val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
+        # CHECK might need to undo this to make getting the variance back easier
+        X_train, y_train = TRAIN_DATASET[:, :3], TRAIN_DATASET[:, -1]
+        X_val, y_val = VAL_DATASET[:, :3], VAL_DATASET[:, -1]
     log_string(f"Training data: {X_train.shape}")
     log_string(f"Validation data: {X_val.shape}")
 
