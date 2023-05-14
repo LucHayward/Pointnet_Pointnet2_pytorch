@@ -292,6 +292,56 @@ def train_predict(X_train, X_val, classifier, log_string, logger, y_train, y_val
     return preds_train, preds_val
 
 
+def retrain_rf(dataset_path):
+    def log_metrics(target, preds, prefix=None, logger=None) -> None:
+        """
+        Log the confusion matrix, the confusion matrix normalized over true_labels (category),
+        and the precision, recall, accuracy and mIoU/Jaccard macro average.
+        :param target: target binary labels
+        :param preds: predicted binary labels
+        :param prefix: Train/Validation
+        """
+        #    pn pp
+        # an tn fp
+        # ap fn tp
+        tn, fp, fn, tp = confusion_matrix(target, preds).ravel()
+        cat_tn, cat_fp, cat_fn, cat_tp = confusion_matrix(target, preds, normalize='true').ravel()
+        precision = precision_score(target, preds)
+        recall = recall_score(target, preds)
+        f1 = f1_score(target, preds)
+        accuracy = accuracy_score(target, preds)
+        keepIoU, discardIoU = jaccard_score(target, preds, average=None)
+        mIoU = jaccard_score(target, preds, average='macro')
+        print(accuracy)
+        print(mIoU)
+
+    def train_predict(X_train, X_val, classifier, y_train, y_val, xgboost=False):
+        preds_val = classifier.predict(X_val)
+        log_metrics(y_val, preds_val)
+        return preds_val
+
+    st = time.time()
+    # Setup training/validation data
+    TRAIN_DATASET = np.load(
+        f"{dataset_path}train.npy")
+    VAL_DATASET = np.load(
+        f"{dataset_path}validate.npy")
+    # val_data_loader = torch.utils.data.DataLoader(VAL_DATASET, batch_size=1, shuffle=False, num_workers=0)
+    # CHECK might need to undo this to make getting the variance back easier
+    X_train, y_train = TRAIN_DATASET[:, :3], TRAIN_DATASET[:, -1]
+    X_val, y_val = VAL_DATASET[:, :3], VAL_DATASET[:, -1]
+    print("Training Random Forest")
+    # Setup classifier, train and perform predictions
+    classifier = RandomForestClassifier(n_estimators=32,
+                                        max_depth=32,
+                                        min_samples_split=20,
+                                        n_jobs=8,
+                                        verbose=1)
+    classifier.fit(X=X_train, y=y_train)
+    preds_val = train_predict(X_train, X_val, classifier, y_train, y_val)
+    print(f"RF: {time.time() - st}")
+
+
 if __name__ == '__main__':
     import os
 
