@@ -25,6 +25,9 @@ def text_to_df(text):
     df = df.replace(r'^\s*$', np.nan, regex=True)
     return df
 
-def experiment_to_csv(exp):
-    dfs = [text_to_df(x.first) for x in exp.experiments] + [text_to_df(x.second) for x in exp.experiments]
+def experiment_to_csv(exp, double=True):
+    if double:
+        dfs = [text_to_df(x.first) for x in exp.experiments] + [text_to_df(x.second) for x in exp.experiments]
+    else:
+        dfs = [text_to_df(x.vals) for x in exp.experiments]
     return [df.to_csv() for df in dfs]
