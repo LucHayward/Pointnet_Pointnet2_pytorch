@@ -11,9 +11,9 @@ import models.pointnet2_sem_seg as Model
 from tqdm import tqdm
 
 LOG_PATH = Path(
-    '/media/luc/Mostly desk/FINAL RESULTS/Pointnet++/results/Lunnahoja_25%')
+    '/media/luc/Mostly desk/FINAL RESULTS/Pointnet++/results/Bagni%_s3dis')
 DATA_PATH = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Lunnahoja/25%')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Lunnahoja/50%')
 RELATIVE_COORDS = False
 MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/best_model.pth'
 
