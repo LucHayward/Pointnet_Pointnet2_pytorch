@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from pathlib import Path
-# import pptk
+import pptk
 
 import Visualisation_utils
 from data_utils.MastersDataset import MastersDataset
@@ -11,18 +11,19 @@ import models.pointnet2_sem_seg as Model
 from tqdm import tqdm
 
 LOG_PATH = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/log/masters/30%_pretrained_higherWD')
+    '/media/luc/Mostly desk/FINAL RESULTS/Pointnet++/results/Lunnahoja_25%')
 DATA_PATH = Path(
-    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Church/MastersFormat/hand_selected_reversed')
+    '/home/luc/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Lunnahoja/25%')
 RELATIVE_COORDS = False
-MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/model.pth'
+MODEL_CHECKPOINT_PATH = LOG_PATH / 'checkpoints/best_model.pth'
 
 model_checkpoint = torch.load(MODEL_CHECKPOINT_PATH)
 print(f"Reached best validation_IoU at epoch {model_checkpoint['epoch']}\n"
       f"IoU: {model_checkpoint['class_avg_iou']}")
 
 # Check this in the logs on wandb
-classifier = Model.get_model(2, points_vector_size=(9 if RELATIVE_COORDS else 4))
+# classifier = Model.get_model(2, points_vector_size=(9 if RELATIVE_COORDS else 4))
+classifier = Model.get_model(2, points_vector_size=3)
 classifier.load_state_dict(model_checkpoint['model_state_dict'])
 classifier.cuda()
 
@@ -35,7 +36,7 @@ num_batches = int(np.ceil(available_batches / BATCH_SIZE))
 
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = [], [], [], []
 
-val_data_loader = torch.utils.data.DataLoader(dataset, batch_size=16,
+val_data_loader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE,
                                               shuffle=False, num_workers=0, pin_memory=True,
                                               drop_last=False)
 classifier.eval()
@@ -73,9 +74,9 @@ for i, (points, target_labels) in tqdm(enumerate(val_data_loader), total=len(val
 
 all_eval_points, all_eval_pred, all_eval_target, all_eval_probs = np.vstack(np.vstack(all_eval_points)), np.hstack(
     np.vstack(all_eval_pred)), np.hstack(np.vstack(all_eval_target)), np.hstack(np.vstack(all_eval_probs))
-print("Showing intensity, predictions, target, difference")
-# v = pptk.viewer(all_eval_points[:, :3], all_eval_points[:, 3], all_eval_pred, all_eval_target,
-#                 all_eval_pred != all_eval_target)
+print("Showing predictions, target, difference")
+v = pptk.viewer(all_eval_points[:, :3], all_eval_pred, all_eval_target,
+                all_eval_pred != all_eval_target)
 # v = pptk.viewer(all_eval_points[:, 6:], all_eval_pred, all_eval_target,
 #                 all_eval_pred != all_eval_target)
 
