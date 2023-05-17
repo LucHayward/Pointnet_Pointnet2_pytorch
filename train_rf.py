@@ -17,6 +17,8 @@ from tqdm import tqdm
 from train_masters import setup_logging_dir, setup_logger, setup_wandb_classification_metrics, _log_string
 from data_utils.MastersDataset import MastersDataset
 
+from Visualisation_utils import turbo_colormap_data
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -340,7 +342,36 @@ def retrain_rf(dataset_path):
     classifier.fit(X=X_train, y=y_train)
     preds_val = train_predict(X_train, X_val, classifier, y_train, y_val)
     print(f"RF: {time.time() - st}")
+    ########
+    pcd_train = TRAIN_DATASET
+    pcd_val = VAL_DATASET
+    pcd_pred = preds_val
+    merged_ground_truth = np.vstack((pcd_train, pcd_val))
+    merged_result = np.vstack(
+        ((pcd_train[:, [0, 1, 2, 4, 4, 4]] + [0, 0, 0, 2, 2, 0]), pcd_pred[:, [0, 1, 2, 3, 4, 3]]))
 
+    def get_intensity_shaded_label(intensity, labels, binary=True):
+        vis = np.zeros((len(labels), 3))
+        if binary:
+            vis += [0, 1, 1]
+            vis *= intensity[:, None]
+            vis[labels == 1] += [1, 0, 0]
+        else:
+            vis[labels == 0] = [106, 23, 136]
+            vis[labels == 1] = [250, 187, 58]
+            vis[labels == 2] = [27, 227, 182]
+            vis[labels == 3] = [144, 5, 3]
+            vis *= intensity[:, None] * 1.2
+        return vis / 256
+
+    import pptk
+    v_result = pptk.viewer(merged_result[:, :3],
+                           get_intensity_shaded_label(merged_ground_truth[:, 3], merged_result[:, 3], False),
+                           get_intensity_shaded_label(merged_ground_truth[:, 3], merged_result[:, 4], False),
+                           get_intensity_shaded_label(merged_ground_truth[:, 3],
+                                                      merged_ground_truth[:, 4] * np.array([2]) + merged_result[:, 5],
+                                                      False))
+    v_result.color_map(turbo_colormap_data)
 
 if __name__ == '__main__':
     import os
