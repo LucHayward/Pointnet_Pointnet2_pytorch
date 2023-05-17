@@ -116,6 +116,7 @@ piazza]
 2,Point-Transformer,65.68,56.89,49.19,49.95,61.04,63.72,50.27,49.71
 3,Random Forest,,,,,46.86,41.88,53.22,52.88
 4,XGBoost,,,,,42.15,41.25,51.12,50.12
+
 ,Model,2.5% (pretrained),5% (pretrained),25% (pretrained),50% (pretrained),2.5% (random),5% (random),25% (random),50% (random)
 0,Pointnet++,31.97,31.96,31.96,31.96,31.96,31.96,31.96,31.96
 1,KPConv,43.84,66.28,89.33,93.94,,90.24,92.23,93.86

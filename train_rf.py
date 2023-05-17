@@ -14,8 +14,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix, jaccard_score
 from tqdm import tqdm
 
-from data_utils.MastersDataset import MastersDataset
 from train_masters import setup_logging_dir, setup_logger, setup_wandb_classification_metrics, _log_string
+from data_utils.MastersDataset import MastersDataset
 
 
 def parse_args():
