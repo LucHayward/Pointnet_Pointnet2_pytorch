@@ -340,6 +340,7 @@ def retrain_rf(dataset_path):
     classifier.fit(X=X_train, y=y_train)
     preds_val = train_predict(X_train, X_val, classifier, y_train, y_val)
     print(f"RF: {time.time() - st}")
+    return preds_val
 
 
 if __name__ == '__main__':
