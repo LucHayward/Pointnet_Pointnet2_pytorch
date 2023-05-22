@@ -345,7 +345,8 @@ def retrain_rf(dataset_path):
     ########
     pcd_train = TRAIN_DATASET
     pcd_val = VAL_DATASET
-    pcd_pred = preds_val
+    pcd_pred = np.copy(pcd_val)
+    pcd_pred[:,3] = preds_val
     merged_ground_truth = np.vstack((pcd_train, pcd_val))
     merged_result = np.vstack(
         ((pcd_train[:, [0, 1, 2, 4, 4, 4]] + [0, 0, 0, 2, 2, 0]), pcd_pred[:, [0, 1, 2, 3, 4, 3]]))
@@ -375,6 +376,8 @@ def retrain_rf(dataset_path):
 
 if __name__ == '__main__':
     import os
+
+    retrain_rf("/Users/luc/Development/PycharmProjects/Pointnet_Pointnet2_pytorch/data/PatrickData/Piazza/2.5%/")
 
     # python --data_path data/PatrickData/Bagni_Nerone/2.5% --log_dir Bagni_Nerone_2.5% --n_estimators {32, 64} --max_depth ={16,32,64,128,256}
     args = parse_args()
