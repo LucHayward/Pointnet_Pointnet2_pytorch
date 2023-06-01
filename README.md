@@ -13,6 +13,11 @@ The notebooks for the early experimentation with random forest models as well as
 We provide ```active_learning.py``` as a wrapper script for both pointnet++ and Random Forest with other models easily adapted.
 This script presupposes that the underlying model saves the results of the training in the expected format.
 This can then be used to dynamically create a subsequent training split based on the model confidences.
+# Branches
+Several additional branches contain the offshoots of experiments that I deem interesting enough to keep around for posterity.
+In general the only branch worth examining is still Master, although parallel_fill_batch contains an unsuccesful attempt at parallelising
+the data loading loop in ```MastersDataset.py```.
+
 
 ## Update
 **2021/03/27:** 
