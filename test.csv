@@ -1,8 +1,0 @@
-Name ,"('Bagni_Nerone_2.5%', 'xyz')","('Bagni_Nerone_5%', 'xyz')","('Bagni_Nerone_25%', 'xyz')","('Bagni_Nerone_50%', 'xyz')","('Bagni_Nerone_2.5%', 'xyz')","('Bagni_Nerone_5%', 'xyz')","('Bagni_Nerone_25%', 'xyz')","('Bagni_Nerone_50%', 'xyz')"
-/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_2.5%/xyz/model_pretrained/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_5%/xyz/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_25%/xyz/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_50%/xyz/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Church_2.5%/xyz/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_5%/xyz/model_pretrained/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_25%/xyz/model_pretrained/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Bagni_Nerone_50%/xyz/model_pretrained/model/model_best_train.pth,/home/eco02/Luc/point-transformer/exp/Church_2.5%/xyz/model_pretrained/model/model_best_train.pth
-0.3653,0.1445,0.1445,0.4764,0.374,0.1445,0.1445,0.7119,0.8396
--,-,-,-,-,-,-,-,-
-0.4619,0.8068,0.5878,0.5442,0.5112,0.7722,0.8735,0.836,0.8851
--,-,-,-,-,-,-,-,-
-0.289,0.1219,0.05922,0.6626,0.6688,0.9761,0.7951,0.561,0.5179
--,-,-,-,-,-,-,-,-
