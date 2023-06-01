@@ -6,7 +6,13 @@ It contains the additions made during the course of my Masters research.
 ## Data visualisation
 In ```DataVis/``` the majority of the notebooks used for visualising our final experimental results.
 Included here are the main experimental results as well as code for loading them as Pandas DataFrames.
-For the remainder of the results see 
+For the remainder of the results see the [Masters-Hub](github.com/LucHayward/Masters-Hub/).
+## Random Forest
+The notebooks for the early experimentation with random forest models as well as the final random forest training code is included.
+## Active Learning
+We provide ```active_learning.py``` as a wrapper script for both pointnet++ and Random Forest with other models easily adapted.
+This script presupposes that the underlying model saves the results of the training in the expected format.
+This can then be used to dynamically create a subsequent training split based on the model confidences.
 
 ## Update
 **2021/03/27:** 
